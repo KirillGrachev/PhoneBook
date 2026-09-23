@@ -245,24 +245,24 @@ fn harden_main_webview(app: &tauri::App) {
             let Ok(settings) = core.Settings() else {
                 return;
             };
-            let _ = settings.SetIsStatusBarEnabled(false.into());
-            let _ = settings.SetAreDefaultContextMenusEnabled(false.into());
-            let _ = settings.SetIsZoomControlEnabled(false.into());
+            let _ = settings.SetIsStatusBarEnabled(false);
+            let _ = settings.SetAreDefaultContextMenusEnabled(false);
+            let _ = settings.SetIsZoomControlEnabled(false);
             if let Ok(settings) = settings.cast::<ICoreWebView2Settings3>() {
-                let _ = settings.SetAreBrowserAcceleratorKeysEnabled(false.into());
+                let _ = settings.SetAreBrowserAcceleratorKeysEnabled(false);
             }
             if let Ok(settings) = settings.cast::<ICoreWebView2Settings4>() {
-                let _ = settings.SetIsGeneralAutofillEnabled(false.into());
-                let _ = settings.SetIsPasswordAutosaveEnabled(false.into());
+                let _ = settings.SetIsGeneralAutofillEnabled(false);
+                let _ = settings.SetIsPasswordAutosaveEnabled(false);
             }
             if let Ok(settings) = settings.cast::<ICoreWebView2Settings5>() {
-                let _ = settings.SetIsPinchZoomEnabled(false.into());
+                let _ = settings.SetIsPinchZoomEnabled(false);
             }
             if let Ok(settings) = settings.cast::<ICoreWebView2Settings6>() {
-                let _ = settings.SetIsSwipeNavigationEnabled(false.into());
+                let _ = settings.SetIsSwipeNavigationEnabled(false);
             }
             #[cfg(not(debug_assertions))]
-            let _ = settings.SetAreDevToolsEnabled(false.into());
+            let _ = settings.SetAreDevToolsEnabled(false);
         }
     });
     if let Err(e) = result {
