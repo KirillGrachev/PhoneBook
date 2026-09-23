@@ -11,23 +11,42 @@ use serde::{Deserialize, Serialize};
 pub struct Employee {
     pub object_guid: String,
     pub source_org: String,
+    // Пустые поля не сериализуются: каталог на десятки тысяч строк отдаёт
+    // заметно меньший IPC-payload, фронтенд читает их через `?.`/`??`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sam_account_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub first_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub middle_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub department: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub company: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub office: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_phone: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub phone_external: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub phone_mobile: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub manager: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub usn_changed: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<i64>,
     /// TrueConf ID (AD-атрибут `pager`).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pager: Option<String>,
 }
 

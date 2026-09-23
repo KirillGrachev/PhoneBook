@@ -177,6 +177,9 @@ export interface VCardInputDto {
   jobTitle?: string | null;
   mobilePhone?: string | null;
   ipPhone?: string | null;
+  phoneExternal?: string | null;
+  /** Режим предприятия (вкладка «КМАруда» не глобальной версии). */
+  preferExternalPhone?: boolean;
   email?: string | null;
 }
 

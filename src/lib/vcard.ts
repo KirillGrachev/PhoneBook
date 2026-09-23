@@ -81,7 +81,12 @@ function encodedLength(value: string): number {
 }
 
 /** Локальная генерация vCard 3.0 (браузерный режим, без бэкенда). */
-export function generateVcard(contact: Contact): string {
+export interface VcardOptions {
+  /** Режим предприятия: внешний номер IP-телефонии вместо внутреннего. */
+  preferExternalPhone?: boolean;
+}
+
+export function generateVcard(contact: Contact, options: VcardOptions = {}): string {
   const lines: string[] = ['BEGIN:VCARD', 'VERSION:3.0'];
 
   if (contact.id && !contact.id.startsWith('dn:')) {
@@ -101,11 +106,16 @@ export function generateVcard(contact: Contact): string {
   if (contact.jobTitle?.trim()) {
     lines.push(`TITLE:${escapeVcard(contact.jobTitle.trim())}`);
   }
-  if (contact.ipPhone?.trim()) {
-    lines.push(`TEL;TYPE=WORK,VOICE:${escapeVcard(normalizePhone(contact.ipPhone))}`);
-  }
+  // Мобильный — первым: телефоны-клиенты (например, Samsung) берут первый
+  // TEL как основной номер контакта; корпоративный остаётся вторым.
   if (contact.mobilePhone?.trim()) {
     lines.push(`TEL;TYPE=CELL:${escapeVcard(normalizePhone(contact.mobilePhone))}`);
+  }
+  const workPhone = options.preferExternalPhone
+    ? contact.fullIpPhone?.trim() || contact.ipPhone?.trim()
+    : contact.ipPhone?.trim();
+  if (workPhone) {
+    lines.push(`TEL;TYPE=WORK,VOICE:${escapeVcard(normalizePhone(workPhone))}`);
   }
   if (contact.email?.trim()) {
     lines.push(`EMAIL;TYPE=INTERNET:${escapeVcard(contact.email.trim())}`);

@@ -16,7 +16,9 @@ export function IconButton({ icon: Icon, className, type = 'button', ...props }:
       className={cn(
         'h-11 w-11 flex items-center justify-center rounded-full text-muted-foreground',
         'hover:text-foreground hover:bg-surface-hover border border-transparent transition-all duration-300',
-        'active:translate-y-[1px] outline-none shrink-0 cursor-pointer',
+        // Без «прыжка» при нажатии: в модальных окнах (QR, отдел) смещение
+        // крестика выглядит как дефект, а не как отклик.
+        'outline-none shrink-0 cursor-pointer',
         'focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}

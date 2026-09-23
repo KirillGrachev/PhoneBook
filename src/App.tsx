@@ -66,7 +66,13 @@ export default function App() {
   }, [isHydrated]);
 
   return (
-    <MotionConfig transition={animationsEnabled ? undefined : { duration: 0 }} reducedMotion="user">
+    // reducedMotion привязан к переключателю приложения, а не к ОС
+    // («user» обесценивал тумблер: при системном «отключить анимации»
+    // он не влиял ни на что): явный выбор пользователя важнее системного.
+    <MotionConfig
+      transition={animationsEnabled ? undefined : { duration: 0 }}
+      reducedMotion={animationsEnabled ? 'never' : 'always'}
+    >
       <AnimatePresence mode="wait">
         {showSplash ? (
           <SplashScreen key="splash" />

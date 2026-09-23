@@ -25,6 +25,11 @@ export function useContact(id: string | null) {
  */
 export function useVcard(contact: Contact | null | undefined): string {
   const [vcard, setVcard] = useState('');
+  // Вкладка предприятия не глобальной версии: в QR подставляется внешний
+  // номер IP-телефонии (внутренний снаружи ненабираем). В глобальной
+  // версии и на остальных вкладках — обычное поведение.
+  const activeTab = useAppStore((state) => state.activeTab);
+  const preferExternalPhone = activeTab === 'kmaruda';
 
   useEffect(() => {
     if (!contact) {
@@ -32,7 +37,7 @@ export function useVcard(contact: Contact | null | undefined): string {
       return;
     }
 
-    const fallback = generateVcard(contact);
+    const fallback = generateVcard(contact, { preferExternalPhone });
     if (isMockMode()) {
       setVcard(fallback);
       return;
@@ -48,6 +53,8 @@ export function useVcard(contact: Contact | null | undefined): string {
         jobTitle: contact.jobTitle ?? null,
         mobilePhone: contact.mobilePhone ?? null,
         ipPhone: contact.ipPhone ?? null,
+        phoneExternal: contact.fullIpPhone ?? null,
+        preferExternalPhone,
         email: contact.email ?? null,
       })
       .then((value) => {
@@ -65,7 +72,7 @@ export function useVcard(contact: Contact | null | undefined): string {
     return () => {
       cancelled = true;
     };
-  }, [contact]);
+  }, [contact, preferExternalPhone]);
 
   return vcard;
 }

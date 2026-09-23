@@ -9,7 +9,11 @@ use tracing::warn;
 use crate::error::AppError;
 
 /// Версия схемы кэша (`PRAGMA user_version`).
-pub(super) const SCHEMA_VERSION: i64 = 1;
+///
+/// v2: триграммный индекс `users_substr` для поиска подстрок без полного
+/// LIKE-скана таблицы. Кэш — восстанавливаемое зеркало AD, поэтому смена
+/// версии просто пересоздаёт его ([`ensure_schema`]).
+pub(super) const SCHEMA_VERSION: i64 = 2;
 
 /// Колонки выборки сотрудника — порядок строго соответствует
 /// [`row_to_employee`]. Значения справочников берутся через JOIN:
@@ -104,6 +108,18 @@ CREATE VIRTUAL TABLE IF NOT EXISTS users_fts USING fts5(
     tokenize = 'unicode61'
 );
 
+-- Триграммный индекс для поиска подстрок («бухг» → «Бухгалтерия», хвосты
+-- телефонов в любом форматировании) без LIKE-скана по всем строкам.
+-- Значения хранятся приведёнными: hay — в нижнем регистре (Unicode-фолдинг
+-- делает Rust, SQLite lower() не знает кириллицу), phones — только цифры;
+-- триграммы case_sensitive, поэтому запрос приходит уже нормализованным.
+CREATE VIRTUAL TABLE IF NOT EXISTS users_substr USING fts5(
+    object_guid UNINDEXED,
+    hay,
+    phones,
+    tokenize = 'trigram case_sensitive 1'
+);
+
 -- Мета последней синхронизации каждого источника.
 CREATE TABLE IF NOT EXISTS sync_meta (
     source_id    INTEGER PRIMARY KEY REFERENCES sources(id) ON DELETE CASCADE,
@@ -135,6 +151,7 @@ pub(super) fn ensure_schema(conn: &Connection) -> Result<(), AppError> {
     }
     conn.execute_batch(
         "DROP TABLE IF EXISTS users_fts;
+         DROP TABLE IF EXISTS users_substr;
          DROP TABLE IF EXISTS users;
          DROP TABLE IF EXISTS sync_meta;
          DROP TABLE IF EXISTS departments;

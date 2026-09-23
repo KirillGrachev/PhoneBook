@@ -60,22 +60,29 @@ impl Db {
                 fts_count = Self::fts_count(&conn, expr, &search)?;
                 items = Self::fts_search(&conn, expr, &search, limit)?;
             }
-            // FTS5 ищет только по префиксам токенов. Чтобы находить подстроки
-            // в середине слова («бухг» → «Бухгалтерия») и телефоны в любом
-            // форматировании, дополняем выдачу LIKE-поиском.
-            if (items.len() as i64) < limit {
-                for employee in Self::like_search(&conn, q, &search, limit)? {
-                    if (items.len() as i64) >= limit {
-                        break;
-                    }
-                    if !items.iter().any(|r| r.object_guid == employee.object_guid) {
-                        items.push(employee);
+            // FTS5 ищет только по префиксам токенов. Дополняем выдачу
+            // совпадениями, которые префиксный поиск не видит: подстроки
+            // середины слова («бухг» → «Бухгалтерия») и телефоны в любом
+            // форматировании. Подстроки от 3 символов идут через триграммный
+            // индекс `users_substr` без скана таблицы; короче — LIKE.
+            if let Some((conditions, args)) = Self::complement_conditions(q, &search) {
+                if (items.len() as i64) < limit {
+                    for employee in Self::complement_search(&conn, &conditions, &args, limit)? {
+                        if (items.len() as i64) >= limit {
+                            break;
+                        }
+                        if !items.iter().any(|r| r.object_guid == employee.object_guid) {
+                            items.push(employee);
+                        }
                     }
                 }
+                // Точное общее число: FTS-совпадения + совпадения только дополнения.
+                let complement_only =
+                    Self::complement_only_count(&conn, &conditions, &args, match_expr.as_deref())?;
+                (items, fts_count + complement_only)
+            } else {
+                (items, fts_count)
             }
-            // Точное общее число: FTS-совпадения + совпадения только по LIKE.
-            let like_only = Self::like_only_count(&conn, q, &search, match_expr.as_deref())?;
-            (items, fts_count + like_only)
         } else {
             let total = Self::browse_count(&conn, &search)?;
             let items = Self::browse(&conn, &search, limit)?;
@@ -237,15 +244,15 @@ impl Db {
         Ok(query_scalar(conn, &sql, &args)? as u64)
     }
 
-    /// Совпадения LIKE-фолбэка, которые FTS не нашёл (для точного общего числа).
-    fn like_only_count(
+    /// Совпадения дополнения, которые FTS не нашёл (для точного общего числа).
+    fn complement_only_count(
         conn: &Connection,
-        query: &str,
-        search: &SearchParams,
+        conditions: &str,
+        args: &[SqlValue],
         fts_expr: Option<&str>,
     ) -> Result<u64, AppError> {
-        let (conditions, mut args) = Self::like_conditions(query, search);
         let mut sql = format!("SELECT COUNT(*) FROM users {LOOKUP_JOINS} WHERE {conditions}");
+        let mut args = args.to_vec();
         if let Some(expr) = fts_expr {
             sql.push_str(
                 " AND NOT EXISTS (SELECT 1 FROM users_fts WHERE users_fts.object_guid = users.object_guid AND users_fts MATCH ?)",
@@ -286,51 +293,79 @@ impl Db {
         query(conn, &sql, &args)
     }
 
-    fn like_conditions(raw_query: &str, search: &SearchParams) -> (String, Vec<SqlValue>) {
-        let pattern = format!("%{}%", escape_like(raw_query));
+    /// Условия дополнения к FTS: триграммный индекс для подстрок от 3
+    /// символов (hay в нижнем регистре, phones только цифры) и LIKE для
+    /// того, что триграммам недоступно (1–2 символа, двухзначные хвосты).
+    /// `None` — дополнять нечем.
+    fn complement_conditions(
+        raw_query: &str,
+        search: &SearchParams,
+    ) -> Option<(String, Vec<SqlValue>)> {
+        let text = raw_query.trim().to_lowercase();
         let digits: String = raw_query.chars().filter(|c| c.is_ascii_digit()).collect();
 
-        let mut where_parts = [
-            "users.display_name",
-            "users.email",
-            "departments.name",
-            "orgs.name",
-            "users.title",
-            "locations.name",
-            "users.sam_account_name",
-        ]
-        .iter()
-        .map(|column| format!("{column} LIKE ? ESCAPE '\\'"))
-        .collect::<Vec<_>>();
-        let mut args: Vec<SqlValue> = vec![SqlValue::Text(pattern.clone()); 7];
+        let mut parts: Vec<String> = Vec::new();
+        let mut args: Vec<SqlValue> = Vec::new();
 
-        // Поиск по «хвосту» номера: сравниваем только цифры, игнорируя
-        // форматирование («45-67» найдёт «+7 (495) 123-45-67»).
-        if digits.len() >= 2 {
-            let digit_pattern = format!("%{}%", digits);
+        if text.chars().count() >= 3 {
+            parts.push(
+                "EXISTS (SELECT 1 FROM users_substr                  WHERE users_substr.object_guid = users.object_guid                  AND users_substr MATCH ?)"
+                    .to_string(),
+            );
+            args.push(SqlValue::Text(fts_phrase("hay", &text)));
+        }
+        if digits.len() >= 3 {
+            parts.push(
+                "EXISTS (SELECT 1 FROM users_substr                  WHERE users_substr.object_guid = users.object_guid                  AND users_substr MATCH ?)"
+                    .to_string(),
+            );
+            args.push(SqlValue::Text(fts_phrase("phones", &digits)));
+        }
+        if text.chars().count() < 3 {
+            let pattern = format!("%{}%", escape_like(raw_query));
+            for column in [
+                "users.display_name",
+                "users.email",
+                "departments.name",
+                "orgs.name",
+                "users.title",
+                "locations.name",
+                "users.sam_account_name",
+            ] {
+                parts.push(format!("{column} LIKE ? ESCAPE '\\'"));
+                args.push(SqlValue::Text(pattern.clone()));
+            }
+        }
+        if digits.len() == 2 {
+            // «Хвост» номера: сравниваем только цифры, игнорируя
+            // форматирование («45-67» найдёт «+7 (495) 123-45-67»).
+            let digit_pattern = format!("%{digits}%");
             for column in ["ip_phone", "phone_external", "phone_mobile"] {
-                where_parts.push(format!("({}) LIKE ? ESCAPE '\\'", digits_sql(column)));
+                parts.push(format!("({}) LIKE ? ESCAPE '\\'", digits_sql(column)));
                 args.push(SqlValue::Text(digit_pattern.clone()));
             }
         }
 
-        let mut conditions = format!("({})", where_parts.join(" OR "));
+        if parts.is_empty() {
+            return None;
+        }
+        let mut conditions = format!("({})", parts.join(" OR "));
         push_filters(&mut conditions, &mut args, search);
         push_empty_filter(&mut conditions, search);
-        (conditions, args)
+        Some((conditions, args))
     }
 
-    fn like_search(
+    fn complement_search(
         conn: &Connection,
-        raw_query: &str,
-        search: &SearchParams,
+        conditions: &str,
+        args: &[SqlValue],
         limit: i64,
     ) -> Result<Vec<Employee>, AppError> {
-        let (conditions, mut args) = Self::like_conditions(raw_query, search);
         let mut sql =
             format!("SELECT {EMPLOYEE_COLUMNS} FROM users {LOOKUP_JOINS} WHERE {conditions}");
         sql.push_str(ORDER_NAMES);
         sql.push_str(" LIMIT ?");
+        let mut args = args.to_vec();
         args.push(SqlValue::Int(limit));
         query(conn, &sql, &args)
     }
@@ -538,4 +573,12 @@ fn digits_sql(column: &str) -> String {
     format!(
         "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(users.{column}, ''), ' ', ''), '-', ''), '(', ''), ')', ''), '+', '')"
     )
+}
+
+/// FTS-фраза с фильтром по колонке: `column : "значение"` (кавычки внутри
+/// значения удваиваются). Значение обязано быть преднормализовано так же,
+/// как содержимое индекса (hay — lower, phones — цифры).
+fn fts_phrase(column: &str, value: &str) -> String {
+    let escaped = value.replace('"', "\"\"");
+    format!("{column} : \"{escaped}\"")
 }

@@ -109,12 +109,41 @@ fn searches_with_wrong_keyboard_layout() {
 }
 
 #[test]
-fn substring_match_works_via_like_fallback() {
+fn substring_match_works_via_trigram_index() {
     let db = sample_db();
     // «хгал» — подстрока в середине слова «Бухгалтерия», FTS-префикс её не берёт.
     let found = db
         .search(SearchParams {
             query: Some("хгал".into()),
+            ..Default::default()
+        })
+        .expect("search")
+        .items;
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].object_guid, "g2");
+}
+
+#[test]
+fn trigram_substring_search_is_case_insensitive() {
+    let db = sample_db();
+    // Запрос в верхнем регистре находит строчное значение: hay хранится
+    // в lower, запрос нормализуется так же.
+    let upper = db
+        .search(SearchParams {
+            query: Some("БУХГ".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(upper.total, 1, "верхний регистр находит строчное значение");
+}
+
+#[test]
+fn short_substring_still_found_via_like() {
+    let db = sample_db();
+    // Два символа: триграммам недоступно, работает LIKE-фолбэк.
+    let found = db
+        .search(SearchParams {
+            query: Some("ух".into()),
             ..Default::default()
         })
         .expect("search")

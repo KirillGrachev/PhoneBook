@@ -26,6 +26,14 @@ pub struct VCardInput {
     pub mobile_phone: Option<String>,
     #[serde(default)]
     pub ip_phone: Option<String>,
+    /// Полный (внешний) номер IP-телефонии.
+    #[serde(default)]
+    pub phone_external: Option<String>,
+    /// Режим предприятия (вкладка «КМАруда» не глобальной версии): в QR
+    /// подставляется внешний номер вместо внутреннего — снаружи короткий
+    /// внутренний номер ненабираем.
+    #[serde(default)]
+    pub prefer_external_phone: bool,
     #[serde(default)]
     pub email: Option<String>,
 }
@@ -80,17 +88,8 @@ pub fn generate(contact: &VCardInput) -> String {
         lines.push(format!("TITLE:{}", escape(title)));
     }
 
-    if let Some(ip) = contact
-        .ip_phone
-        .as_deref()
-        .map(str::trim)
-        .filter(|p| !p.is_empty())
-    {
-        lines.push(format!(
-            "TEL;TYPE=WORK,VOICE:{}",
-            escape(&normalize_phone(ip))
-        ));
-    }
+    // Мобильный — первым: телефоны-клиенты (например, Samsung) берут первый
+    // TEL как основной номер контакта; корпоративный остаётся вторым.
     if let Some(mobile) = contact
         .mobile_phone
         .as_deref()
@@ -100,6 +99,22 @@ pub fn generate(contact: &VCardInput) -> String {
         lines.push(format!(
             "TEL;TYPE=CELL:{}",
             escape(&normalize_phone(mobile))
+        ));
+    }
+    // Корпоративный номер: в режиме предприятия — внешний (полный), иначе
+    // внутренний; без основного варианта корпоративный не дублируется.
+    let work_phone = if contact.prefer_external_phone {
+        contact
+            .phone_external
+            .as_deref()
+            .or(contact.ip_phone.as_deref())
+    } else {
+        contact.ip_phone.as_deref()
+    };
+    if let Some(ip) = work_phone.map(str::trim).filter(|p| !p.is_empty()) {
+        lines.push(format!(
+            "TEL;TYPE=WORK,VOICE:{}",
+            escape(&normalize_phone(ip))
         ));
     }
     if let Some(email) = contact
@@ -225,6 +240,11 @@ mod tests {
         assert!(vcard.contains("TITLE:Системный администратор"));
         assert!(vcard.contains("TEL;TYPE=CELL:+79991112233"));
         assert!(vcard.contains("TEL;TYPE=WORK,VOICE:1234"));
+        // Мобильный идёт первым TEL: клиенты телефонов берут первый номер
+        // как основной (кейс Samsung с двумя полями).
+        assert!(
+            vcard.find("TEL;TYPE=CELL").expect("cell") < vcard.find("TEL;TYPE=WORK").expect("work")
+        );
         assert!(vcard.contains("EMAIL;TYPE=INTERNET:ivanov@kmaruda.ru"));
         assert!(vcard.contains("UID:abc-123"));
     }
@@ -285,5 +305,27 @@ mod tests {
         assert!(vcard.contains("FN:Безымянный"));
         assert!(!vcard.contains("ORG:"));
         assert!(!vcard.contains("TEL"));
+    }
+
+    #[test]
+    fn enterprise_mode_prefers_external_phone() {
+        let mut input = input();
+        input.phone_external = Some("+7 (495) 123-45-67".into());
+        input.prefer_external_phone = true;
+        let vcard = generate(&input);
+        assert!(vcard.contains("TEL;TYPE=WORK,VOICE:+74951234567"));
+        assert!(!vcard.contains("TEL;TYPE=WORK,VOICE:1234"));
+        // Мобильный по-прежнему первый TEL.
+        assert!(
+            vcard.find("TEL;TYPE=CELL").expect("cell") < vcard.find("TEL;TYPE=WORK").expect("work")
+        );
+    }
+
+    #[test]
+    fn enterprise_mode_falls_back_to_internal_when_external_empty() {
+        let mut input = input();
+        input.prefer_external_phone = true;
+        let vcard = generate(&input);
+        assert!(vcard.contains("TEL;TYPE=WORK,VOICE:1234"));
     }
 }

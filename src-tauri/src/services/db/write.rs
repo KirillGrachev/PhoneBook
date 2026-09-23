@@ -39,6 +39,11 @@ impl Db {
             let mut insert_seen =
                 tx.prepare("INSERT OR IGNORE INTO seen_guids (object_guid) VALUES (?1)")?;
             let mut delete_fts = tx.prepare("DELETE FROM users_fts WHERE object_guid = ?1")?;
+            let mut delete_substr =
+                tx.prepare("DELETE FROM users_substr WHERE object_guid = ?1")?;
+            let mut insert_substr = tx.prepare(
+                "INSERT INTO users_substr (object_guid, hay, phones) VALUES (?1, ?2, ?3)",
+            )?;
             let mut insert_fts = tx.prepare(
                 "INSERT INTO users_fts (object_guid, display_name, department, company, title, email, tokens)
                  VALUES (?1,?2,?3,?4,?5,?6,?7)",
@@ -89,6 +94,9 @@ impl Db {
                 ])?;
                 insert_seen.execute(rusqlite::params![user.object_guid])?;
                 delete_fts.execute(rusqlite::params![user.object_guid])?;
+                delete_substr.execute(rusqlite::params![user.object_guid])?;
+                let (hay, phones) = substr_columns(user);
+                insert_substr.execute(rusqlite::params![user.object_guid, hay, phones])?;
                 insert_fts.execute(rusqlite::params![
                     user.object_guid,
                     user.display_name,
@@ -108,6 +116,10 @@ impl Db {
             // Чистим осиротевшие строки FTS.
             tx.execute(
                 "DELETE FROM users_fts WHERE object_guid NOT IN (SELECT object_guid FROM users)",
+                [],
+            )?;
+            tx.execute(
+                "DELETE FROM users_substr WHERE object_guid NOT IN (SELECT object_guid FROM users)",
                 [],
             )?;
             // Удаляем значения справочников, на которые больше никто не
@@ -175,4 +187,38 @@ impl Db {
         }
         Ok(out)
     }
+}
+
+/// Колонки триграммного индекса: hay — текстовые поля в нижнем регистре
+/// (Unicode-фолдинг на стороне Rust), phones — только цифры телефонов,
+/// чтобы хвосты находились независимо от форматирования.
+fn substr_columns(user: &UserRecord) -> (String, String) {
+    let hay = [
+        user.display_name.as_str(),
+        user.email.as_deref().unwrap_or_default(),
+        user.department.as_deref().unwrap_or_default(),
+        user.company.as_deref().unwrap_or_default(),
+        user.office.as_deref().unwrap_or_default(),
+        user.title.as_deref().unwrap_or_default(),
+        user.sam_account_name.as_deref().unwrap_or_default(),
+    ]
+    .join(" ")
+    .to_lowercase();
+    let phones = [
+        user.ip_phone.as_deref(),
+        user.phone_external.as_deref(),
+        user.phone_mobile.as_deref(),
+    ]
+    .iter()
+    .flatten()
+    .map(|phone| {
+        phone
+            .chars()
+            .filter(|c| c.is_ascii_digit())
+            .collect::<String>()
+    })
+    .filter(|digits| !digits.is_empty())
+    .collect::<Vec<_>>()
+    .join(" ");
+    (hay, phones)
 }
