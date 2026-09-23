@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+coverage/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Env & logs
+.env
+.env.*
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Verification scratch (не часть поставки)
+cargo_check.log

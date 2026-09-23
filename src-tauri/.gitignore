@@ -1,0 +1,4 @@
+# Артефакты Cargo
+/target/
+# Генерируемые схемы capabilities
+/gen/schemas

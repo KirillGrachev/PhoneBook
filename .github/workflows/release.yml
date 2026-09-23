@@ -1,0 +1,45 @@
+name: Release
+
+# Релиз собирается при публикации тега вида v0.2.0
+# (тег должен совпадать с версией в src-tauri/tauri.conf.json)
+# либо вручную через "Run workflow".
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows installers (MSI / NSIS)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Собирает .msi и .nsis-установщик и прикрепляет их к GitHub Release (draft).
+      # beforeBuildCommand из tauri.conf.json (npm run build) tauri-action выполняет сам.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'KMAruda Phonebook v__VERSION__'
+          releaseBody: 'Корпоративный телефонный справочник (Active Directory). Установщики для Windows: MSI и NSIS. WebView2 устанавливается автоматически (bootstrapper встроен в инсталлятор).'
+          releaseDraft: true
+          prerelease: false
+          args: --bundles msi,nsis

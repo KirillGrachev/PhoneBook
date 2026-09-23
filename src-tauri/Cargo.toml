@@ -1,0 +1,75 @@
+[package]
+name = "kmaruda-phonebook"
+version = "0.2.0"
+description = "Корпоративный телефонный справочник КМАруда (Active Directory)"
+authors = ["Kirill Grachev"]
+repository = "https://github.com/KirillGrachev/kmaruda-phonebook"
+edition = "2021"
+rust-version = "1.82"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.2" }
+
+[dependencies]
+tauri = { version = "2.11.2", features = ["tray-icon"] }
+tauri-plugin-window-state = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-single-instance = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+
+# Локальный кэш контактов и полнотекстовый поиск (FTS5 входит в сборку).
+# Фича `serialize` нужна для шифрования at-rest: рабочая база живёт в
+# памяти, на диск пишется только зашифрованный образ (см. db/encryption.rs).
+rusqlite = { version = "0.31", features = ["bundled", "serialize"] }
+# Шифрование кэша: AES-256-GCM (pure Rust, без OpenSSL/Perl/NASM).
+aes-gcm = "0.10"
+# Нативный LDAP-клиент: больше не нужны PowerShell и модуль RSAT.
+ldap3 = "0.11"
+base64 = "0.22"
+# Криптостойкий генератор случайных чисел (BCryptGenRandom на Windows) —
+# ключ и nonce шифрования локальной базы.
+getrandom = "0.2"
+
+# Пароли bind-учёток хранятся в системном хранилище секретов,
+# а не в config.json. Набор фич зависит от платформы:
+# Windows → Credential Manager, macOS → Keychain, Linux → kernel keyutils.
+keyring = { version = "3", default-features = false }
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[target.'cfg(windows)'.dependencies]
+keyring = { version = "3", default-features = false, features = ["windows-native"] }
+# Интегрированная аутентификация (Kerberos/NTLM текущей сессии Windows) через SSPI.
+ldap3 = { version = "0.11", features = ["gssapi"] }
+webview2-com = "0.38.2"
+windows = { version = "0.61.3", features = ["Win32_UI_Controls"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3", default-features = false, features = ["apple-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", default-features = false, features = ["linux-native"] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+
+# Ограничение потребления памяти при локальной разработке/CI:
+# проверочные сборки не нуждаются в отладочной информации.
+[profile.dev]
+debug = 0
+
+[profile.dev.package."*"]
+debug = 0
