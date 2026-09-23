@@ -168,6 +168,13 @@ export interface SearchParamsDto {
   hideEmpty?: boolean | null;
 }
 
+/** Превью дубликатов учётных записей в кэше (camelCase-контракт бэкенда). */
+export interface DuplicatesPreviewDto {
+  groups: number;
+  removable: number;
+  samples: string[];
+}
+
 /** Данные контакта для генерации vCard на бэкенде. */
 export interface VCardInputDto {
   id?: string | null;

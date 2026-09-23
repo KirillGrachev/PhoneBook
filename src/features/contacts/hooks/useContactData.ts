@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { vcardApi } from '@/api/directory';
+import { devLog } from '@/lib/devlog';
 import { generateVcard } from '@/lib/vcard';
 import { getContactsService, isMockMode } from '@/services/ContactsService';
 import { useAppStore } from '@/store/useAppStore';
@@ -42,6 +43,13 @@ export function useVcard(contact: Contact | null | undefined): string {
       setVcard(fallback);
       return;
     }
+
+    devLog('vcard', {
+      mode: activeTab,
+      preferExternalPhone,
+      ipPhone: contact.ipPhone ?? null,
+      phoneExternal: contact.fullIpPhone ?? null,
+    });
 
     let cancelled = false;
     vcardApi

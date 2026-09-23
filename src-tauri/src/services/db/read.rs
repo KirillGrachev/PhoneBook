@@ -46,14 +46,25 @@ impl Db {
             return Ok(SearchPage { items, total });
         }
 
+        // Запрос санитизируется до букв/цифр/пробелов: пунктуация (запятая,
+        // точки, скобки) не попадает ни в триграммные фразы, ни в LIKE —
+        // в hay её нет, а раскладочные карты лишь путают (`,` ⇄ `б`).
+        // Пустой после санитизации запрос равносилен просмотру без поиска.
         let query = search
             .query
             .as_deref()
-            .map(str::trim)
+            .map(|q| {
+                q.chars()
+                    .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+                    .collect::<String>()
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
             .filter(|q| !q.is_empty());
 
         let (items, total) = if let Some(q) = query {
-            let match_expr = crate::services::tokens::build_fts_query(q);
+            let match_expr = crate::services::tokens::build_fts_query(&q);
             let mut fts_count = 0u64;
             let mut items = Vec::new();
             if let Some(expr) = match_expr.as_deref() {
@@ -65,7 +76,7 @@ impl Db {
             // середины слова («бухг» → «Бухгалтерия») и телефоны в любом
             // форматировании. Подстроки от 3 символов идут через триграммный
             // индекс `users_substr` без скана таблицы; короче — LIKE.
-            if let Some((conditions, args)) = Self::complement_conditions(q, &search) {
+            if let Some((conditions, args)) = Self::complement_conditions(&q, &search) {
                 if (items.len() as i64) < limit {
                     for employee in Self::complement_search(&conn, &conditions, &args, limit)? {
                         if (items.len() as i64) >= limit {

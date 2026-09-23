@@ -54,7 +54,7 @@ export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActio
           <button
             type="button"
             onClick={onWrite}
-            className="flex flex-1 items-center justify-center gap-2 h-[40px] rounded-[10px] bg-primary hover:bg-primary-hover text-white transition-all duration-300 active:translate-y-[1px] cursor-pointer shadow-sm min-w-0 px-2 no-ring"
+            className="flex flex-1 items-center justify-center gap-2 h-[40px] rounded-[10px] bg-primary hover:bg-primary-hover text-white transition-all duration-300 cursor-pointer shadow-sm min-w-0 px-2 no-ring"
           >
             <Mail className="w-[16px] h-[16px] shrink-0" aria-hidden />
             <span className="text-[14px] font-medium leading-none select-none truncate">{t('write')}</span>
@@ -72,7 +72,7 @@ export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActio
                 devLog('trueconf', { trueconfId: contact.trueconfId, url });
                 onActionClick('trueconf', url);
               }}
-              className="flex flex-1 items-center justify-center gap-2 h-[40px] rounded-[10px] bg-[#1a78c2] hover:bg-[#135d96] text-white transition-all duration-300 active:translate-y-[1px] cursor-pointer shadow-sm min-w-0 px-2 no-ring"
+              className="flex flex-1 items-center justify-center gap-2 h-[40px] rounded-[10px] bg-[#1a78c2] hover:bg-[#135d96] text-white transition-all duration-300 cursor-pointer shadow-sm min-w-0 px-2 no-ring"
             >
               <MessageCircle className="w-[16px] h-[16px] shrink-0" aria-hidden />
               <span className="text-[14px] font-medium leading-none select-none truncate">{t('trueconf')}</span>
@@ -82,7 +82,7 @@ export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActio
         <button
           type="button"
           onClick={handleToggleSave}
-          className={`flex w-full items-center justify-center gap-2 h-[40px] rounded-[10px] transition-all duration-300 active:translate-y-[1px] shadow-sm no-ring cursor-pointer ${
+          className={`flex w-full items-center justify-center gap-2 h-[40px] rounded-[10px] transition-all duration-300 shadow-sm no-ring cursor-pointer ${
             isSaved
               ? 'bg-primary/15 text-primary hover:bg-primary/25 font-medium border-transparent'
               : 'bg-input border border-border text-foreground hover:bg-input-hover active:bg-input-hover'

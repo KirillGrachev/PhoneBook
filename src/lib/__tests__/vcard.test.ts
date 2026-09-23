@@ -44,6 +44,12 @@ describe('vcard (клиентский генератор)', () => {
     expect(vcard).not.toContain('TEL;TYPE=WORK,VOICE:1234');
   });
 
+  it('в режиме предприятия без внешнего номера корпоративный TEL отсутствует', () => {
+    const vcard = generateVcard({ ...contact, fullIpPhone: undefined }, { preferExternalPhone: true });
+    expect(vcard).not.toContain('TEL;TYPE=WORK');
+    expect(vcard).toContain('TEL;TYPE=CELL:+79991112233');
+  });
+
   it('экранирует спецсимволы', () => {
     expect(escapeVcard('a\\b;c,d')).toBe('a\\\\b\\;c\\,d');
     expect(escapeVcard('line1\nline2')).toBe('line1\\nline2');

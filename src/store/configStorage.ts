@@ -129,6 +129,11 @@ export const configStorage: StateStorage = {
           emailOverrides: config.emailOverrides,
           ldapConfigs: config.ldapConfigs,
           savedContactIds: config.savedContactIds,
+          // Группы организаций и отметка вкладки предприятия обязаны
+          // переживать перезапуск: без них гидрация затирала импортированные
+          // и созданные группы дефолтным пустым значением.
+          orgGroups: config.orgGroups,
+          enterpriseGroupId: config.enterpriseGroupId,
         },
         version: 0,
       });

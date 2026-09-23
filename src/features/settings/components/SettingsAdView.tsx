@@ -10,15 +10,16 @@ import {
   ShieldAlert,
   Trash2,
   TriangleAlert,
+  UsersRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { ApiError, isTauri } from '@/api/backend';
-import { configApi, syncApi } from '@/api/directory';
+import { configApi, contactsApi, syncApi } from '@/api/directory';
 import { devLog } from '@/lib/devlog';
-import type { LdapOrgConfigDto, LdapOrgInput } from '@/api/contracts';
+import type { DuplicatesPreviewDto, LdapOrgConfigDto, LdapOrgInput } from '@/api/contracts';
 import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
 import { TextField } from '@/components/ui/TextField';
@@ -67,7 +68,7 @@ function primaryButton(disabled: boolean, extra?: string): string {
     'flex items-center justify-center gap-2 rounded-[10px] text-[13px] font-bold transition-colors',
     disabled
       ? 'bg-input text-muted-foreground border border-border cursor-not-allowed'
-      : 'bg-primary text-white hover:bg-primary-hover cursor-pointer active:translate-y-[1px]',
+      : 'bg-primary text-white hover:bg-primary-hover cursor-pointer',
     extra,
   );
 }
@@ -98,6 +99,8 @@ export function SettingsAdView() {
   const [passwordDrafts, setPasswordDrafts] = useState<Record<string, string>>({});
   const [testingOrg, setTestingOrg] = useState<number | null>(null);
   const [removingOrg, setRemovingOrg] = useState<number | null>(null);
+  const [dupBusy, setDupBusy] = useState<'preview' | 'apply' | null>(null);
+  const [dupPreview, setDupPreview] = useState<DuplicatesPreviewDto | null>(null);
 
   const desktop = isTauri();
 
@@ -206,6 +209,42 @@ export function SettingsAdView() {
       void queryClient.invalidateQueries({ queryKey: ['sync-status'] });
     } catch (error) {
       toast.error(translateBackendError(error, t), { id: 'sync-manual' });
+    }
+  };
+
+  /** Превью дубликатов: пусто — тост, иначе подтверждающий диалог. */
+  const handleDuplicatesCheck = async () => {
+    setDupBusy('preview');
+    try {
+      const preview = await contactsApi.previewDuplicates();
+      devLog('dedup', { preview });
+      if (preview.groups === 0) {
+        toast.success(t('settings.ad.duplicatesNone'));
+      } else {
+        setDupPreview(preview);
+      }
+    } catch (error) {
+      toast.error(translateBackendError(error, t), { id: 'dedup-error' });
+    } finally {
+      setDupBusy(null);
+    }
+  };
+
+  /** Уборка дубликатов с инвалидацией выдач справочника. */
+  const handleDuplicatesApply = async () => {
+    setDupBusy('apply');
+    try {
+      const removed = await contactsApi.deduplicate();
+      devLog('dedup', { removed });
+      toast.success(t('settings.ad.duplicatesDone', { count: removed }));
+      setDupPreview(null);
+      for (const key of ['contacts', 'contact', 'contacts-count', 'organizations'] as const) {
+        void queryClient.invalidateQueries({ queryKey: [key] });
+      }
+    } catch (error) {
+      toast.error(translateBackendError(error, t), { id: 'dedup-error' });
+    } finally {
+      setDupBusy(null);
     }
   };
 
@@ -484,6 +523,67 @@ export function SettingsAdView() {
                 {syncRunning ? t('sync.running') : t('sync.now')}
               </button>
             </section>
+
+            {/* Уборка дубликатов учёток */}
+            <section className="flex flex-col gap-3 p-4 border border-border bg-surface rounded-[16px] shadow-sm">
+              <h3 className="text-[13px] font-bold text-muted-foreground uppercase">
+                {t('settings.ad.duplicatesTitle')}
+              </h3>
+              <p className="text-[13px] text-muted-foreground leading-relaxed">{t('settings.ad.duplicatesDesc')}</p>
+              <button
+                type="button"
+                onClick={() => void handleDuplicatesCheck()}
+                disabled={dupBusy !== null || testMode}
+                className={primaryButton(dupBusy !== null || testMode, 'w-full py-2.5 text-[14px]')}
+              >
+                {dupBusy === 'preview' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                ) : (
+                  <UsersRound className="w-4 h-4" aria-hidden />
+                )}
+                {t('settings.ad.duplicatesCheck')}
+              </button>
+            </section>
+
+            {dupPreview && (
+              <div
+                className="fixed inset-0 top-[32px] z-[100] flex items-center justify-center p-4"
+                role="alertdialog"
+                aria-modal="true"
+              >
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDupPreview(null)} />
+                <div className="relative bg-surface w-full max-w-[420px] rounded-[20px] shadow-2xl border border-border p-6 flex flex-col gap-4 z-10">
+                  <h3 className="text-[18px] font-bold text-foreground m-0">
+                    {t('settings.ad.duplicatesConfirmTitle')}
+                  </h3>
+                  <p className="text-[14px] text-muted-foreground leading-relaxed m-0">
+                    {t('settings.ad.duplicatesConfirmMsg', {
+                      groups: dupPreview.groups,
+                      records: dupPreview.removable,
+                      samples: dupPreview.samples.join(', '),
+                    })}
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDupPreview(null)}
+                      className="px-4 py-2 rounded-[12px] text-[14px] font-bold text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors outline-none cursor-pointer"
+                    >
+                      {t('settings.orgGroupsCancel')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDuplicatesApply()}
+                      disabled={dupBusy !== null}
+                      className="flex items-center gap-2 px-4 py-2 rounded-[12px] bg-primary text-white text-[14px] font-bold hover:bg-primary-hover transition-colors outline-none cursor-pointer disabled:opacity-60"
+                    >
+                      {dupBusy === 'apply' && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
+                      {t('settings.ad.duplicatesApply')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 

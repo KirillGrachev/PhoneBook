@@ -10,6 +10,7 @@ import type {
   AppConfigDto,
   SearchPageDto,
   ConnectionTestDto,
+  DuplicatesPreviewDto,
   EmployeeDto,
   LdapOrgInput,
   OrgGroupsFileDto,
@@ -40,6 +41,13 @@ export const contactsApi = {
   listOrganizations: (): Promise<string[]> => invokeCommand<string[]>('list_organizations'),
 
   count: (): Promise<number> => invokeCommand<number>('count_contacts'),
+
+  /** Превью дубликатов учёток: кластеры, число убираемых записей, примеры. */
+  previewDuplicates: (): Promise<DuplicatesPreviewDto> =>
+    invokeCommand<DuplicatesPreviewDto>('preview_duplicate_contacts'),
+
+  /** Уборка дубликатов: возвращает число удалённых записей. */
+  deduplicate: (): Promise<number> => invokeCommand<number>('deduplicate_contacts'),
 };
 
 /** Конфигурация: чтение/сохранение, секрет, проверка подключения. */

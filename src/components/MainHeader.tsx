@@ -74,7 +74,7 @@ export const MainHeader = memo(function MainHeader({
             <button
               type="button"
               onClick={onSettingsClick}
-              className="text-muted-foreground hover:text-foreground transition-all duration-300 active:translate-y-[1px] p-2 rounded-full hover:bg-surface-hover outline-none"
+              className="text-muted-foreground hover:text-foreground transition-all duration-300 p-2 rounded-full hover:bg-surface-hover outline-none"
               aria-label={t('settings')}
             >
               <Settings className="w-[20px] h-[20px]" aria-hidden />
@@ -105,7 +105,7 @@ export const MainHeader = memo(function MainHeader({
               <button
                 type="button"
                 onClick={onSettingsClick}
-                className="text-muted-foreground hover:text-foreground transition-all duration-300 active:translate-y-[1px] p-2 rounded-full hover:bg-surface-hover outline-none cursor-pointer"
+                className="text-muted-foreground hover:text-foreground transition-all duration-300 p-2 rounded-full hover:bg-surface-hover outline-none cursor-pointer"
                 aria-label={t('settings')}
               >
                 <Settings className="w-[18px] h-[18px]" aria-hidden />

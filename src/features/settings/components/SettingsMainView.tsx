@@ -20,7 +20,7 @@ const THEME_OPTIONS: { value: ThemeName; icon: typeof Sun; labelKey: string }[] 
 ];
 
 const NAV_ITEM_CLASS =
-  'group w-full flex items-center justify-between border border-border bg-surface hover:bg-surface-hover active:translate-y-[1px] outline-none px-4 py-2.5 rounded-[16px] transition-all duration-300 shadow-sm cursor-pointer';
+  'group w-full flex items-center justify-between border border-border bg-surface hover:bg-surface-hover outline-none px-4 py-2.5 rounded-[16px] transition-all duration-300 shadow-sm cursor-pointer';
 
 /** Основной раздел настроек: оформление, язык, анимации, параметры поиска. */
 export function SettingsMainView({ onNavigate }: SettingsMainViewProps) {

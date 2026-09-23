@@ -9,7 +9,7 @@
 use tauri::State;
 
 use crate::error::AppError;
-use crate::services::db::{Employee, SearchPage, SearchParams};
+use crate::services::db::{DuplicatesPreview, Employee, SearchPage, SearchParams};
 use crate::state::AppState;
 
 use super::run_blocking;
@@ -61,4 +61,21 @@ pub async fn list_organizations(state: State<'_, AppState>) -> Result<Vec<String
 pub async fn count_contacts(state: State<'_, AppState>) -> Result<u64, AppError> {
     let db = state.db.clone();
     run_blocking(move || db.count()).await
+}
+
+/// Превью дубликатов учётных записей: сколько кластеров и записей уберёт
+/// уборка (правило совпадения — в [`crate::services::db::dedup`]).
+#[tauri::command]
+pub async fn preview_duplicate_contacts(
+    state: State<'_, AppState>,
+) -> Result<DuplicatesPreview, AppError> {
+    let db = state.db.clone();
+    run_blocking(move || db.duplicates_preview()).await
+}
+
+/// Уборка дубликатов: возвращает число удалённых записей.
+#[tauri::command]
+pub async fn deduplicate_contacts(state: State<'_, AppState>) -> Result<usize, AppError> {
+    let db = state.db.clone();
+    run_blocking(move || db.deduplicate()).await
 }

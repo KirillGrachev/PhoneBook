@@ -7,9 +7,17 @@ import App from '@/App';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ApiError } from '@/api/backend';
 import i18n from '@/lib/i18n';
+import { flushConfigSave } from '@/store/configStorage';
 import { useAppStore } from '@/store/useAppStore';
 
 import '@/index.css';
+
+// Дебаунс-сохранение конфигурации (400 мс) должно успеть при закрытии:
+// сбрасываем отложенный хвост на beforeunload (best-effort: IPC асинхронный,
+// но закрытие пользовательского окна обычно переживает эту гонку).
+window.addEventListener('beforeunload', () => {
+  flushConfigSave();
+});
 
 // Язык из сохранённой конфигурации — ещё до первого рендера.
 void i18n.changeLanguage(useAppStore.getState().language);

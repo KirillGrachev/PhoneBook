@@ -101,10 +101,7 @@ export function SearchInput({ value, onChange, placeholder, className }: SearchI
                 aria-label={t('searchTooltip')}
                 tabIndex={-1}
               >
-                <HelpCircle
-                  className="w-[22px] h-[22px] transition-transform duration-300 active:translate-y-[1px]"
-                  aria-hidden
-                />
+                <HelpCircle className="w-[22px] h-[22px] transition-transform duration-300" aria-hidden />
               </button>
             </Tooltip.Trigger>
             <Tooltip.Portal>

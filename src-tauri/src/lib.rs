@@ -106,6 +106,8 @@ pub fn run() {
             commands::contacts::get_contact,
             commands::contacts::list_organizations,
             commands::contacts::count_contacts,
+            commands::contacts::preview_duplicate_contacts,
+            commands::contacts::deduplicate_contacts,
             commands::sync::start_sync,
             commands::sync::get_sync_status,
             commands::vcard::generate_vcard,

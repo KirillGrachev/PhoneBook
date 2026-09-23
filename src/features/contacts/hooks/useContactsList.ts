@@ -93,6 +93,16 @@ export function useContactsList(
     }
   }, [isError, error, t]);
 
+  // Видимый признак идущего поиска: пока debounced-запрос выполняется,
+  // держим loading-тост снизу (тот же слот, что и прогресс синхронизации).
+  useEffect(() => {
+    if (isFetching && debouncedSearch.trim() !== '') {
+      toast.loading(t('searchInProgress'), { id: 'search-progress-toast', duration: Infinity });
+    } else {
+      toast.dismiss('search-progress-toast');
+    }
+  }, [isFetching, debouncedSearch, t]);
+
   const contacts = page?.contacts ?? [];
   const total = page?.total ?? 0;
 

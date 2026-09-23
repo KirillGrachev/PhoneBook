@@ -53,14 +53,14 @@ export function ActionConfirmModal({ isOpen, type, fullName, email, onConfirm, o
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="px-5 py-3 rounded-[12px] text-[15px] font-bold text-foreground/70 hover:bg-input transition-all duration-300 active:translate-y-[1px] border border-border bg-surface cursor-pointer"
+                  className="px-5 py-3 rounded-[12px] text-[15px] font-bold text-foreground/70 hover:bg-input transition-all duration-300 border border-border bg-surface cursor-pointer"
                 >
                   {t('action.cancelBtn')}
                 </button>
                 <button
                   type="button"
                   onClick={onConfirm}
-                  className="px-5 py-3 rounded-[12px] text-[15px] font-bold text-white bg-primary hover:bg-primary-hover transition-all duration-300 active:translate-y-[1px] cursor-pointer"
+                  className="px-5 py-3 rounded-[12px] text-[15px] font-bold text-white bg-primary hover:bg-primary-hover transition-all duration-300 cursor-pointer"
                 >
                   {t('action.goBtn')}
                 </button>

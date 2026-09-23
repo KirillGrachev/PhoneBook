@@ -10,7 +10,7 @@ import { collectGroupedOrgs } from '@/lib/orgGroups';
 import { cn } from '@/lib/utils';
 
 const filterButtonVariants = cva(
-  'w-[52px] h-[52px] flex items-center justify-center rounded-[16px] transition-all duration-300 ease-in-out border border-transparent outline-none relative cursor-pointer active:translate-y-[1px]',
+  'w-[52px] h-[52px] flex items-center justify-center rounded-[16px] transition-all duration-300 ease-in-out border border-transparent outline-none relative cursor-pointer',
   {
     variants: {
       active: {

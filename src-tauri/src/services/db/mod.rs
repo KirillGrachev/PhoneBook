@@ -56,6 +56,7 @@ use tracing::warn;
 
 use crate::error::AppError;
 
+mod dedup;
 mod encryption;
 mod lookups;
 mod model;
@@ -66,6 +67,7 @@ mod write;
 #[cfg(test)]
 mod tests;
 
+pub use dedup::DuplicatesPreview;
 pub use model::{Employee, SearchPage, SearchParams, UserRecord};
 
 pub struct Db {

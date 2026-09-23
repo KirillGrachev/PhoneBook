@@ -101,13 +101,12 @@ pub fn generate(contact: &VCardInput) -> String {
             escape(&normalize_phone(mobile))
         ));
     }
-    // Корпоративный номер: в режиме предприятия — внешний (полный), иначе
-    // внутренний; без основного варианта корпоративный не дублируется.
+    // Корпоративный номер: в режиме предприятия (вкладка «КМАруда» не
+    // глобальной версии) — ТОЛЬКО внешний (полный): внутренний короткий
+    // номер снаружи ненабираем, и в QR ему в этом режиме места нет, даже
+    // как фолбэк. В остальных режимах — внутренний, как обычно.
     let work_phone = if contact.prefer_external_phone {
-        contact
-            .phone_external
-            .as_deref()
-            .or(contact.ip_phone.as_deref())
+        contact.phone_external.as_deref()
     } else {
         contact.ip_phone.as_deref()
     };
@@ -322,10 +321,13 @@ mod tests {
     }
 
     #[test]
-    fn enterprise_mode_falls_back_to_internal_when_external_empty() {
+    fn enterprise_mode_never_exposes_internal_phone() {
+        // Внешнего номера нет — корпоративный TEL отсутствует вовсе:
+        // внутренний в режиме предприятия в QR не подставляется.
         let mut input = input();
         input.prefer_external_phone = true;
         let vcard = generate(&input);
-        assert!(vcard.contains("TEL;TYPE=WORK,VOICE:1234"));
+        assert!(!vcard.contains("TEL;TYPE=WORK"));
+        assert!(vcard.contains("TEL;TYPE=CELL:+79991112233"));
     }
 }

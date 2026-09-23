@@ -357,7 +357,7 @@ export function SettingsGroupsView() {
             <button
               type="button"
               onClick={openCreate}
-              className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-[16px] border border-border bg-surface hover:bg-surface-hover active:translate-y-[1px] text-[14px] font-bold text-foreground shadow-sm transition-all outline-none cursor-pointer"
+              className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-[16px] border border-border bg-surface hover:bg-surface-hover text-[14px] font-bold text-foreground shadow-sm transition-all outline-none cursor-pointer"
             >
               <Plus className="w-4 h-4 text-primary" aria-hidden />
               {t('settings.orgGroupsCreate')}
@@ -367,7 +367,7 @@ export function SettingsGroupsView() {
               onClick={handleExport}
               disabled={shareBusy !== null}
               title={t('settings.orgGroupsExport')}
-              className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[16px] border border-border bg-surface hover:bg-surface-hover active:translate-y-[1px] text-[13px] font-bold text-muted-foreground hover:text-foreground shadow-sm transition-all outline-none cursor-pointer disabled:opacity-60"
+              className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[16px] border border-border bg-surface hover:bg-surface-hover text-[13px] font-bold text-muted-foreground hover:text-foreground shadow-sm transition-all outline-none cursor-pointer disabled:opacity-60"
             >
               <Download className="w-4 h-4" aria-hidden />
               {t('settings.orgGroupsExport')}
@@ -377,7 +377,7 @@ export function SettingsGroupsView() {
               onClick={() => fileInputRef.current?.click()}
               disabled={shareBusy !== null}
               title={t('settings.orgGroupsImport')}
-              className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[16px] border border-border bg-surface hover:bg-surface-hover active:translate-y-[1px] text-[13px] font-bold text-muted-foreground hover:text-foreground shadow-sm transition-all outline-none cursor-pointer disabled:opacity-60"
+              className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[16px] border border-border bg-surface hover:bg-surface-hover text-[13px] font-bold text-muted-foreground hover:text-foreground shadow-sm transition-all outline-none cursor-pointer disabled:opacity-60"
             >
               <Upload className="w-4 h-4" aria-hidden />
               {t('settings.orgGroupsImport')}

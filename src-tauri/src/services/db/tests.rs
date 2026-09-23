@@ -301,17 +301,27 @@ fn organizations_are_distinct_and_sorted() {
 }
 
 #[test]
-fn like_specials_are_escaped() {
+fn like_wildcards_do_not_leak_into_pattern() {
     let db = sample_db();
-    // «%» не должен матчить всё подряд.
-    let found = db
+    // Символы LIKE/FTS в запросе игнорируются (санитизация), а не работают
+    // как wildcards: одиночный «%» равносилен пустому запросу (просмотру).
+    let wildcard = db
         .search(SearchParams {
             query: Some("%".into()),
             ..Default::default()
         })
-        .expect("search")
-        .items;
-    assert!(found.is_empty());
+        .expect("search");
+    let browse = db.search(SearchParams::default()).expect("browse");
+    assert_eq!(wildcard.total, browse.total);
+
+    // Пунктуация внутри слова не мешает поиску: «Иван_ов» ищет как «Иванов».
+    let underscore = db
+        .search(SearchParams {
+            query: Some("Иван_ов".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert!(underscore.total >= 1);
 }
 
 #[test]
@@ -737,4 +747,63 @@ fn schema_version_mismatch_recreates_cache() {
         .query_row("SELECT COUNT(*) FROM sources", [], |row| row.get(0))
         .expect("count");
     assert_eq!(sources, 1, "совпадение версии — no-op");
+}
+
+#[test]
+fn punctuation_in_query_does_not_break_search() {
+    let db = sample_db();
+    // Запятая и пунктуация санитизируются: «Смирнов, Иван» ищет то же,
+    // что «Смирнов Иван», а не превращается в триграммную фразу с запятой.
+    let with_comma = db
+        .search(SearchParams {
+            query: Some("Иванов, Иван".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    let plain = db
+        .search(SearchParams {
+            query: Some("Иванов Иван".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(with_comma.total, plain.total);
+    assert!(with_comma.total >= 1);
+}
+
+#[test]
+fn punctuation_only_query_falls_back_to_browse() {
+    let db = sample_db();
+    // Одна запятая — не запрос: выдача равна просмотру без поиска.
+    let comma = db
+        .search(SearchParams {
+            query: Some(",".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    let browse = db.search(SearchParams::default()).expect("browse");
+    assert_eq!(comma.total, browse.total);
+}
+
+#[test]
+fn layout_variants_include_punctuation_mapping() {
+    let db = sample_db();
+    // `,j,f` на русской раскладке — это «боба»: раскладочный вариант
+    // строится до отбрасывания пунктуации, запятая воспринимается как «б».
+    let expr = crate::services::tokens::build_fts_query(",j,f").expect("expr");
+    assert!(expr.contains("боба"), "вариант с запятой как «б»: {expr}");
+
+    // Одиночная запятая равносильна поиску на «б».
+    let comma = db
+        .search(SearchParams {
+            query: Some(",".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    let bee = db
+        .search(SearchParams {
+            query: Some("б".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(comma.total, bee.total);
 }

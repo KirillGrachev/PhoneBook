@@ -111,9 +111,9 @@ export function generateVcard(contact: Contact, options: VcardOptions = {}): str
   if (contact.mobilePhone?.trim()) {
     lines.push(`TEL;TYPE=CELL:${escapeVcard(normalizePhone(contact.mobilePhone))}`);
   }
-  const workPhone = options.preferExternalPhone
-    ? contact.fullIpPhone?.trim() || contact.ipPhone?.trim()
-    : contact.ipPhone?.trim();
+  // Режим предприятия: ТОЛЬКО внешний номер, внутренний не подставляется
+  // даже как фолбэк (короткий номер снаружи ненабираем).
+  const workPhone = options.preferExternalPhone ? contact.fullIpPhone?.trim() : contact.ipPhone?.trim();
   if (workPhone) {
     lines.push(`TEL;TYPE=WORK,VOICE:${escapeVcard(normalizePhone(workPhone))}`);
   }
