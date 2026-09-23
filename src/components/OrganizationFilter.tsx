@@ -129,9 +129,18 @@ export function OrganizationFilter({
                       className={itemClass(selectedGroupId === group.id)}
                       onClick={() => onSelectGroup(selectedGroupId === group.id ? null : group.id)}
                     >
-                      <span className="flex items-center gap-2 truncate flex-1 pr-2 min-w-0">
-                        <Layers className="w-[13px] h-[13px] shrink-0" aria-hidden />
-                        <span className="truncate">{group.name}</span>
+                      {/* Состав группы виден прямо в пункте: в глобальном
+                          фильтре группа заменяет поглощённые организации,
+                          и без этой строки их «исчезновение» из секции
+                          организаций выглядит как несвежий список. */}
+                      <span className="flex flex-col gap-0.5 flex-1 pr-2 min-w-0">
+                        <span className="flex items-center gap-2 min-w-0">
+                          <Layers className="w-[13px] h-[13px] shrink-0" aria-hidden />
+                          <span className="truncate">{group.name}</span>
+                        </span>
+                        <span className="truncate pl-[21px] text-[11px] font-normal text-muted-foreground">
+                          {group.orgs.join(', ')}
+                        </span>
                       </span>
                       {selectedGroupId === group.id && <Check className="w-[14px] h-[14px] shrink-0" aria-hidden />}
                     </button>

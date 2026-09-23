@@ -350,7 +350,7 @@ export function SettingsGroupsView() {
               <span className="truncate flex-1 min-w-0" title={exportedPath}>
                 {exportedPath}
               </span>
-              <CopyButton text={exportedPath} className="shrink-0" />
+              <CopyButton text={exportedPath} variant="ghost" className="w-7 h-7" iconClassName="w-3.5 h-3.5" />
             </div>
           )}
           <div className="flex gap-2">

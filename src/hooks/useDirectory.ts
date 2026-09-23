@@ -10,7 +10,11 @@ export function useOrganizations() {
   return useQuery({
     queryKey: ['organizations', testMode],
     queryFn: () => getContactsService().listOrganizations(),
-    staleTime: 5 * 60_000,
+    // Списки организаций должны быть свежими на каждом входе в экран
+    // (фильтр и редактор групп читают один кэш): дешёвый DISTINCT-запрос
+    // лучше ощущения «где-то неактуальный список».
+    staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 }
 
