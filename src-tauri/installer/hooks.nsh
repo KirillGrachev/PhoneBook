@@ -12,6 +12,9 @@
   ; Вместо стоковой строки футера «Nullsoft Install System v3.11» —
   ; наш нейминг: футер страниц установщика показывает продукт, а не NSIS.
   BrandingText "KMAruda Phonebook · (c) КМАруда, 2026"
+  ; Компания в version-info файла (вкладка «Подробно» в свойствах).
+  ; На поле «Издатель» в UAC не влияет: то берётся только из подписи.
+  VIAddVersionKey "CompanyName" "КМАруда"
 !macroend
 
 !macro NSIS_HOOK_PREINSTALL
