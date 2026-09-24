@@ -114,7 +114,9 @@ fn runtime_on_disk() -> bool {
                 .join("Application")
         })
         .any(|app_dir| {
-            std::fs::read_dir(&app_dir).map_or(false, |entries| {
+            // is_ok_and вместо map_or(false, …): clippy style-lint
+            // unnecessary_map_or под -D warnings (read_dir даёт Result).
+            std::fs::read_dir(&app_dir).is_ok_and(|entries| {
                 entries
                     .flatten()
                     .any(|entry| entry.path().join("msedgewebview2.exe").is_file())
