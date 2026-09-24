@@ -39,7 +39,17 @@
         "silent": true
       },
       "nsis": {
-        "installMode": "both"
+        "installMode": "both",
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "installer/header.bmp",
+        "sidebarImage": "installer/sidebar.bmp",
+        "installerHooks": "installer/hooks.nsh",
+        "languages": [
+          "Russian",
+          "English"
+        ],
+        "displayLanguageSelector": true,
+        "startMenuFolder": "KMARUDA"
       }
     },
     "icon": [
@@ -49,6 +59,7 @@
       "icons/icon.png",
       "icons/icon.ico"
     ],
+    "copyright": "© КМАруда, 2026",
     "category": "Productivity",
     "shortDescription": "Корпоративный телефонный справочник",
     "longDescription": "Телефонный справочник КМАруда на базе Active Directory: поиск сотрудников, внутренние и мобильные номера, e-mail, QR-визитки."

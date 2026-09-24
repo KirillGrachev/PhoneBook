@@ -51,7 +51,13 @@ keyring = { version = "3", default-features = false, features = ["windows-native
 # Интегрированная аутентификация (Kerberos/NTLM текущей сессии Windows) через SSPI.
 ldap3 = { version = "0.11", features = ["gssapi"] }
 webview2-com = "0.38.2"
-windows = { version = "0.61.3", features = ["Win32_UI_Controls"] }
+windows = { version = "0.61.3", features = [
+    "Win32_UI_Controls",
+    "Win32_Foundation",
+    "Win32_System_Registry",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "3", default-features = false, features = ["apple-native"] }

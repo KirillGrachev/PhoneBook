@@ -27,6 +27,17 @@ const MAIN_WINDOW: &str = "main";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Без WebView2 Runtime окно создать нечем: процесс жил бы только в трее.
+    // Проверяем рантайм до инициализации Tauri и говорим с пользователем
+    // нативным диалогом; отключение проверки — KMPB_SKIP_WEBVIEW_CHECK=1.
+    #[cfg(target_os = "windows")]
+    if std::env::var_os("KMPB_SKIP_WEBVIEW_CHECK").is_none()
+        && !services::webview_prereq::webview2_runtime_installed()
+    {
+        services::webview_prereq::report_missing_runtime();
+        std::process::exit(1);
+    }
+
     tauri::Builder::default()
         // Должен регистрироваться первым (требование плагина на Windows).
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
