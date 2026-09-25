@@ -121,6 +121,13 @@ pub struct AppConfig {
     /// наследуемое поведение (организация первого AD-подключения).
     #[serde(default)]
     pub enterprise_group_id: Option<String>,
+    /// Путь к внешнему телефонному файлу (Yealink IPPhoneBook, XML):
+    /// `None` — файл не подключён.
+    #[serde(default)]
+    pub external_phonebook_path: Option<String>,
+    /// Загружать внешний телефонный файл в справочник.
+    #[serde(default)]
+    pub external_phonebook_enabled: bool,
     /// Версия приложения, записавшая конфиг (диагностика).
     #[serde(default)]
     pub version: Option<String>,
@@ -141,6 +148,8 @@ impl Default for AppConfig {
             email_overrides: std::collections::HashMap::new(),
             org_groups: Vec::new(),
             enterprise_group_id: None,
+            external_phonebook_path: None,
+            external_phonebook_enabled: false,
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
         }
     }
@@ -174,4 +183,8 @@ pub struct SaveConfigRequest {
     pub org_groups: Vec<OrgGroup>,
     #[serde(default)]
     pub enterprise_group_id: Option<String>,
+    #[serde(default)]
+    pub external_phonebook_path: Option<String>,
+    #[serde(default)]
+    pub external_phonebook_enabled: bool,
 }

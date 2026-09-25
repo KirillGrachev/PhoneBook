@@ -1,15 +1,17 @@
-//! Операции записи: полная замена кэша организации и мета синхронизации.
+//! Операции записи: полная замена кэша источника и мета синхронизации.
 
 use std::collections::HashMap;
 
+use rusqlite::Transaction;
+
 use crate::error::AppError;
 
-use super::lookups::{resolve_lookup, resolve_org, upsert_source};
+use super::lookups::{resolve_lookup, resolve_org, source_kind, upsert_source};
 use super::model::{OrgSyncMeta, UserRecord};
 use super::{unix_now, Db};
 
 impl Db {
-    /// Полностью заменяет кэш организации: upsert полученных записей,
+    /// Полностью заменяет кэш источника AD: upsert полученных записей,
     /// удаление исчезнувших, чистка справочников и обновление `sync_meta` —
     /// в одной транзакции.
     pub fn replace_org_users(
@@ -21,126 +23,11 @@ impl Db {
         let now = unix_now();
         let tx = conn.transaction()?;
         {
-            let source_id = upsert_source(&tx, source_org)?;
-            tx.execute_batch(
-                "CREATE TEMP TABLE IF NOT EXISTS seen_guids (object_guid TEXT PRIMARY KEY);
-                 DELETE FROM seen_guids;",
-            )?;
-
-            let mut insert_user = tx.prepare(
-                "INSERT OR REPLACE INTO users (
-                    object_guid, source_id, org_id, department_id, location_id,
-                    sam_account_name, first_name, last_name, middle_name,
-                    display_name, sort_key, title, email,
-                    ip_phone, phone_external, phone_mobile, pager, manager,
-                    usn_changed, updated_at
-                 ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20)",
-            )?;
-            let mut insert_seen =
-                tx.prepare("INSERT OR IGNORE INTO seen_guids (object_guid) VALUES (?1)")?;
-            let mut delete_fts = tx.prepare("DELETE FROM users_fts WHERE object_guid = ?1")?;
-            let mut delete_substr =
-                tx.prepare("DELETE FROM users_substr WHERE object_guid = ?1")?;
-            let mut insert_substr = tx.prepare(
-                "INSERT INTO users_substr (object_guid, hay, phones) VALUES (?1, ?2, ?3)",
-            )?;
-            let mut insert_fts = tx.prepare(
-                "INSERT INTO users_fts (object_guid, display_name, department, company, title, email, tokens)
-                 VALUES (?1,?2,?3,?4,?5,?6,?7)",
-            )?;
-
-            // Справочные значения разрешаются в id один раз на уникальное
-            // значение: тысячи сотрудников одного отдела не долбят базу.
-            let mut org_cache = HashMap::new();
-            let mut department_cache = HashMap::new();
-            let mut location_cache = HashMap::new();
-
-            for user in users {
-                let org_id = resolve_org(&tx, &mut org_cache, user.company.as_deref())?;
-                let department_id = resolve_lookup(
-                    &tx,
-                    &mut department_cache,
-                    "departments",
-                    user.department.as_deref(),
-                )?;
-                let location_id = resolve_lookup(
-                    &tx,
-                    &mut location_cache,
-                    "locations",
-                    user.office.as_deref(),
-                )?;
-
-                insert_user.execute(rusqlite::params![
-                    user.object_guid,
-                    source_id,
-                    org_id,
-                    department_id,
-                    location_id,
-                    user.sam_account_name,
-                    user.first_name,
-                    user.last_name,
-                    user.middle_name,
-                    user.display_name,
-                    user.sort_key,
-                    user.title,
-                    user.email,
-                    user.ip_phone,
-                    user.phone_external,
-                    user.phone_mobile,
-                    user.pager,
-                    user.manager,
-                    user.usn_changed,
-                    now,
-                ])?;
-                insert_seen.execute(rusqlite::params![user.object_guid])?;
-                delete_fts.execute(rusqlite::params![user.object_guid])?;
-                delete_substr.execute(rusqlite::params![user.object_guid])?;
-                let (hay, phones) = substr_columns(user);
-                insert_substr.execute(rusqlite::params![user.object_guid, hay, phones])?;
-                insert_fts.execute(rusqlite::params![
-                    user.object_guid,
-                    user.display_name,
-                    user.department,
-                    user.company,
-                    user.title,
-                    user.email,
-                    user.tokens,
-                ])?;
-            }
-
-            // Удаляем сотрудников, исчезнувших из каталога этой организации.
-            tx.execute(
-                "DELETE FROM users WHERE source_id = ?1 AND object_guid NOT IN (SELECT object_guid FROM seen_guids)",
-                rusqlite::params![source_id],
-            )?;
-            // Чистим осиротевшие строки FTS.
-            tx.execute(
-                "DELETE FROM users_fts WHERE object_guid NOT IN (SELECT object_guid FROM users)",
-                [],
-            )?;
-            tx.execute(
-                "DELETE FROM users_substr WHERE object_guid NOT IN (SELECT object_guid FROM users)",
-                [],
-            )?;
-            // Удаляем значения справочников, на которые больше никто не
-            // ссылается (отдел расформирован, организация исчезла из AD).
-            tx.execute_batch(
-                "DELETE FROM departments WHERE id NOT IN
-                    (SELECT department_id FROM users WHERE department_id IS NOT NULL);
-                 DELETE FROM locations WHERE id NOT IN
-                    (SELECT location_id FROM users WHERE location_id IS NOT NULL);
-                 DELETE FROM orgs WHERE id NOT IN
-                    (SELECT org_id FROM users WHERE org_id IS NOT NULL);",
-            )?;
-            tx.execute(
-                "INSERT INTO sync_meta (source_id, last_sync_at, last_count, last_error)
-                 VALUES (?1, ?2, ?3, NULL)
-                 ON CONFLICT(source_id) DO UPDATE SET
-                    last_sync_at = excluded.last_sync_at,
-                    last_count   = excluded.last_count,
-                    last_error   = NULL",
-                rusqlite::params![source_id, now, users.len() as i64],
-            )?;
+            let source_id = upsert_source(&tx, source_org, source_kind::AD)?;
+            insert_users(&tx, source_id, users, now)?;
+            delete_vanished(&tx, source_id)?;
+            cleanup_orphans(&tx)?;
+            upsert_sync_meta(&tx, source_id, users.len())?;
         }
         tx.commit()?;
         drop(conn);
@@ -149,11 +36,65 @@ impl Db {
         Ok(users.len())
     }
 
+    /// Полностью заменяет кэш внешнего телефонного файла
+    /// ([`crate::services::external`]): те же шаги, что и у источника AD,
+    /// плюс удаление записей прежнего внешнего источника (заголовок файла
+    /// переименован, файл заменён на другой) — в одной транзакции.
+    pub fn replace_external_users(
+        &self,
+        organization: &str,
+        users: &[UserRecord],
+    ) -> Result<usize, AppError> {
+        let mut conn = self.lock();
+        let now = unix_now();
+        let tx = conn.transaction()?;
+        {
+            let source_id = upsert_source(&tx, organization, source_kind::EXTERNAL)?;
+            insert_users(&tx, source_id, users, now)?;
+            delete_vanished(&tx, source_id)?;
+            tx.execute(
+                "DELETE FROM users WHERE source_id IN
+                    (SELECT id FROM sources WHERE kind = ?1 AND id != ?2)",
+                rusqlite::params![source_kind::EXTERNAL, source_id],
+            )?;
+            cleanup_orphans(&tx)?;
+            upsert_sync_meta(&tx, source_id, users.len())?;
+        }
+        tx.commit()?;
+        drop(conn);
+        self.flush()?;
+        Ok(users.len())
+    }
+
+    /// Убирает из кэша все записи внешних телефонных файлов (опция выключена
+    /// или путь не задан). Возвращает число записей, исчезнувших из выдачи.
+    /// Мета синхронизации уходит каскадом вместе с источниками.
+    pub fn clear_external_users(&self) -> Result<usize, AppError> {
+        let mut conn = self.lock();
+        let tx = conn.transaction()?;
+        let removed = tx.execute(
+            "DELETE FROM users WHERE source_id IN
+                (SELECT id FROM sources WHERE kind = ?1)",
+            rusqlite::params![source_kind::EXTERNAL],
+        )?;
+        cleanup_orphans(&tx)?;
+        tx.execute(
+            "DELETE FROM sources WHERE kind = ?1",
+            rusqlite::params![source_kind::EXTERNAL],
+        )?;
+        tx.commit()?;
+        drop(conn);
+        if removed > 0 {
+            self.flush()?;
+        }
+        Ok(removed)
+    }
+
     pub fn set_sync_error(&self, organization: &str, message: &str) -> Result<(), AppError> {
         let conn = self.lock();
         // Источник создаётся даже при неудачной первой синхронизации —
         // ошибка должна быть видна в настройках.
-        let source_id = upsert_source(&conn, organization)?;
+        let source_id = upsert_source(&conn, organization, source_kind::AD)?;
         conn.execute(
             "INSERT INTO sync_meta (source_id, last_sync_at, last_count, last_error)
              VALUES (?1, NULL, NULL, ?2)
@@ -189,6 +130,146 @@ impl Db {
     }
 }
 
+/// Вставляет записи источника вместе с поисковыми индексами (FTS и
+/// триграммный): строки индексов пересоздаются для каждого guid, чтобы
+/// повторная синхронизация не накапливала дубликаты.
+///
+/// Справочные значения разрешаются в id один раз на уникальное значение:
+/// тысячи сотрудников одного отдела не долбят базу.
+fn insert_users(
+    tx: &Transaction<'_>,
+    source_id: i64,
+    users: &[UserRecord],
+    now: i64,
+) -> Result<(), AppError> {
+    tx.execute_batch(
+        "CREATE TEMP TABLE IF NOT EXISTS seen_guids (object_guid TEXT PRIMARY KEY);
+         DELETE FROM seen_guids;",
+    )?;
+
+    let mut insert_user = tx.prepare(
+        "INSERT OR REPLACE INTO users (
+            object_guid, source_id, org_id, department_id, location_id,
+            sam_account_name, first_name, last_name, middle_name,
+            display_name, sort_key, title, email,
+            ip_phone, phone_external, phone_mobile, pager, manager, manager_guid,
+            usn_changed, updated_at
+         ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21)",
+    )?;
+    let mut insert_seen =
+        tx.prepare("INSERT OR IGNORE INTO seen_guids (object_guid) VALUES (?1)")?;
+    let mut delete_fts = tx.prepare("DELETE FROM users_fts WHERE object_guid = ?1")?;
+    let mut delete_substr = tx.prepare("DELETE FROM users_substr WHERE object_guid = ?1")?;
+    let mut insert_substr =
+        tx.prepare("INSERT INTO users_substr (object_guid, hay, phones) VALUES (?1, ?2, ?3)")?;
+    let mut insert_fts = tx.prepare(
+        "INSERT INTO users_fts (object_guid, display_name, department, company, title, email, tokens)
+         VALUES (?1,?2,?3,?4,?5,?6,?7)",
+    )?;
+
+    let mut org_cache = HashMap::new();
+    let mut department_cache = HashMap::new();
+    let mut location_cache = HashMap::new();
+
+    for user in users {
+        let org_id = resolve_org(tx, &mut org_cache, user.company.as_deref())?;
+        let department_id = resolve_lookup(
+            tx,
+            &mut department_cache,
+            "departments",
+            user.department.as_deref(),
+        )?;
+        let location_id =
+            resolve_lookup(tx, &mut location_cache, "locations", user.office.as_deref())?;
+
+        insert_user.execute(rusqlite::params![
+            user.object_guid,
+            source_id,
+            org_id,
+            department_id,
+            location_id,
+            user.sam_account_name,
+            user.first_name,
+            user.last_name,
+            user.middle_name,
+            user.display_name,
+            user.sort_key,
+            user.title,
+            user.email,
+            user.ip_phone,
+            user.phone_external,
+            user.phone_mobile,
+            user.pager,
+            user.manager,
+            user.manager_guid,
+            user.usn_changed,
+            now,
+        ])?;
+        insert_seen.execute(rusqlite::params![user.object_guid])?;
+        delete_fts.execute(rusqlite::params![user.object_guid])?;
+        delete_substr.execute(rusqlite::params![user.object_guid])?;
+        let (hay, phones) = substr_columns(user);
+        insert_substr.execute(rusqlite::params![user.object_guid, hay, phones])?;
+        insert_fts.execute(rusqlite::params![
+            user.object_guid,
+            user.display_name,
+            user.department,
+            user.company,
+            user.title,
+            user.email,
+            user.tokens,
+        ])?;
+    }
+    Ok(())
+}
+
+/// Удаляет сотрудников, исчезнувших из каталога этого источника.
+fn delete_vanished(tx: &Transaction<'_>, source_id: i64) -> Result<(), AppError> {
+    tx.execute(
+        "DELETE FROM users WHERE source_id = ?1 AND object_guid NOT IN (SELECT object_guid FROM seen_guids)",
+        rusqlite::params![source_id],
+    )?;
+    Ok(())
+}
+
+/// Чистка осиротевших строк поисковых индексов и значений справочников,
+/// на которые больше никто не ссылается (отдел расформирован, организация
+/// исчезла из AD, внешний файл отключён).
+fn cleanup_orphans(tx: &Transaction<'_>) -> Result<(), AppError> {
+    tx.execute(
+        "DELETE FROM users_fts WHERE object_guid NOT IN (SELECT object_guid FROM users)",
+        [],
+    )?;
+    tx.execute(
+        "DELETE FROM users_substr WHERE object_guid NOT IN (SELECT object_guid FROM users)",
+        [],
+    )?;
+    tx.execute_batch(
+        "DELETE FROM departments WHERE id NOT IN
+            (SELECT department_id FROM users WHERE department_id IS NOT NULL);
+         DELETE FROM locations WHERE id NOT IN
+            (SELECT location_id FROM users WHERE location_id IS NOT NULL);
+         DELETE FROM orgs WHERE id NOT IN
+            (SELECT org_id FROM users WHERE org_id IS NOT NULL);",
+    )?;
+    Ok(())
+}
+
+/// Мета успешной синхронизации источника: время и число полученных записей,
+/// прежняя ошибка сбрасывается.
+fn upsert_sync_meta(tx: &Transaction<'_>, source_id: i64, count: usize) -> Result<(), AppError> {
+    tx.execute(
+        "INSERT INTO sync_meta (source_id, last_sync_at, last_count, last_error)
+         VALUES (?1, ?2, ?3, NULL)
+         ON CONFLICT(source_id) DO UPDATE SET
+            last_sync_at = excluded.last_sync_at,
+            last_count   = excluded.last_count,
+            last_error   = NULL",
+        rusqlite::params![source_id, unix_now(), count as i64],
+    )?;
+    Ok(())
+}
+
 /// Колонки триграммного индекса: hay — текстовые поля в нижнем регистре
 /// (Unicode-фолдинг на стороне Rust), phones — только цифры телефонов,
 /// чтобы хвосты находились независимо от форматирования.
@@ -217,7 +298,6 @@ fn substr_columns(user: &UserRecord) -> (String, String) {
             .filter(|c| c.is_ascii_digit())
             .collect::<String>()
     })
-    .filter(|digits| !digits.is_empty())
     .collect::<Vec<_>>()
     .join(" ");
     (hay, phones)

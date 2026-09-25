@@ -14,7 +14,7 @@ pub(crate) mod store;
 mod validate;
 
 pub use model::{AppConfig, LdapOrgConfig, LdapOrgInput, SaveConfigRequest};
-pub use share::{OrgGroupsShareFile, SHARE_FILE_NAME};
+pub use share::{ConfigShareFile, OrgGroupsShareFile, CONFIG_SHARE_FILE_NAME, SHARE_FILE_NAME};
 pub use store::ConfigStore;
 
 #[cfg(test)]

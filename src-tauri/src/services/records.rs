@@ -27,6 +27,7 @@ pub fn build_records(raw_users: Vec<RawUser>) -> Vec<UserRecord> {
         .filter(|user| !user.is_account_disabled())
         .collect();
     let mut names_by_dn: HashMap<String, String> = HashMap::with_capacity(raw_users.len());
+    let mut guid_by_dn: HashMap<String, String> = HashMap::with_capacity(raw_users.len());
     for user in &raw_users {
         if let Some(name) = user
             .display_name
@@ -35,6 +36,7 @@ pub fn build_records(raw_users: Vec<RawUser>) -> Vec<UserRecord> {
             .filter(|name| !name.trim().is_empty())
         {
             names_by_dn.insert(user.dn.to_lowercase(), name.trim().to_string());
+            guid_by_dn.insert(user.dn.to_lowercase(), user.object_guid.clone());
         }
     }
 
@@ -54,6 +56,13 @@ pub fn build_records(raw_users: Vec<RawUser>) -> Vec<UserRecord> {
                     .cloned()
                     .unwrap_or_else(|| cn_from_dn(dn))
             });
+            // GUID руководителя: только если руководитель есть в той же
+            // выборке (живая учётка того же источника) — иначе карточка
+            // руководителя ищется по имени кликом.
+            let manager_guid = user
+                .manager_dn
+                .as_ref()
+                .and_then(|dn| guid_by_dn.get(&dn.to_lowercase()).cloned());
 
             let company = user
                 .company
@@ -101,6 +110,7 @@ pub fn build_records(raw_users: Vec<RawUser>) -> Vec<UserRecord> {
                 phone_external: user.phone_external,
                 phone_mobile: user.phone_mobile,
                 manager,
+                manager_guid,
                 pager,
                 usn_changed: user.usn_changed,
                 tokens: token_parts.join(" "),
@@ -290,5 +300,21 @@ mod tests {
         let no_display = raw_user("g3", None, Some("sidorov"));
         let records = build_records(vec![no_display]);
         assert_eq!(records[0].display_name, "sidorov");
+    }
+
+    #[test]
+    fn manager_guid_resolved_from_same_selection() {
+        let mut boss = raw_user("g1", Some("Петров П.П."), Some("petrov"));
+        // DN из фикстуры: CN=<display>,OU=Staff,DC=kmaruda,DC=ru
+        boss.dn = "CN=Петров П.П.,OU=Staff,DC=kmaruda,DC=ru".into();
+        let mut employee = raw_user("g2", Some("Иванов И.И."), Some("ivanov"));
+        employee.manager_dn = Some("CN=Петров П.П.,OU=Staff,DC=kmaruda,DC=ru".into());
+        // Отключённый руководитель вне выборки: guid не подставляется.
+        let mut orphan = raw_user("g3", Some("Сирота С.С."), Some("orphan"));
+        orphan.manager_dn = Some("CN=Уволенный У.У.,OU=Staff,DC=kmaruda,DC=ru".into());
+
+        let records = build_records(vec![boss, employee, orphan]);
+        assert_eq!(records[1].manager_guid.as_deref(), Some("g1"));
+        assert_eq!(records[2].manager_guid, None);
     }
 }

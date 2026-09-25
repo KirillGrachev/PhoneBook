@@ -1,5 +1,6 @@
 pub mod config;
 pub mod db;
+pub mod external;
 pub mod ldap;
 pub mod policy;
 pub mod records;

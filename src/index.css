@@ -260,3 +260,23 @@ input::-ms-clear {
   animation-duration: 0s !important;
   animation-delay: 0s !important;
 }
+
+/* Появление «подменюшек» (радикс-дропдауны: фильтр организаций, селекты) —
+   та же семья движения, что и прогрузка списков в lib/motionPresets.ts
+   (0.18s ease-out против 0.2s кроссфейда: меню короче и ближе к курсору).
+   При выключенных анимациях правило .disable-animations выше обнуляет
+   длительность, и меню открывается мгновенно. */
+@keyframes submenu-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.submenu-pop {
+  animation: submenu-pop 0.18s ease-out;
+}

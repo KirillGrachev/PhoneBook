@@ -12,7 +12,14 @@ export const GLOBAL_STROY_ORG = 'ЗАО «Глобал Строй»';
 /** Демо-организация «Рога и Копыта» (константа названия). */
 export const ROGA_ORG = 'ООО «Рога и Копыта»';
 
-/** Демо-контакты браузерного режима и тестов. */
+/** Демо-контакты браузерного режима и тестов.
+ *
+ * Набор подобран так, чтобы покрывать кликабельные поля карточки:
+ * пары с одинаковой должностью («Бухгалтер», «Инженер технической
+ * поддержки», «Менеджер по работе с клиентами»), одинаковым кабинетом
+ * («Каб. 210», «Каб. 401», «Каб. 12») и цепочки руководителей —
+ * с GUID (`managerId`) и без него (фолбэк поиска по имени).
+ */
 export const mockContacts: Contact[] = [
   {
     id: 'mock-ivanov',
@@ -27,6 +34,7 @@ export const mockContacts: Contact[] = [
     trueconfId: 'ivanov',
     office: 'Каб. 402',
     manager: 'Петров Пётр Петрович',
+    managerId: 'mock-petrov',
   },
   {
     id: 'mock-petrov',
@@ -53,6 +61,22 @@ export const mockContacts: Contact[] = [
     trueconfId: 'sidorova',
     office: 'Каб. 212',
     manager: 'Петров Пётр Петрович',
+    managerId: 'mock-petrov',
+  },
+  {
+    id: 'mock-orlova',
+    fullName: 'Орлова Ольга Павловна',
+    ipPhone: '5680',
+    fullIpPhone: '+7 (495) 402-56-80',
+    mobilePhone: '+7 (999) 444-55-66',
+    organization: KMARUDA_ORG,
+    department: 'Бухгалтерия',
+    jobTitle: 'Бухгалтер',
+    email: 'orlova@kmaruda.ru',
+    trueconfId: 'orlova',
+    office: 'Каб. 210',
+    manager: 'Петров Пётр Петрович',
+    managerId: 'mock-petrov',
   },
   {
     id: 'mock-kuznetsov',
@@ -67,6 +91,22 @@ export const mockContacts: Contact[] = [
     trueconfId: 'kuznetsov',
     office: 'Каб. 401',
     manager: 'Иванов Иван Иванович',
+    managerId: 'mock-ivanov',
+  },
+  {
+    id: 'mock-gusev',
+    fullName: 'Гусев Андрей Михайлович',
+    ipPhone: '1236',
+    fullIpPhone: '+7 (495) 402-12-36',
+    mobilePhone: '+7 (999) 666-77-88',
+    organization: KMARUDA_ORG,
+    department: 'IT-отдел',
+    jobTitle: 'Инженер технической поддержки',
+    email: 'gusev@kmaruda.ru',
+    trueconfId: 'gusev',
+    office: 'Каб. 401',
+    manager: 'Иванов Иван Иванович',
+    managerId: 'mock-ivanov',
   },
   {
     id: 'mock-smirnova',
@@ -80,6 +120,8 @@ export const mockContacts: Contact[] = [
     email: 'smirnova@globalstroy.ru',
     trueconfId: 'smirnova',
     office: 'Этаж 2, оф. 12',
+    // Руководитель без GUID: демонстрирует фолбэк клика — поиск по имени.
+    manager: 'Фёдоров Игорь Николаевич',
   },
   {
     id: 'mock-fedorov',
@@ -114,7 +156,24 @@ export const mockContacts: Contact[] = [
     jobTitle: 'Менеджер по работе с клиентами',
     email: 'volkova@rogaikopyta.ru',
     trueconfId: 'volkova',
+    office: 'Каб. 12',
     manager: 'Сидоров Алексей Владимирович',
+    managerId: 'mock-sidorov',
+  },
+  {
+    id: 'mock-zaytseva',
+    fullName: 'Зайцева Анна Игоревна',
+    ipPhone: '4323',
+    fullIpPhone: '+7 (812) 432-12-35',
+    mobilePhone: '+7 (981) 222-33-44',
+    organization: ROGA_ORG,
+    department: 'Отдел продаж',
+    jobTitle: 'Менеджер по работе с клиентами',
+    email: 'zaytseva@rogaikopyta.ru',
+    trueconfId: 'zaytseva',
+    office: 'Каб. 12',
+    manager: 'Сидоров Алексей Владимирович',
+    managerId: 'mock-sidorov',
   },
 ];
 

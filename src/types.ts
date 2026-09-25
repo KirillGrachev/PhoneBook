@@ -25,4 +25,6 @@ export interface Contact {
   trueconfId?: string;
   office?: string;
   manager?: string;
+  /** GUID руководителя: клик по строке руководителя открывает его карточку. */
+  managerId?: string;
 }

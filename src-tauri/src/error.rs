@@ -35,6 +35,9 @@ pub enum AppError {
     #[error("Ошибка локальной базы данных: {0}")]
     Db(String),
 
+    #[error("Внешний телефонный файл: {0}")]
+    ExternalFile(String),
+
     #[error("{0}")]
     NotFound(String),
 
@@ -54,6 +57,7 @@ impl AppError {
             Self::LdapTls(_) => "LDAP_TLS",
             Self::LdapProtocol(_) => "LDAP_PROTOCOL",
             Self::Db(_) => "DB_ERROR",
+            Self::ExternalFile(_) => "EXTERNAL_FILE",
             Self::NotFound(_) => "NOT_FOUND",
             Self::Internal(_) => "INTERNAL",
         }

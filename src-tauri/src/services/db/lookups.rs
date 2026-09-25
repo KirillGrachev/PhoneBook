@@ -8,11 +8,24 @@ use rusqlite::Connection;
 
 use crate::error::AppError;
 
+/// Тип источника синхронизации: значение колонки `sources.kind`.
+pub(super) mod source_kind {
+    /// Подключение к Active Directory из настроек приложения.
+    pub const AD: &str = "ad";
+    /// Внешний телефонный файл (Yealink IPPhoneBook).
+    pub const EXTERNAL: &str = "external";
+}
+
 /// Строка источника синхронизации: создаётся при первом обращении.
-pub(super) fn upsert_source(conn: &Connection, name: &str) -> Result<i64, AppError> {
+///
+/// `kind` обновляется при коллизии имён: имя источника уникально, а тип
+/// определяет, какой механизм владеет кэшем источника (синхронизация AD или
+/// внешний файл) — вызывающие исключают коллизии до обращения сюда.
+pub(super) fn upsert_source(conn: &Connection, name: &str, kind: &str) -> Result<i64, AppError> {
     conn.execute(
-        "INSERT INTO sources (name) VALUES (?1) ON CONFLICT(name) DO NOTHING",
-        rusqlite::params![name],
+        "INSERT INTO sources (name, kind) VALUES (?1, ?2)
+         ON CONFLICT(name) DO UPDATE SET kind = excluded.kind",
+        rusqlite::params![name, kind],
     )?;
     Ok(conn.query_row(
         "SELECT id FROM sources WHERE name = ?1",

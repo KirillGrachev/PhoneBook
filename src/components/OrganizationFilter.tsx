@@ -107,7 +107,7 @@ export function OrganizationFilter({
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
-          className="w-[260px] bg-surface rounded-[12px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] border border-border py-2 z-50"
+          className="submenu-pop w-[260px] bg-surface rounded-[12px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] border border-border py-2 z-50"
         >
           <div className="px-3 pb-2 pt-1 border-b border-border mb-1">
             <span className="text-[13px] font-bold text-muted-foreground">{t('filterByOrg')}</span>

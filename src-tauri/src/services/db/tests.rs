@@ -21,6 +21,7 @@ fn record(guid: &str, org: &str, display: &str, department: &str, phone_tail: &s
         phone_external: Some(format!("+7 (495) 123-{phone_tail}-89")),
         phone_mobile: None,
         manager: None,
+        manager_guid: None,
         pager: None,
         usn_changed: Some(1),
         tokens,
@@ -750,6 +751,47 @@ fn schema_version_mismatch_recreates_cache() {
 }
 
 #[test]
+fn mixed_schema_structure_self_heals() {
+    use super::schema::{ensure_schema, SCHEMA_VERSION};
+
+    // База «смешанной» сборки: штамп версии актуальный, но в `sources`
+    // нет колонки `kind` — ровно та картина, при которой синхронизация
+    // внешнего файла падает на «no such column: kind».
+    let conn = Connection::open_in_memory().expect("conn");
+    Db::apply_pragmas(&conn).expect("pragmas");
+    ensure_schema(&conn).expect("ensure");
+    conn.execute_batch(
+        "DROP TABLE sync_meta;
+         DROP TABLE users;
+         DROP TABLE sources;
+         CREATE TABLE sources (
+             id   INTEGER PRIMARY KEY,
+             name TEXT NOT NULL UNIQUE
+         );",
+    )
+    .expect("имитация смешанной сборки");
+    conn.execute("INSERT INTO sources (name) VALUES ('КМАруда')", [])
+        .expect("row");
+    let version: i64 = conn
+        .pragma_query_value(None, "user_version", |row| row.get(0))
+        .expect("version");
+    assert_eq!(version, SCHEMA_VERSION, "штамп версии не менялся");
+
+    // Самопроверка структуры замечает подмену и пересоздаёт кэш.
+    ensure_schema(&conn).expect("self-heal");
+    conn.prepare("SELECT kind FROM sources LIMIT 0")
+        .expect("колонка kind вернулась");
+    let sources: i64 = conn
+        .query_row("SELECT COUNT(*) FROM sources", [], |row| row.get(0))
+        .expect("count");
+    assert_eq!(sources, 0, "кэш пересоздан с нуля: зеркало восстановимо");
+    let version: i64 = conn
+        .pragma_query_value(None, "user_version", |row| row.get(0))
+        .expect("version");
+    assert_eq!(version, SCHEMA_VERSION);
+}
+
+#[test]
 fn punctuation_in_query_does_not_break_search() {
     let db = sample_db();
     // Запятая и пунктуация санитизируются: «Смирнов, Иван» ищет то же,
@@ -806,4 +848,264 @@ fn layout_variants_include_punctuation_mapping() {
         })
         .expect("search");
     assert_eq!(comma.total, bee.total);
+}
+
+#[test]
+fn comma_and_dot_reach_layout_letters() {
+    let db = sample_db();
+    // Запятая на русской раскладке — это «б»: находится «Бухгалтерия»,
+    // хотя санитизация для триграмм/LIKE пунктуацию отбрасывает.
+    let comma = db
+        .search(SearchParams {
+            query: Some(",".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert!(comma.total >= 1);
+    assert!(comma
+        .items
+        .iter()
+        .any(|e| e.department.as_deref() == Some("Бухгалтерия")));
+
+    // Точка — это «ю»: отдельная база с таким именем.
+    let db2 = Db::open_in_memory().expect("db");
+    db2.replace_org_users(
+        "КМАруда",
+        &[record("g9", "КМАруда", "Юдин Юлий", "Кадры", "77")],
+    )
+    .expect("sync");
+    let dot = db2
+        .search(SearchParams {
+            query: Some(".".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(dot.total, 1);
+    assert_eq!(dot.items[0].object_guid, "g9");
+}
+
+#[test]
+fn offset_pages_are_disjoint_and_stable() {
+    let db = sample_db();
+    let first = db
+        .search(SearchParams {
+            limit: Some(2),
+            offset: Some(0),
+            ..Default::default()
+        })
+        .expect("page 0");
+    let second = db
+        .search(SearchParams {
+            limit: Some(2),
+            offset: Some(2),
+            ..Default::default()
+        })
+        .expect("page 1");
+    assert_eq!(first.items.len(), 2);
+    assert_eq!(second.items.len(), 1);
+    assert_eq!(first.total, 3);
+    assert_eq!(second.total, 3, "total не зависит от порции");
+    let guids: Vec<&str> = first
+        .items
+        .iter()
+        .chain(second.items.iter())
+        .map(|e| e.object_guid.as_str())
+        .collect();
+    let mut deduped = guids.clone();
+    deduped.sort_unstable();
+    deduped.dedup();
+    assert_eq!(guids.len(), deduped.len(), "порции не пересекаются");
+}
+
+#[test]
+fn title_filter_finds_people_with_same_title() {
+    let db = Db::open_in_memory().expect("db");
+    let mut engineer = record("g1", "КМАруда", "Иванов Иван", "IT отдел", "11");
+    engineer.title = Some("Инженер".into());
+    let mut manager = record("g2", "КМАруда", "Петров Пётр", "IT отдел", "22");
+    manager.title = Some("Начальник отдела".into());
+    db.replace_org_users("КМАруда", &[engineer, manager])
+        .expect("sync");
+
+    let engineers = db
+        .search(SearchParams {
+            title: Some("Инженер".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(engineers.total, 1);
+    assert_eq!(engineers.items[0].object_guid, "g1");
+    let none = db
+        .search(SearchParams {
+            title: Some("Вертолётоводитель".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(none.total, 0);
+}
+
+#[test]
+fn office_filter_finds_people_in_same_office() {
+    let db = Db::open_in_memory().expect("db");
+    let mut first = record("g1", "КМАруда", "Иванов Иван", "IT отдел", "11");
+    first.office = Some("Каб. 401".into());
+    let mut second = record("g2", "КМАруда", "Петров Пётр", "IT отдел", "22");
+    second.office = Some("Каб. 401".into());
+    let mut third = record("g3", "КМАруда", "Сидоров Сергей", "Бухгалтерия", "33");
+    third.office = Some("Каб. 210".into());
+    db.replace_org_users("КМАруда", &[first, second, third])
+        .expect("sync");
+
+    // Клик по кабинету: точный фильтр отдаёт только соседей по кабинету.
+    let roommates = db
+        .search(SearchParams {
+            office: Some("Каб. 401".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(roommates.total, 2);
+    let mut guids: Vec<&str> = roommates
+        .items
+        .iter()
+        .map(|e| e.object_guid.as_str())
+        .collect();
+    guids.sort_unstable();
+    assert_eq!(guids, vec!["g1", "g2"]);
+
+    // Пустая строка кабинета фильтром не считается (как отдел/должность).
+    let unfiltered = db
+        .search(SearchParams {
+            office: Some("   ".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(unfiltered.total, 3);
+
+    let none = db
+        .search(SearchParams {
+            office: Some("Каб. 999".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(none.total, 0);
+}
+
+#[test]
+fn manager_guid_roundtrips_to_employee() {
+    let db = Db::open_in_memory().expect("db");
+    let mut record = record("g1", "КМАруда", "Иванов Иван", "IT отдел", "11");
+    record.manager = Some("Петров Пётр".into());
+    record.manager_guid = Some("g0".into());
+    db.replace_org_users("КМАруда", &[record]).expect("sync");
+    let employee = db.get_by_id("g1").expect("employee");
+    assert_eq!(employee.manager_guid.as_deref(), Some("g0"));
+}
+
+/// Запись внешнего телефонного файла: минимум полей, номер обязателен.
+fn external_record(guid: &str, display: &str, phone: &str) -> UserRecord {
+    let tokens = crate::services::tokens::initials_tokens(display).join(" ");
+    UserRecord {
+        object_guid: guid.into(),
+        sam_account_name: None,
+        first_name: None,
+        last_name: None,
+        middle_name: None,
+        display_name: display.into(),
+        sort_key: crate::services::tokens::sort_key(display),
+        title: None,
+        department: Some("Тестовое".into()),
+        company: Some("Yealink".into()),
+        office: None,
+        email: None,
+        ip_phone: Some(phone.into()),
+        phone_external: None,
+        phone_mobile: None,
+        manager: None,
+        manager_guid: None,
+        pager: None,
+        usn_changed: None,
+        tokens,
+    }
+}
+
+#[test]
+fn external_source_replaces_renames_and_clears() {
+    let db = sample_db();
+    let replaced = db
+        .replace_external_users(
+            "Yealink",
+            &[
+                external_record("ext-1", "ТЕСТ", "310"),
+                external_record("ext-2", "Тест 1", "311"),
+            ],
+        )
+        .expect("replace external");
+    assert_eq!(replaced, 2);
+
+    // Источник виден в фильтре организаций, записи ищутся по номеру.
+    let orgs = db.list_organizations().expect("orgs");
+    assert!(orgs.contains(&"Yealink".to_string()));
+    let page = db
+        .search(SearchParams {
+            query: Some("310".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(page.total, 1);
+    assert_eq!(page.items[0].display_name.as_deref(), Some("ТЕСТ"));
+
+    // Переименование источника (заголовок файла изменён) убирает старый кэш:
+    // организация внешней записи совпадает с именем источника, как в бою.
+    let mut renamed = external_record("ext-3", "Тест 2", "312");
+    renamed.company = Some("Yealink v2".into());
+    db.replace_external_users("Yealink v2", &[renamed])
+        .expect("replace renamed");
+    let orgs = db.list_organizations().expect("orgs");
+    assert!(!orgs.contains(&"Yealink".to_string()));
+    assert!(orgs.contains(&"Yealink v2".to_string()));
+    // Записи AD не задеты: 3 сотрудника + 1 внешняя.
+    assert_eq!(db.count().expect("count"), 4);
+
+    // Отключение опции вычищает внешний кэш целиком, мета уходит каскадом.
+    let cleared = db.clear_external_users().expect("clear");
+    assert_eq!(cleared, 1);
+    assert_eq!(db.count().expect("count"), 3);
+    let orgs = db.list_organizations().expect("orgs");
+    assert!(!orgs.contains(&"Yealink v2".to_string()));
+    let metas = db.sync_meta().expect("meta");
+    assert!(metas.iter().all(|meta| meta.organization != "Yealink v2"));
+}
+
+#[test]
+fn source_kind_distinguishes_ad_and_external() {
+    let db = sample_db();
+    assert_eq!(
+        db.source_kind("КМАруда").expect("kind").as_deref(),
+        Some("ad")
+    );
+    assert_eq!(db.source_kind("нет такого").expect("kind"), None);
+    db.replace_external_users("Yealink", &[external_record("ext-1", "ТЕСТ", "310")])
+        .expect("replace");
+    assert_eq!(
+        db.source_kind("Yealink").expect("kind").as_deref(),
+        Some("external")
+    );
+}
+
+#[test]
+fn external_records_are_excluded_from_duplicate_clusters() {
+    let db = sample_db();
+    // Полный «двойник» сотрудника AD из внешнего файла: то же имя и телефон.
+    let mut twin = external_record("ext-twin", "Иванов Иван Иванович", "5611");
+    twin.company = Some("КМАруда".into());
+    twin.department = Some("IT отдел".into());
+    db.replace_external_users("Yealink", &[twin])
+        .expect("replace");
+
+    let preview = db.duplicates_preview().expect("preview");
+    assert_eq!(
+        preview.groups, 0,
+        "внешний файл не должен участвовать в уборке дубликатов: {:?}",
+        preview.samples
+    );
 }

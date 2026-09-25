@@ -21,10 +21,10 @@ use tokio::sync::Mutex as AsyncMutex;
 use tracing::{info, warn};
 
 use crate::error::AppError;
-use crate::services::config::{ConfigStore, LdapOrgConfig};
+use crate::services::config::{AppConfig, ConfigStore, LdapOrgConfig};
 use crate::services::db::Db;
 use crate::services::ldap::{self, DirectoryCredentials};
-use crate::services::{policy, records};
+use crate::services::{external, policy, records};
 use crate::state::AppState;
 
 /// Имя Tauri-события с прогрессом синхронизации.
@@ -143,6 +143,10 @@ impl SyncManager {
             info!("тестовый режим: синхронизация с AD пропущена");
             return Ok(());
         }
+
+        // Внешний телефонный файл не зависит от подключений AD: грузим до
+        // проверки организаций, чтобы справочник работал и без каталога.
+        refresh_external(&state.db, &config);
 
         let orgs: Vec<&LdapOrgConfig> = config
             .ldap_configs
@@ -292,16 +296,41 @@ impl SyncManager {
             loop {
                 let state = app.state::<AppState>().inner().clone();
                 match ConfigStore::load(&state.config_dir) {
-                    Ok(config) if policy::needs_sync(&state.db, &config) => {
-                        info!("кэш устарел или пуст — запускаю фоновую синхронизацию");
-                        self.run(&app, false).await;
+                    Ok(config) => {
+                        if policy::needs_sync(&state.db, &config) {
+                            info!("кэш устарел или пуст — запускаю фоновую синхронизацию");
+                            self.run(&app, false).await;
+                        } else {
+                            // Синхронизация AD не нужна: внешний файл всё
+                            // равно перечитываем (правку файла пользователь
+                            // не сопровождает кнопкой).
+                            refresh_external(&state.db, &config);
+                        }
                     }
-                    Ok(_) => {}
                     Err(e) => warn!(error = %e, "планировщик: не удалось прочитать конфигурацию"),
                 }
                 tokio::time::sleep(SCHEDULE_TICK).await;
             }
         });
+    }
+}
+
+/// Загрузка внешнего телефонного файла по текущей конфигурации.
+/// Ошибка (файл удалён, битый XML) не прерывает синхронизацию: логируется.
+fn refresh_external(db: &Db, config: &AppConfig) {
+    match external::refresh(
+        db,
+        config.external_phonebook_enabled,
+        config.external_phonebook_path.as_deref(),
+    ) {
+        Ok(external::ExternalRefresh::Loaded {
+            organization,
+            count,
+        }) => {
+            info!(organization = %organization, count, "внешний телефонный файл загружен");
+        }
+        Ok(_) => {}
+        Err(e) => warn!(error = %e, "внешний телефонный файл не загружен"),
     }
 }
 

@@ -35,6 +35,8 @@ interface PersistedState {
   savedContactIds: string[];
   orgGroups: AppConfigDto['orgGroups'];
   enterpriseGroupId: string | null;
+  externalPhonebookPath: string | null;
+  externalPhonebookEnabled: boolean;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -68,6 +70,8 @@ async function persistNow(value: string): Promise<void> {
       savedContactIds: state.savedContactIds ?? [],
       orgGroups: state.orgGroups ?? [],
       enterpriseGroupId: state.enterpriseGroupId ?? null,
+      externalPhonebookPath: state.externalPhonebookPath ?? null,
+      externalPhonebookEnabled: state.externalPhonebookEnabled ?? false,
       // Черновики без названия не сохраняем: бэкенд валидирует имя,
       // а незаполненная карточка — это ещё не организация.
       ldapConfigs: (state.ldapConfigs ?? []).filter((org) => org.organization.trim() !== '').map(toLdapOrgInput),
@@ -134,6 +138,8 @@ export const configStorage: StateStorage = {
           // и созданные группы дефолтным пустым значением.
           orgGroups: config.orgGroups,
           enterpriseGroupId: config.enterpriseGroupId,
+          externalPhonebookPath: config.externalPhonebookPath,
+          externalPhonebookEnabled: config.externalPhonebookEnabled,
         },
         version: 0,
       });

@@ -1,8 +1,10 @@
-import { useCallback, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { BookmarkMinus, DatabaseZap, RefreshCw, SearchX } from 'lucide-react';
 
+import { contentRevealVariants } from '@/lib/motionPresets';
 import { cn } from '@/lib/utils';
 import type { Contact, TabType } from '@/types';
 
@@ -27,6 +29,10 @@ interface SidebarProps {
   /** Показывать кнопку быстрого удаления из избранного (вкладка «Мои контакты»). */
   showUnsave?: boolean;
   onUnsave?: (id: string) => void;
+  /** Догрузка следующей порции выдачи при скролле к концу списка. */
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isFetchingMore?: boolean;
 }
 
 const ITEM_HEIGHT = 64;
@@ -48,6 +54,9 @@ export function Sidebar({
   emptyDescription,
   showUnsave = false,
   onUnsave,
+  onLoadMore,
+  hasMore = false,
+  isFetchingMore = false,
 }: SidebarProps) {
   const { t } = useTranslation();
   const parentRef = useRef<HTMLDivElement>(null);
@@ -61,6 +70,16 @@ export function Sidebar({
     paddingStart: 12,
     paddingEnd: 12,
   });
+
+  // Порционная догрузка: когда виртуализатор дорисовался до хвоста
+  // загруженного списка, запрашиваем следующую страницу.
+  const virtualItems = virtualizer.getVirtualItems();
+  useEffect(() => {
+    const last = virtualItems[virtualItems.length - 1];
+    if (hasMore && !isFetchingMore && onLoadMore && last && last.index >= contacts.length - 10) {
+      onLoadMore();
+    }
+  }, [virtualItems, hasMore, isFetchingMore, onLoadMore, contacts.length]);
 
   const moveSelection = useCallback(
     (delta: number) => {
@@ -83,14 +102,8 @@ export function Sidebar({
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
       switch (event.key) {
-        case 'ArrowDown':
-          event.preventDefault();
-          moveSelection(1);
-          break;
-        case 'ArrowUp':
-          event.preventDefault();
-          moveSelection(-1);
-          break;
+        // Стрелки ↑/↓ обрабатываются глобальным слушателем (см. ниже),
+        // чтобы листать список, даже когда фокус не на самом списке.
         case 'Home':
           event.preventDefault();
           onSelect(contacts[0]?.id ?? null);
@@ -105,8 +118,35 @@ export function Sidebar({
           break;
       }
     },
-    [contacts, moveSelection, onSelect, virtualizer],
+    [contacts, onSelect, virtualizer],
   );
+
+  // Стрелки ↑/↓ листают список глобально: работают, когда фокус где угодно
+  // в окне, кроме полей ввода и открытых диалогов.
+  useEffect(() => {
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (document.querySelector('[role="alertdialog"], [role="dialog"]')) {
+        return;
+      }
+      event.preventDefault();
+      moveSelection(event.key === 'ArrowDown' ? 1 : -1);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [moveSelection]);
 
   return (
     <div className="w-full shrink-0 bg-background border-r border-border flex flex-col z-10 transition-colors duration-300 ease-in-out h-full overflow-hidden">
@@ -132,124 +172,153 @@ export function Sidebar({
         aria-busy={isLoading}
         aria-activedescendant={selectedId ? `contact-${selectedId}` : undefined}
       >
-        {isError ? (
-          <div className="flex flex-col items-center justify-center gap-3 p-8 text-center mt-6">
-            <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/20">
-              <SearchX className="w-6 h-6" aria-hidden />
-            </div>
-            <p className="text-sm font-semibold text-foreground">{t('errorLoadContacts')}</p>
-            <button
-              type="button"
-              onClick={onRetry}
-              className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-primary text-white text-[13px] font-bold hover:bg-primary-hover transition-colors cursor-pointer"
+        {/* Смена состояний списка (ошибка / загрузка / пусто / выдача) —
+            кроссфейд из общих пресетов: первая прогрузка и переходы не
+            мигают мгновенной подменой содержимого. Пока выдача просто
+            уточняется поиском, состояние остаётся «list» и строки
+            обновляются на месте без перестройки. */}
+        <AnimatePresence mode="wait" initial={false}>
+          {isError ? (
+            <motion.div
+              key="error"
+              variants={contentRevealVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="flex flex-col items-center justify-center gap-3 p-8 text-center mt-6"
             >
-              <RefreshCw className="w-4 h-4" aria-hidden />
-              {t('retry')}
-            </button>
-          </div>
-        ) : isLoading && contacts.length === 0 ? (
-          <div className="text-center text-sm text-muted-foreground mt-10" role="status">
-            {t('loading')}
-          </div>
-        ) : contacts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 p-8 text-center mt-6">
-            <div className="w-14 h-14 rounded-full bg-surface-hover text-muted-foreground flex items-center justify-center border border-border">
-              <DatabaseZap className="w-6 h-6" aria-hidden />
-            </div>
-            <p className="text-sm font-semibold text-foreground">{emptyTitle ?? t('emptyState.title')}</p>
-            <p className="text-[13px] text-muted-foreground max-w-[260px] leading-relaxed">
-              {emptyDescription ?? t('emptyState.desc')}
-            </p>
-            {emptyAction}
-          </div>
-        ) : (
-          <>
-            <div
-              style={{
-                height: `${virtualizer.getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
+              <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/20">
+                <SearchX className="w-6 h-6" aria-hidden />
+              </div>
+              <p className="text-sm font-semibold text-foreground">{t('errorLoadContacts')}</p>
+              <button
+                type="button"
+                onClick={onRetry}
+                className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-primary text-white text-[13px] font-bold hover:bg-primary-hover transition-colors cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" aria-hidden />
+                {t('retry')}
+              </button>
+            </motion.div>
+          ) : isLoading && contacts.length === 0 ? (
+            <motion.div
+              key="loading"
+              variants={contentRevealVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="text-center text-sm text-muted-foreground mt-10"
+              role="status"
             >
-              {virtualizer.getVirtualItems().map((virtualItem) => {
-                const contact = contacts[virtualItem.index];
-                const isSelected = selectedId === contact.id;
+              {t('loading')}
+            </motion.div>
+          ) : contacts.length === 0 ? (
+            <motion.div
+              key="empty"
+              variants={contentRevealVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="flex flex-col items-center justify-center gap-3 p-8 text-center mt-6"
+            >
+              <div className="w-14 h-14 rounded-full bg-surface-hover text-muted-foreground flex items-center justify-center border border-border">
+                <DatabaseZap className="w-6 h-6" aria-hidden />
+              </div>
+              <p className="text-sm font-semibold text-foreground">{emptyTitle ?? t('emptyState.title')}</p>
+              <p className="text-[13px] text-muted-foreground max-w-[260px] leading-relaxed">
+                {emptyDescription ?? t('emptyState.desc')}
+              </p>
+              {emptyAction}
+            </motion.div>
+          ) : (
+            <motion.div key="list" variants={contentRevealVariants} initial="hidden" animate="visible" exit="exit">
+              <div
+                style={{
+                  height: `${virtualizer.getTotalSize()}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
+              >
+                {virtualizer.getVirtualItems().map((virtualItem) => {
+                  const contact = contacts[virtualItem.index];
+                  const isSelected = selectedId === contact.id;
 
-                return (
-                  <div
-                    id={`contact-${contact.id}`}
-                    key={virtualItem.key}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: `${virtualItem.size}px`,
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                    className="px-3 py-1"
-                    role="option"
-                    aria-selected={isSelected}
-                  >
+                  return (
                     <div
-                      onClick={() => onSelect(contact.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          onSelect(contact.id);
-                        }
+                      id={`contact-${contact.id}`}
+                      key={virtualItem.key}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualItem.size}px`,
+                        transform: `translateY(${virtualItem.start}px)`,
                       }}
-                      role="button"
-                      tabIndex={-1}
-                      className={cn(
-                        'px-3 h-full flex flex-col justify-center rounded-[10px] gap-1 cursor-pointer transition-colors outline-none relative group',
-                        isSelected ? 'bg-primary text-white shadow-sm' : 'hover:bg-input text-foreground',
-                      )}
+                      className="px-3 py-1"
+                      role="option"
+                      aria-selected={isSelected}
                     >
-                      <div className="font-semibold text-[15px] truncate leading-tight pr-7">{contact.fullName}</div>
                       <div
+                        onClick={() => onSelect(contact.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            onSelect(contact.id);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={-1}
                         className={cn(
-                          'text-[13px] truncate font-normal pr-7',
-                          isSelected ? 'text-blue-100' : 'text-muted-foreground',
+                          'px-3 h-full flex flex-col justify-center rounded-[10px] gap-1 cursor-pointer transition-colors outline-none relative group',
+                          isSelected ? 'bg-primary text-white shadow-sm' : 'hover:bg-input text-foreground',
                         )}
                       >
-                        {!selectedOrg && activeTab !== 'kmaruda' && contact.organization && (
-                          <span className="mr-1">{contact.organization} •</span>
-                        )}
-                        <span>{contact.jobTitle || contact.department || t('employee')}</span>
-                      </div>
-                      {showUnsave && onUnsave && (
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onUnsave(contact.id);
-                          }}
-                          aria-label={t('removeFromSaved')}
-                          title={t('removeFromSaved')}
+                        <div className="font-semibold text-[15px] truncate leading-tight pr-7">{contact.fullName}</div>
+                        <div
                           className={cn(
-                            'absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center',
-                            'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer outline-none',
-                            isSelected
-                              ? 'text-white hover:bg-white/20'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10',
+                            'text-[13px] truncate font-normal pr-7',
+                            isSelected ? 'text-blue-100' : 'text-muted-foreground',
                           )}
                         >
-                          <BookmarkMinus className="w-4 h-4" aria-hidden />
-                        </button>
-                      )}
+                          {!selectedOrg && activeTab !== 'kmaruda' && contact.organization && (
+                            <span className="mr-1">{contact.organization} •</span>
+                          )}
+                          <span>{contact.jobTitle || contact.department || t('employee')}</span>
+                        </div>
+                        {showUnsave && onUnsave && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onUnsave(contact.id);
+                            }}
+                            aria-label={t('removeFromSaved')}
+                            title={t('removeFromSaved')}
+                            className={cn(
+                              'absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center',
+                              'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer outline-none',
+                              isSelected
+                                ? 'text-white hover:bg-white/20'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10',
+                            )}
+                          >
+                            <BookmarkMinus className="w-4 h-4" aria-hidden />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-            {limitReached && (
-              <div className="px-6 py-3 text-center text-[12px] text-muted-foreground">
-                {t('limitReached', { shown: contacts.length, total })}
+                  );
+                })}
               </div>
-            )}
-          </>
-        )}
+              {limitReached && (
+                <div className="px-6 py-3 text-center text-[12px] text-muted-foreground">
+                  {t('limitReached', { shown: contacts.length, total })}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

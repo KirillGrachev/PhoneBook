@@ -6,6 +6,12 @@
  * должно сопровождаться правкой здесь — это единственная точка правды.
  */
 
+/** Тема оформления (бэкенд нормализует к одному из трёх значений). */
+export type ThemeName = 'light' | 'dark' | 'system';
+
+/** Язык интерфейса (бэкенд нормализует к ru/en). */
+export type LanguageCode = 'ru' | 'en';
+
 export interface EmployeeDto {
   objectGuid: string;
   /** Организация-источник синхронизации (из настроек AD). */
@@ -24,6 +30,8 @@ export interface EmployeeDto {
   phoneExternal: string | null;
   phoneMobile: string | null;
   manager: string | null;
+  /** GUID руководителя для клика по карточке (если руководитель в выборке). */
+  managerGuid?: string | null;
   /** TrueConf ID сотрудника: значение AD-атрибута `pager`. */
   pager: string | null;
   usnChanged: number | null;
@@ -89,6 +97,10 @@ export interface AppConfigDto {
   orgGroups: OrgGroupDto[];
   /** Группа для вкладки «КМАруда» (не глобальная версия). */
   enterpriseGroupId: string | null;
+  /** Путь к внешнему телефонному файлу (Yealink IPPhoneBook); null — не подключён. */
+  externalPhonebookPath: string | null;
+  /** Загружать внешний телефонный файл в справочник. */
+  externalPhonebookEnabled: boolean;
   version?: string | null;
 }
 
@@ -107,6 +119,20 @@ export interface SaveConfigRequest {
   orgGroups: OrgGroupDto[];
   /** Группа для вкладки «КМАруда»; `null` — наследуемое поведение. */
   enterpriseGroupId: string | null;
+  externalPhonebookPath: string | null;
+  externalPhonebookEnabled: boolean;
+}
+
+/**
+ * Итог загрузки внешнего телефонного файла (тег `state` в serde-энумерации
+ * [`ExternalRefresh`]): `loaded` — файл в кэше, `cleared` — кэш очищен
+ * (записей больше нет), `disabled` — опция выключена.
+ */
+export interface ExternalRefreshDto {
+  state: 'disabled' | 'cleared' | 'loaded';
+  cleared?: number;
+  organization?: string | null;
+  count?: number;
 }
 
 /** Результат диагностики подключения к каталогу. */
@@ -163,8 +189,14 @@ export interface SearchParamsDto {
   /** Фильтр по организации-источнику синхронизации (вкладка «Предприятие»). */
   sourceOrg?: string | null;
   department?: string | null;
+  /** Фильтр по должности (клик по должности в карточке). */
+  title?: string | null;
+  /** Фильтр по кабинету (клик по кабинету в карточке). */
+  office?: string | null;
   ids?: string[] | null;
   limit?: number | null;
+  /** Смещение порции выдачи (порционная загрузка списком). */
+  offset?: number | null;
   hideEmpty?: boolean | null;
 }
 

@@ -53,7 +53,7 @@ export function Select<T>({ value, options, onChange, ariaLabel, className }: Se
           align="end"
           sideOffset={6}
           style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
-          className="bg-surface rounded-[12px] border border-border shadow-[0_4px_20px_rgba(0,0,0,0.25)] py-1.5 z-50"
+          className="submenu-pop bg-surface rounded-[12px] border border-border shadow-[0_4px_20px_rgba(0,0,0,0.25)] py-1.5 z-50"
         >
           {options.map((option) => (
             <DropdownMenu.Item asChild key={String(option.value)}>

@@ -100,6 +100,13 @@ impl ConfigStore {
             email_overrides: request.email_overrides,
             org_groups,
             enterprise_group_id,
+            external_phonebook_path: request
+                .external_phonebook_path
+                .as_deref()
+                .map(str::trim)
+                .filter(|path| !path.is_empty())
+                .map(str::to_string),
+            external_phonebook_enabled: request.external_phonebook_enabled,
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
         };
 

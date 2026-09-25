@@ -42,6 +42,12 @@ export class MockContactsService implements ContactsService {
       if (query.department) {
         list = list.filter((contact) => contact.department === query.department);
       }
+      if (query.title) {
+        list = list.filter((contact) => contact.jobTitle === query.title);
+      }
+      if (query.office) {
+        list = list.filter((contact) => contact.office === query.office);
+      }
       if (query.search?.trim()) {
         list = list.filter((contact) => this.engine.match(contact, query.search as string));
       }
@@ -57,8 +63,9 @@ export class MockContactsService implements ContactsService {
       const delta = group(a.fullName) - group(b.fullName);
       return delta !== 0 ? delta : RU_COLLATOR.compare(a.fullName, b.fullName);
     });
-    const limit = query.limit && query.limit > 0 ? query.limit : list.length;
-    return delay({ contacts: list.slice(0, limit), total: list.length }, DEMO_DELAY_MS);
+    const offset = query.offset ?? 0;
+    const limit = query.limit && query.limit > 0 ? query.limit : list.length - offset;
+    return delay({ contacts: list.slice(offset, offset + limit), total: list.length }, DEMO_DELAY_MS);
   }
 
   async getById(id: string): Promise<Contact> {

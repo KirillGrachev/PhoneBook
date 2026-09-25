@@ -30,6 +30,7 @@ export function mapEmployeeToContact(employee: EmployeeDto): Contact {
     trueconfId: employee.pager?.trim() || undefined,
     office: employee.office ?? undefined,
     manager: employee.manager ?? undefined,
+    managerId: employee.managerGuid ?? undefined,
   };
 }
 
@@ -41,7 +42,11 @@ export function mapEmployeeToContact(employee: EmployeeDto): Contact {
  */
 export class TauriContactsService implements ContactsService {
   async search(query: ContactsQuery): Promise<ContactsPage> {
-    const params: SearchParamsDto = { limit: query.limit ?? 0, hideEmpty: query.hideEmpty ?? true };
+    const params: SearchParamsDto = {
+      limit: query.limit ?? 0,
+      offset: query.offset ?? 0,
+      hideEmpty: query.hideEmpty ?? true,
+    };
 
     if (query.activeTab === 'local') {
       const ids = query.savedIds ?? [];
@@ -77,6 +82,12 @@ export class TauriContactsService implements ContactsService {
 
       if (query.department) {
         params.department = query.department;
+      }
+      if (query.title) {
+        params.title = query.title;
+      }
+      if (query.office) {
+        params.office = query.office;
       }
       if (query.search?.trim()) {
         params.query = query.search.trim();

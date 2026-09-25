@@ -46,57 +46,60 @@ impl Db {
             return Ok(SearchPage { items, total });
         }
 
-        // Запрос санитизируется до букв/цифр/пробелов: пунктуация (запятая,
-        // точки, скобки) не попадает ни в триграммные фразы, ни в LIKE —
-        // в hay её нет, а раскладочные карты лишь путают (`,` ⇄ `б`).
-        // Пустой после санитизации запрос равносилен просмотру без поиска.
-        let query = search
+        // Раскладочные варианты строятся из СЫРОГО запроса: запятая и точка
+        // на русской раскладке — это «б» и «ю», и санитизация до них лишила бы
+        // поиск этих букв. Санитизированная строка нужна только триграммному
+        // индексу и LIKE (в hay пунктуации нет); если раскладочных вариантов
+        // нет вовсе (например, «%»), запрос деградирует до просмотра.
+        let raw_query = search
             .query
             .as_deref()
-            .map(|q| {
-                q.chars()
+            .map(str::trim)
+            .filter(|q| !q.is_empty());
+        let offset = i64::from(search.offset.unwrap_or(0));
+        let (items, total) = if let Some(raw) = raw_query {
+            let match_expr = crate::services::tokens::build_fts_query(raw);
+            if let Some(expr) = match_expr.as_deref() {
+                let san: String = raw
+                    .chars()
                     .filter(|c| c.is_alphanumeric() || c.is_whitespace())
                     .collect::<String>()
                     .split_whitespace()
                     .collect::<Vec<_>>()
-                    .join(" ")
-            })
-            .filter(|q| !q.is_empty());
-
-        let (items, total) = if let Some(q) = query {
-            let match_expr = crate::services::tokens::build_fts_query(&q);
-            let mut fts_count = 0u64;
-            let mut items = Vec::new();
-            if let Some(expr) = match_expr.as_deref() {
-                fts_count = Self::fts_count(&conn, expr, &search)?;
-                items = Self::fts_search(&conn, expr, &search, limit)?;
-            }
-            // FTS5 ищет только по префиксам токенов. Дополняем выдачу
-            // совпадениями, которые префиксный поиск не видит: подстроки
-            // середины слова («бухг» → «Бухгалтерия») и телефоны в любом
-            // форматировании. Подстроки от 3 символов идут через триграммный
-            // индекс `users_substr` без скана таблицы; короче — LIKE.
-            if let Some((conditions, args)) = Self::complement_conditions(&q, &search) {
-                if (items.len() as i64) < limit {
-                    for employee in Self::complement_search(&conn, &conditions, &args, limit)? {
-                        if (items.len() as i64) >= limit {
-                            break;
-                        }
-                        if !items.iter().any(|r| r.object_guid == employee.object_guid) {
-                            items.push(employee);
+                    .join(" ");
+                let mut fts_count = Self::fts_count(&conn, expr, &search)?;
+                let mut items = Self::fts_search(&conn, expr, &search, limit, offset)?;
+                // Дополнение: подстроки, которые префиксный FTS не видит.
+                if let Some((conditions, args)) = Self::complement_conditions(&san, &search) {
+                    if (items.len() as i64) < limit {
+                        for employee in
+                            Self::complement_search(&conn, &conditions, &args, limit, offset)?
+                        {
+                            if (items.len() as i64) >= limit {
+                                break;
+                            }
+                            if !items.iter().any(|r| r.object_guid == employee.object_guid) {
+                                items.push(employee);
+                            }
                         }
                     }
+                    let complement_only = Self::complement_only_count(
+                        &conn,
+                        &conditions,
+                        &args,
+                        match_expr.as_deref(),
+                    )?;
+                    fts_count += complement_only;
                 }
-                // Точное общее число: FTS-совпадения + совпадения только дополнения.
-                let complement_only =
-                    Self::complement_only_count(&conn, &conditions, &args, match_expr.as_deref())?;
-                (items, fts_count + complement_only)
-            } else {
                 (items, fts_count)
+            } else {
+                let total = Self::browse_count(&conn, &search)?;
+                let items = Self::browse(&conn, &search, limit, offset)?;
+                (items, total)
             }
         } else {
             let total = Self::browse_count(&conn, &search)?;
-            let items = Self::browse(&conn, &search, limit)?;
+            let items = Self::browse(&conn, &search, limit, offset)?;
             (items, total)
         };
         Ok(SearchPage { items, total })
@@ -287,6 +290,7 @@ impl Db {
         match_expr: &str,
         search: &SearchParams,
         limit: i64,
+        offset: i64,
     ) -> Result<Vec<Employee>, AppError> {
         let mut sql = format!(
             "SELECT {EMPLOYEE_COLUMNS} FROM users_fts \
@@ -298,8 +302,11 @@ impl Db {
         push_empty_filter(&mut sql, search);
         // Веса bm25 по колонкам FTS: guid(0), ФИО, отдел, компания,
         // должность, e-mail, токены (инициалы/телефоны).
-        sql.push_str(" ORDER BY bm25(users_fts, 0.0, 10.0, 2.0, 1.0, 2.0, 3.0, 6.0) LIMIT ?");
+        sql.push_str(
+            " ORDER BY bm25(users_fts, 0.0, 10.0, 2.0, 1.0, 2.0, 3.0, 6.0) LIMIT ? OFFSET ?",
+        );
         args.push(SqlValue::Int(limit));
+        args.push(SqlValue::Int(offset));
 
         query(conn, &sql, &args)
     }
@@ -371,13 +378,15 @@ impl Db {
         conditions: &str,
         args: &[SqlValue],
         limit: i64,
+        offset: i64,
     ) -> Result<Vec<Employee>, AppError> {
         let mut sql =
             format!("SELECT {EMPLOYEE_COLUMNS} FROM users {LOOKUP_JOINS} WHERE {conditions}");
         sql.push_str(ORDER_NAMES);
-        sql.push_str(" LIMIT ?");
+        sql.push_str(" LIMIT ? OFFSET ?");
         let mut args = args.to_vec();
         args.push(SqlValue::Int(limit));
+        args.push(SqlValue::Int(offset));
         query(conn, &sql, &args)
     }
 
@@ -385,14 +394,16 @@ impl Db {
         conn: &Connection,
         search: &SearchParams,
         limit: i64,
+        offset: i64,
     ) -> Result<Vec<Employee>, AppError> {
         let mut sql = format!("SELECT {EMPLOYEE_COLUMNS} FROM users {LOOKUP_JOINS} WHERE 1=1");
         let mut args: Vec<SqlValue> = Vec::new();
         push_filters(&mut sql, &mut args, search);
         push_empty_filter(&mut sql, search);
         sql.push_str(ORDER_NAMES);
-        sql.push_str(" LIMIT ?");
+        sql.push_str(" LIMIT ? OFFSET ?");
         args.push(SqlValue::Int(limit));
+        args.push(SqlValue::Int(offset));
         query(conn, &sql, &args)
     }
 
@@ -428,6 +439,19 @@ impl Db {
         )
         .optional()?
         .ok_or_else(|| AppError::NotFound("Контакт не найден в справочнике или был удалён".into()))
+    }
+
+    /// Тип источника по имени (`Some("ad"` / `Some("external")`): внешний
+    /// файл не должен занимать имя источника, который синхронизируется с AD.
+    pub fn source_kind(&self, name: &str) -> Result<Option<String>, AppError> {
+        let conn = self.lock();
+        conn.query_row(
+            "SELECT kind FROM sources WHERE name = ?1",
+            rusqlite::params![name],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(AppError::from)
     }
 
     pub fn list_organizations(&self) -> Result<Vec<String>, AppError> {
@@ -507,6 +531,28 @@ fn push_filters(sql: &mut String, args: &mut Vec<SqlValue>, search: &SearchParam
         sql.push_str(" AND departments.name = ?");
         args.push(SqlValue::Text(department.to_string()));
     }
+    // Должность: точное совпадение (клик по должности в карточке открывает
+    // список людей с той же должностью — аналог модалки отдела).
+    if let Some(title) = search
+        .title
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+    {
+        sql.push_str(" AND users.title = ?");
+        args.push(SqlValue::Text(title.to_string()));
+    }
+    // Кабинет: точное совпадение (клик по кабинету в карточке открывает
+    // список людей в том же кабинете — та же логика, что отдел/должность).
+    if let Some(office) = search
+        .office
+        .as_deref()
+        .map(str::trim)
+        .filter(|o| !o.is_empty())
+    {
+        sql.push_str(" AND locations.name = ?");
+        args.push(SqlValue::Text(office.to_string()));
+    }
 }
 
 fn query(conn: &Connection, sql: &str, args: &[SqlValue]) -> Result<Vec<Employee>, AppError> {
@@ -521,7 +567,10 @@ fn query(conn: &Connection, sql: &str, args: &[SqlValue]) -> Result<Vec<Employee
 
 /// «Кириллица сначала»: служебные учётки и записи, начинающиеся с латиницы
 /// (adm-, svc- и т.п.), не поднимаются в начало списка. Юникод: а=1072..я=1103, ё=1105.
-const ORDER_NAMES: &str = " ORDER BY CASE WHEN unicode(substr(users.sort_key, 1, 1)) BETWEEN 1072 AND 1105 THEN 0 ELSE 1 END, users.sort_key";
+// Детерминированный порядок для порционной выдачи: сортировка по имени
+// дополняется tie-break по GUID, иначе страницы могли бы перемешиваться
+// при одинаковых sort_key.
+const ORDER_NAMES: &str = " ORDER BY CASE WHEN unicode(substr(users.sort_key, 1, 1)) BETWEEN 1072 AND 1105 THEN 0 ELSE 1 END, users.sort_key, users.object_guid";
 
 /// Группа сортировки имени: 0 — начинается с кириллицы, 1 — прочее (латиница и т.д.).
 fn name_group(name: &str) -> u8 {
@@ -561,6 +610,7 @@ fn row_to_employee(row: &Row<'_>) -> rusqlite::Result<Employee> {
         usn_changed: row.get(16)?,
         updated_at: row.get(17)?,
         pager: row.get(18)?,
+        manager_guid: row.get(19)?,
     })
 }
 

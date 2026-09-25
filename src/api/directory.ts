@@ -12,6 +12,7 @@ import type {
   ConnectionTestDto,
   DuplicatesPreviewDto,
   EmployeeDto,
+  ExternalRefreshDto,
   LdapOrgInput,
   OrgGroupsFileDto,
   SaveConfigRequest,
@@ -30,8 +31,11 @@ export const contactsApi = {
         organizations: params.organizations ?? null,
         sourceOrg: params.sourceOrg ?? null,
         department: params.department ?? null,
+        title: params.title ?? null,
+        office: params.office ?? null,
         ids: params.ids ?? null,
         limit: params.limit ?? null,
+        offset: params.offset ?? null,
         hideEmpty: params.hideEmpty ?? true,
       },
     }),
@@ -69,6 +73,20 @@ export const configApi = {
   /** Валидировать содержимое файла обмена группами; возвращает нормализованный DTO. */
   parseOrgGroupsFile: (content: string): Promise<OrgGroupsFileDto> =>
     invokeCommand<OrgGroupsFileDto>('parse_org_groups_file', { content }),
+
+  /** Перечитать внешний телефонный файл по сохранённой конфигурации. */
+  refreshExternalPhonebook: (): Promise<ExternalRefreshDto> =>
+    invokeCommand<ExternalRefreshDto>('refresh_external_phonebook'),
+
+  /** Нативный диалог выбора XML-файла; `null` — диалог закрыт. */
+  pickExternalPhonebookFile: (): Promise<string | null> => invokeCommand<string | null>('pick_external_phonebook_file'),
+
+  /** Экспорт конфигурации в файл обмена; возвращает путь записанного файла. */
+  exportConfigFile: (): Promise<string> => invokeCommand<string>('export_config_file'),
+
+  /** Валидировать содержимое файла обмена конфигурацией; возвращает DTO конфига. */
+  parseConfigFile: (content: string): Promise<AppConfigDto> =>
+    invokeCommand<AppConfigDto>('parse_config_file', { content }),
 
   testConnection: (org: LdapOrgInput, passwordOverride?: string | null): Promise<ConnectionTestDto> =>
     invokeCommand<ConnectionTestDto>('test_ldap_connection', {

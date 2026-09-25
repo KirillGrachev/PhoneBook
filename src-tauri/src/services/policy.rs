@@ -83,6 +83,7 @@ mod tests {
             phone_external: None,
             phone_mobile: None,
             manager: None,
+            manager_guid: None,
             pager: None,
             usn_changed: None,
             tokens: String::new(),

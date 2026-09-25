@@ -8,9 +8,10 @@ import type { TabType } from '@/types';
 import { configStorage } from './configStorage';
 
 /** Тема оформления: светлая / тёмная / системная. */
-export type ThemeName = 'light' | 'dark' | 'system';
+import type { LanguageCode, ThemeName } from '@/api/contracts';
+
+export type { LanguageCode, ThemeName };
 /** Язык интерфейса. */
-export type LanguageCode = 'ru' | 'en';
 
 /** Персистируемые настройки (в десктопе живут в config.json + keyring). */
 interface SettingsSlice {
@@ -41,6 +42,12 @@ interface SettingsSlice {
   setOrgGroups: (groups: OrgGroupDto[]) => void;
   /** Группа для вкладки «КМАруда» (не глобальная версия). */
   enterpriseGroupId: string | null;
+  /** Путь к внешнему телефонному файлу (Yealink IPPhoneBook); null — не подключён. */
+  externalPhonebookPath: string | null;
+  setExternalPhonebookPath: (path: string | null) => void;
+  /** Загружать внешний телефонный файл в справочник. */
+  externalPhonebookEnabled: boolean;
+  setExternalPhonebookEnabled: (enabled: boolean) => void;
   setEnterpriseGroupId: (id: string | null) => void;
   savedContactIds: string[];
   toggleSavedContact: (id: string) => void;
@@ -103,6 +110,10 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
     })),
   enterpriseGroupId: null,
   setEnterpriseGroupId: (enterpriseGroupId) => set({ enterpriseGroupId }),
+  externalPhonebookPath: null,
+  setExternalPhonebookPath: (externalPhonebookPath) => set({ externalPhonebookPath }),
+  externalPhonebookEnabled: false,
+  setExternalPhonebookEnabled: (externalPhonebookEnabled) => set({ externalPhonebookEnabled }),
   savedContactIds: [],
   toggleSavedContact: (id) =>
     set((state) => {
@@ -147,6 +158,8 @@ export const useAppStore = create<AppStore>()(
       savedContactIds: state.savedContactIds,
       orgGroups: state.orgGroups,
       enterpriseGroupId: state.enterpriseGroupId,
+      externalPhonebookPath: state.externalPhonebookPath,
+      externalPhonebookEnabled: state.externalPhonebookEnabled,
     }),
     /** Гидрация асинхронная (чтение config.json через IPC) — запускается из App. */
     skipHydration: true,

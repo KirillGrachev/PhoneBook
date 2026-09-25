@@ -6,15 +6,25 @@ import { FlaskConical, Settings2 } from 'lucide-react';
 import { isTauri as isTauriEnv } from '@/api/backend';
 import { findOrgGroup, resolveEnterpriseName } from '@/lib/orgGroups';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { DepartmentModal } from '@/components/DepartmentModal';
+import { ColleaguesModal } from '@/components/ColleaguesModal';
+import type { ColleaguesMode } from '@/components/ColleaguesModal';
 import { MainHeader } from '@/components/MainHeader';
 import { Sidebar } from '@/components/Sidebar';
 import { ContactDetails } from '@/features/contacts/components/ContactDetails';
+import { getContactsService } from '@/services/ContactsService';
+import { toast } from 'sonner';
 import { useContactsList } from '@/features/contacts/hooks/useContactsList';
 import { useOrganizations } from '@/hooks/useDirectory';
 import { isMockMode } from '@/services/ContactsService';
 import { useAppStore } from '@/store/useAppStore';
 import type { Contact } from '@/types';
+
+/** Открытый список коллег: поле карточки, значение и организация контакта. */
+interface ColleaguesView {
+  mode: ColleaguesMode;
+  value: string;
+  organization: string | null;
+}
 
 /** Главный экран: список контактов + карточка выбранного сотрудника. */
 export function PhonebookView() {
@@ -40,9 +50,7 @@ export function PhonebookView() {
   const setTestMode = useAppStore((state) => state.setTestMode);
   const ldapConfigs = useAppStore((state) => state.ldapConfigs);
 
-  const [departmentView, setDepartmentView] = useState<{ department: string; organization: string | null } | null>(
-    null,
-  );
+  const [colleaguesView, setColleaguesView] = useState<ColleaguesView | null>(null);
 
   // Выбранная группа фильтра: союз её организаций уходит в запрос целиком.
   const selectedGroup = useMemo(() => {
@@ -62,6 +70,9 @@ export function PhonebookView() {
     isError,
     refetch,
     limitReached,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
   } = useContactsList(activeTab, search, selectedOrg, savedContactIds, selectedGroupOrgs);
   const { data: organizations = [] } = useOrganizations();
 
@@ -110,14 +121,63 @@ export function PhonebookView() {
     setSelectedId(null);
   }, [testMode, setSelectedId]);
 
+  // Поиск сам открывает карточку: единственное совпадение или верхний
+  // результат списка — пользователю не нужно целиться в список вручную.
+  // Ручной выбор внутри выдачи не перебрасывается, пока не изменится выдача.
+  useEffect(() => {
+    if (search.trim() !== '' && filtered.length > 0) {
+      const topId = filtered[0].id;
+      if (useAppStore.getState().selectedId !== topId) {
+        setSelectedId(topId);
+      }
+    }
+  }, [filtered, search, setSelectedId]);
+
   const handleSettingsClick = useCallback(() => navigate('/settings'), [navigate]);
   const handleConfigureAdClick = useCallback(() => navigate('/settings?view=ad'), [navigate]);
-  const handleDepartmentClick = useCallback(
-    (department: string, organization?: string) =>
-      setDepartmentView({ department, organization: organization ?? null }),
-    [],
-  );
+  // Клик по отделу / должности / кабинету в карточке открывает список
+  // коллег по тому же полю; организация контакта ограничивает выдачу,
+  // чтобы одинаковые кабинеты и должности разных организаций не смешивались.
+  const handleDepartmentClick = useCallback((department: string, organization?: string) => {
+    setColleaguesView({ mode: 'department', value: department, organization: organization ?? null });
+  }, []);
+  const handleTitleClick = useCallback((title: string, organization?: string) => {
+    setColleaguesView({ mode: 'title', value: title, organization: organization ?? null });
+  }, []);
+  const handleOfficeClick = useCallback((office: string, organization?: string) => {
+    setColleaguesView({ mode: 'office', value: office, organization: organization ?? null });
+  }, []);
   const handleBackToSidebar = useCallback(() => setSelectedId(null), [setSelectedId]);
+
+  /**
+   * Клик по руководителю: открывает его карточку. По GUID — мгновенно;
+   * если руководитель вне выборки AD (GUID не разрешён при синхронизации),
+   * ищем по имени и открываем точное совпадение.
+   */
+  const handleManagerClick = useCallback(
+    async (manager: string, managerId?: string) => {
+      if (managerId) {
+        setSelectedId(managerId);
+        return;
+      }
+      try {
+        const page = await getContactsService().search({
+          activeTab: 'global',
+          search: manager,
+          limit: 1,
+        });
+        const match = page.contacts[0];
+        if (match) {
+          setSelectedId(match.id);
+        } else {
+          toast.info(t('managerNotFound'));
+        }
+      } catch {
+        toast.error(t('errorLoadContacts'));
+      }
+    },
+    [setSelectedId, t],
+  );
 
   const browserLocked = !isTauriEnv() && !testMode;
   const directoryNotConfigured = !isMockMode() && !browserLocked && ldapConfigs.length === 0;
@@ -169,6 +229,9 @@ export function PhonebookView() {
               total={total}
               showUnsave={activeTab === 'local'}
               onUnsave={toggleSavedContact}
+              onLoadMore={fetchNextPage}
+              hasMore={hasNextPage}
+              isFetchingMore={isFetchingNextPage}
               emptyTitle={emptyState.title}
               emptyDescription={emptyState.description}
               emptyAction={
@@ -210,6 +273,9 @@ export function PhonebookView() {
                 onToggleSave={toggleSavedContact}
                 onBack={handleBackToSidebar}
                 onDepartmentClick={handleDepartmentClick}
+                onTitleClick={handleTitleClick}
+                onOfficeClick={handleOfficeClick}
+                onManagerClick={handleManagerClick}
               />
             ) : (
               <div className="flex-1 items-center justify-center text-muted-foreground text-[15px] font-medium h-full hidden md:flex">
@@ -219,11 +285,12 @@ export function PhonebookView() {
           </div>
         </ErrorBoundary>
 
-        <DepartmentModal
-          isOpen={Boolean(departmentView)}
-          onClose={() => setDepartmentView(null)}
-          department={departmentView?.department ?? null}
-          organization={departmentView?.organization ?? null}
+        <ColleaguesModal
+          isOpen={colleaguesView !== null}
+          onClose={() => setColleaguesView(null)}
+          mode={colleaguesView?.mode ?? 'department'}
+          value={colleaguesView?.value ?? null}
+          organization={colleaguesView?.organization ?? null}
           onSelectContact={(id: Contact['id']) => setSelectedId(id)}
         />
       </div>

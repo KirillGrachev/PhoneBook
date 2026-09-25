@@ -35,6 +35,12 @@ interface ContactDetailsProps {
   onToggleSave: (id: string) => void;
   onBack: () => void;
   onDepartmentClick?: (department: string, org?: string) => void;
+  /** Клик по должности: список людей с той же должностью в той же организации. */
+  onTitleClick?: (title: string, org?: string) => void;
+  /** Клик по кабинету: список людей в том же кабинете. */
+  onOfficeClick?: (office: string, org?: string) => void;
+  /** Клик по руководителю: открывает карточку руководителя (guid или поиск по имени). */
+  onManagerClick?: (manager: string, managerId?: string) => void;
 }
 
 type PendingAction = { type: 'mailto' | 'trueconf'; url: string };
@@ -64,7 +70,16 @@ function QrPlaceholder({ size }: { size: number }) {
  * Внешние действия (mailto/trueconf) идут через Rust-команду `open_external`
  * с allow-list схем вместо прямого shell-плагина.
  */
-export function ContactDetails({ contactId, isSaved, onToggleSave, onBack, onDepartmentClick }: ContactDetailsProps) {
+export function ContactDetails({
+  contactId,
+  isSaved,
+  onToggleSave,
+  onBack,
+  onDepartmentClick,
+  onTitleClick,
+  onOfficeClick,
+  onManagerClick,
+}: ContactDetailsProps) {
   const { t } = useTranslation();
   const animationsEnabled = useAppStore((state) => state.animationsEnabled);
 
@@ -215,17 +230,50 @@ export function ContactDetails({ contactId, isSaved, onToggleSave, onBack, onDep
                       copyable
                     />
                     <div className="h-px bg-border ml-[56px]" />
-                    <DetailRow icon={Briefcase} label={t('jobTitle')} value={contact.jobTitle} copyable />
+                    <DetailRow
+                      icon={Briefcase}
+                      label={t('jobTitle')}
+                      value={contact.jobTitle}
+                      onClick={
+                        contact.jobTitle && onTitleClick
+                          ? () => onTitleClick?.(contact.jobTitle as string, contact.organization)
+                          : undefined
+                      }
+                      showArrow={Boolean(contact.jobTitle) && Boolean(onTitleClick)}
+                      copyable
+                    />
                     {contact.office && (
                       <>
                         <div className="h-px bg-border ml-[56px]" />
-                        <DetailRow icon={MapPin} label={t('office')} value={contact.office} copyable />
+                        <DetailRow
+                          icon={MapPin}
+                          label={t('office')}
+                          value={contact.office}
+                          onClick={
+                            contact.office && onOfficeClick
+                              ? () => onOfficeClick?.(contact.office as string, contact.organization)
+                              : undefined
+                          }
+                          showArrow={Boolean(contact.office) && Boolean(onOfficeClick)}
+                          copyable
+                        />
                       </>
                     )}
                     {contact.manager && (
                       <>
                         <div className="h-px bg-border ml-[56px]" />
-                        <DetailRow icon={UserRound} label={t('manager')} value={contact.manager} copyable />
+                        <DetailRow
+                          icon={UserRound}
+                          label={t('manager')}
+                          value={contact.manager}
+                          onClick={
+                            contact.manager && onManagerClick
+                              ? () => onManagerClick?.(contact.manager as string, contact.managerId)
+                              : undefined
+                          }
+                          showArrow={Boolean(contact.manager) && Boolean(onManagerClick)}
+                          copyable
+                        />
                       </>
                     )}
                   </div>

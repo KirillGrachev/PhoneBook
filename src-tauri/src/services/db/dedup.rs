@@ -126,11 +126,16 @@ impl Db {
         Ok(removed)
     }
 
+    /// Строки для кластеризации дубликатов. Записи внешних телефонных
+    /// файлов не участвуют: их идентификаторы синтетические, а «дубль»
+    /// с сотрудником AD — легитимное дополнение номера, не мусор.
     fn duplicate_rows(conn: &Connection) -> Result<Vec<RawRow>, AppError> {
         let mut stmt = conn.prepare(
-            "SELECT object_guid, display_name, email, ip_phone, phone_external, \
-                    phone_mobile, sam_account_name, title, department_id, pager \
-             FROM users",
+            "SELECT users.object_guid, users.display_name, users.email, users.ip_phone, \
+                    users.phone_external, users.phone_mobile, users.sam_account_name, \
+                    users.title, users.department_id, users.pager \
+             FROM users JOIN sources ON sources.id = users.source_id \
+             WHERE sources.kind = 'ad'",
         )?;
         let mapped = stmt.query_map([], |row| {
             let guid: String = row.get(0)?;
@@ -281,6 +286,7 @@ mod tests {
             phone_external: None,
             phone_mobile: None,
             manager: None,
+            manager_guid: None,
             pager: None,
             usn_changed: None,
             tokens: String::new(),

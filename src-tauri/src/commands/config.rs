@@ -1,12 +1,16 @@
-//! Команды конфигурации и диагностики подключений к каталогу.
+//! Команды конфигурации, обмена настройками и диагностики подключений.
 
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_dialog::DialogExt;
+use tracing::warn;
 
 use crate::error::AppError;
 use crate::services::config::{
-    AppConfig, ConfigStore, LdapOrgInput, OrgGroupsShareFile, SaveConfigRequest, SHARE_FILE_NAME,
+    AppConfig, ConfigShareFile, ConfigStore, LdapOrgInput, OrgGroupsShareFile, SaveConfigRequest,
+    CONFIG_SHARE_FILE_NAME, SHARE_FILE_NAME,
 };
 use crate::services::ldap::{self, ConnectionTest, DirectoryCredentials};
+use crate::services::{external, external::ExternalRefresh};
 use crate::state::AppState;
 
 use super::run_blocking;
@@ -63,11 +67,7 @@ pub async fn export_org_groups_file(
             config.org_groups.clone(),
             config.enterprise_group_id.clone(),
         );
-        let dir = app.path().document_dir().map_err(|e| {
-            AppError::Config(format!("не удалось определить папку «Документы»: {e}"))
-        })?;
-        let dir = dir.join("KMARUDA Phonebook");
-        std::fs::create_dir_all(&dir)?;
+        let dir = share_dir(&app)?;
         let path = dir.join(SHARE_FILE_NAME);
         std::fs::write(&path, file.render())?;
         Ok(path.to_string_lossy().into_owned())
@@ -85,6 +85,97 @@ pub async fn parse_org_groups_file(content: String) -> Result<OrgGroupsShareFile
     run_blocking(move || OrgGroupsShareFile::parse(&content)).await
 }
 
+/// Загрузка внешнего телефонного файла (Yealink IPPhoneBook) в кэш по
+/// текущей сохранённой конфигурации: путь и признак берутся с диска, поэтому
+/// фронтенд перед вызовом сбрасывает дебаунс сохранения.
+#[tauri::command]
+pub async fn refresh_external_phonebook(
+    state: State<'_, AppState>,
+) -> Result<ExternalRefresh, AppError> {
+    let db = state.db.clone();
+    let config_dir = state.config_dir.clone();
+    run_blocking(move || {
+        let config = ConfigStore::load(&config_dir)?;
+        external::refresh(
+            &db,
+            config.external_phonebook_enabled,
+            config.external_phonebook_path.as_deref(),
+        )
+    })
+    .await
+}
+
+/// Нативный диалог выбора XML-файла телефонной книги. Возвращает `None`,
+/// если пользователь закрыл диалог: отмена — не ошибка.
+#[tauri::command]
+pub async fn pick_external_phonebook_file(app: AppHandle) -> Result<Option<String>, AppError> {
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .set_title("Выберите файл телефонной книги")
+        .add_filter("XML (*.xml)", &["xml"])
+        .pick_file(move |picked| {
+            // `into_path` возвращает Result: выбор из диалога теоретически может
+            // быть URL, а не локальным путём. Для файлового диалога это недостижимо,
+            // но молча терять путь нельзя — логируем и трактуем как отмену.
+            let _ = sender.send(picked.and_then(|value| match value.into_path() {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    warn!(error = %error, "выбранный файл не является локальным путём");
+                    None
+                }
+            }));
+        });
+    Ok(receiver
+        .await
+        .ok()
+        .flatten()
+        .map(|path| path.to_string_lossy().into_owned()))
+}
+
+/// Экспорт всей конфигурации в файл обмена: «Документы/KMARUDA Phonebook/
+/// kmaruda-config.json». Секреты LDAP не покидают машину: флаг `hasPassword`
+/// сбрасывается, пароли остаются в системном хранилище.
+#[tauri::command]
+pub async fn export_config_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<String, AppError> {
+    let config_dir = state.config_dir.clone();
+    run_blocking(move || {
+        let mut config = ConfigStore::load(&config_dir)?;
+        for org in &mut config.ldap_configs {
+            org.has_password = false;
+        }
+        let file = ConfigShareFile::new(config);
+        let dir = share_dir(&app)?;
+        let path = dir.join(CONFIG_SHARE_FILE_NAME);
+        std::fs::write(&path, file.render())?;
+        Ok(path.to_string_lossy().into_owned())
+    })
+    .await
+}
+
+/// Разбор содержимого файла обмена конфигурацией (выбор файла — нативный
+/// `<input type="file">` webview, чтение — на фронтенде). Валидация формата
+/// живёт в Rust ([`ConfigShareFile::parse`]): фронтенд не применяет
+/// непроверенные данные. Применение к стору выполняет фронтенд, персист —
+/// через обычный save_config.
+#[tauri::command]
+pub async fn parse_config_file(content: String) -> Result<AppConfig, AppError> {
+    run_blocking(move || ConfigShareFile::parse(&content)).await
+}
+
+/// Папка файлов обмена: «Документы/KMARUDA Phonebook».
+fn share_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
+    let dir = app
+        .path()
+        .document_dir()
+        .map_err(|e| AppError::Config(format!("не удалось определить папку «Документы»: {e}")))?;
+    let dir = dir.join("KMARUDA Phonebook");
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
 /// Диагностика подключения: bind, rootDSE, пробная выборка сотрудников.
 ///
 /// `passwordOverride` позволяет проверить ещё не сохранённый пароль;

@@ -32,6 +32,24 @@ describe('MockContactsService (демо-режим)', () => {
     expect(page.contacts.every((c) => c.department === 'Бухгалтерия')).toBe(true);
   });
 
+  it('фильтрует по должности и кабинету (клики по карточке)', async () => {
+    const byTitle = await service.search({ activeTab: 'global', title: 'Бухгалтер' });
+    expect(byTitle.contacts.length).toBeGreaterThan(1);
+    expect(byTitle.contacts.every((c) => c.jobTitle === 'Бухгалтер')).toBe(true);
+
+    const byOffice = await service.search({ activeTab: 'global', office: 'Каб. 401' });
+    expect(byOffice.contacts.length).toBeGreaterThan(1);
+    expect(byOffice.contacts.every((c) => c.office === 'Каб. 401')).toBe(true);
+
+    // Должность и кабинет вместе (карточка коллеги из того же кабинета).
+    const both = await service.search({ activeTab: 'global', title: 'Бухгалтер', office: 'Каб. 210' });
+    expect(both.contacts.map((c) => c.id)).toEqual(['mock-orlova']);
+
+    const none = await service.search({ activeTab: 'global', office: 'Каб. 999' });
+    expect(none.contacts).toEqual([]);
+    expect(none.total).toBe(0);
+  });
+
   it('учитывает союз организаций группы фильтра', async () => {
     const all = await service.search({ activeTab: 'global' });
     const orgs = [...new Set(all.contacts.map((c) => c.organization).filter((o): o is string => Boolean(o)))];

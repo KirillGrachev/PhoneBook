@@ -11,9 +11,13 @@ use crate::error::AppError;
 /// Версия схемы кэша (`PRAGMA user_version`).
 ///
 /// v2: триграммный индекс `users_substr` для поиска подстрок без полного
-/// LIKE-скана таблицы. Кэш — восстанавливаемое зеркало AD, поэтому смена
-/// версии просто пересоздаёт его ([`ensure_schema`]).
-pub(super) const SCHEMA_VERSION: i64 = 2;
+/// LIKE-скана таблицы; v3: `users.manager_guid` — кликабельный руководитель
+/// (карточка открывается по GUID без поиска по имени); v4: `sources.kind` —
+/// источник «external» для записей внешнего телефонного файла (Yealink
+/// IPPhoneBook), загружаемых в справочник наравне с сотрудниками AD.
+/// Кэш — восстанавливаемое зеркало AD, поэтому смена версии просто
+/// пересоздаёт его ([`ensure_schema`]).
+pub(super) const SCHEMA_VERSION: i64 = 4;
 
 /// Колонки выборки сотрудника — порядок строго соответствует
 /// [`row_to_employee`]. Значения справочников берутся через JOIN:
@@ -24,7 +28,7 @@ pub(super) const EMPLOYEE_COLUMNS: &str =
      users.first_name, users.last_name, users.middle_name, users.display_name, users.title, \
      departments.name, orgs.name, locations.name, users.email, users.ip_phone, \
      users.phone_external, users.phone_mobile, users.manager, users.usn_changed, \
-     users.updated_at, users.pager";
+     users.updated_at, users.pager, users.manager_guid";
 
 /// Общая часть всех выборок: присоединение источника и справочников к `users`.
 ///
@@ -39,10 +43,12 @@ pub(super) const LOOKUP_JOINS: &str = " JOIN sources ON sources.id = users.sourc
 /// Актуальная схема. Комментарии к колонкам — часть поставки:
 /// структуру базы читают не только запросы, но и люди.
 pub(super) const CREATE_SCHEMA: &str = "
--- Источник синхронизации: подключение к AD из настроек приложения.
+-- Источник синхронизации: подключение к AD из настроек приложения
+-- или внешний телефонный файл (kind = 'external').
 CREATE TABLE IF NOT EXISTS sources (
     id   INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+    name TEXT NOT NULL UNIQUE,
+    kind TEXT NOT NULL DEFAULT 'ad'   -- 'ad' — подключение AD, 'external' — файл телефонной книги
 );
 
 -- Организации (AD `company`): одна строка на группу вариантов написания.
@@ -85,6 +91,7 @@ CREATE TABLE IF NOT EXISTS users (
     phone_mobile     TEXT,              -- мобильный (AD mobile)
     pager            TEXT,              -- TrueConf ID (AD pager)
     manager          TEXT,              -- имя руководителя (разрешается из DN при синхронизации)
+    manager_guid     TEXT,              -- GUID руководителя: карточка открывается кликом без поиска по имени
     usn_changed      INTEGER,           -- AD uSNChanged: метка изменений для инкрементальной синхронизации
     updated_at       INTEGER NOT NULL   -- время обновления записи, unix-секунды
 );
@@ -129,19 +136,47 @@ CREATE TABLE IF NOT EXISTS sync_meta (
 );
 ";
 
+/// Структурная самопроверка схемы: ключевые колонки актуальной версии.
+///
+/// Один штамп `PRAGMA user_version` — не гарантия: базу могла создать
+/// «смешанная» сборка, у которой номер версии уже актуальный, а отдельные
+/// таблицы — ещё старые (частично применённые обновления, ручные правки).
+/// Каждый зонд — пустой `SELECT`: при отсутствии колонки он падает на этапе
+/// подготовки запроса, а на здоровой схеме не стоит ничего.
+const STRUCTURE_PROBES: &[&str] = &[
+    "SELECT kind FROM sources LIMIT 0",             // v4
+    "SELECT manager_guid FROM users LIMIT 0",       // v3
+    "SELECT object_guid FROM users_substr LIMIT 0", // v2
+];
+
+/// Соответствует ли структура таблиц актуальной версии схемы.
+fn structure_matches(conn: &Connection) -> bool {
+    STRUCTURE_PROBES
+        .iter()
+        .all(|probe| conn.prepare(probe).is_ok())
+}
+
 /// Привести схему кэша к актуальной версии.
 ///
 /// Кэш — полностью восстанавливаемое зеркало Active Directory (избранное и
 /// настройки живут в `config.json`, пароли — в системном хранилище), поэтому
 /// переносы данных между версиями схемы не нужны: при несовпадении штампа
-/// `PRAGMA user_version` таблицы кэша пересоздаются с нуля, а содержимое
-/// восстановит ближайшая синхронизация. Совпадение версии — no-op.
+/// `PRAGMA user_version` **или** провале структурной самопроверки
+/// ([`STRUCTURE_PROBES`]) таблицы кэша пересоздаются с нуля, а содержимое
+/// восстановит ближайшая синхронизация. Совпадение версии и структуры — no-op.
 pub(super) fn ensure_schema(conn: &Connection) -> Result<(), AppError> {
     let version: i64 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
-    if version == SCHEMA_VERSION {
+    let structure_ok = version == SCHEMA_VERSION && structure_matches(conn);
+    if structure_ok {
         return Ok(());
     }
-    if version != 0 {
+    if version == SCHEMA_VERSION {
+        warn!(
+            target: "db",
+            version,
+            "структура кэша не соответствует версии схемы — кэш пересоздан"
+        );
+    } else if version != 0 {
         warn!(
             target: "db",
             from = version,
@@ -160,6 +195,14 @@ pub(super) fn ensure_schema(conn: &Connection) -> Result<(), AppError> {
          DROP TABLE IF EXISTS sources;",
     )?;
     conn.execute_batch(CREATE_SCHEMA)?;
+    // Самопроверка после пересоздания: если ключевых колонок всё ещё нет,
+    // значит устарел сам `CREATE_SCHEMA` в сборке — сообщаем явно, вместо
+    // того чтобы синхронизация позже падала на «no such column».
+    if !structure_matches(conn) {
+        return Err(AppError::Db(
+            "самопроверка схемы после пересоздания не прошла".to_string(),
+        ));
+    }
     conn.pragma_update(None, "user_version", SCHEMA_VERSION)?;
     Ok(())
 }

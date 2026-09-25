@@ -1,12 +1,13 @@
-//! Файл обмена группами организаций: перенос настроек между машинами.
+//! Файлы обмена настройками: перенос конфигурации между машинами.
 //!
-//! Группы и отметка группы вкладки «КМАруда» живут в локальном `config.json`
-//! (SQLite-кэш — только восстанавливаемое зеркало AD). Файл обмена — способ
-//! передать эти настройки другому пользователю: экспорт пишет его в
-//! «Документы», импорт читает и проверяет формат до применения.
+//! Группы организаций и вся конфигурация живут в локальном `config.json`
+//! (SQLite-кэш — только восстанавливаемое зеркало AD). Файлы обмена — способ
+//! передать эти настройки на другой ПК: экспорт пишет их в «Документы»,
+//! импорт читает и проверяет формат до применения.
 //!
-//! Формат самодокументированный и версионируемый: маркер `format` защищает от
+//! Форматы самодокументируемые и версионируемые: маркер `format` защищает от
 //! случайного импорта чужого JSON, `version` — от файлов будущего формата.
+//! Секреты (пароли LDAP) не покидают машину ни в одном из форматов.
 
 use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -15,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
 
-use super::model::OrgGroup;
+use super::model::{AppConfig, OrgGroup};
 
 /// Маркер формата: импорт чужого JSON отклоняется с понятной ошибкой.
 pub const SHARE_FORMAT: &str = "kmaruda-phonebook/org-groups";
@@ -134,6 +135,79 @@ impl OrgGroupsShareFile {
     }
 }
 
+/// Маркер формата файла обмена конфигурацией.
+pub const CONFIG_SHARE_FORMAT: &str = "kmaruda-phonebook/config";
+/// Текущая версия формата файла обмена конфигурацией.
+pub const CONFIG_SHARE_VERSION: u32 = 1;
+/// Имя файла, предлагаемое при экспорте конфигурации.
+pub const CONFIG_SHARE_FILE_NAME: &str = "kmaruda-config.json";
+
+/// Файл обмена конфигурацией: полный перенос настроек на другой ПК
+/// (оформление, подключения AD без секретов, группы, внешний телефонный файл).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigShareFile {
+    /// Маркер формата ([`CONFIG_SHARE_FORMAT`]).
+    pub format: String,
+    /// Версия формата ([`CONFIG_SHARE_VERSION`]).
+    pub version: u32,
+    /// Момент экспорта (unix-секунды): справочное поле для получателя.
+    #[serde(default)]
+    pub exported_at: Option<i64>,
+    /// Конфигурация машины-источника.
+    pub config: AppConfig,
+}
+
+impl ConfigShareFile {
+    /// Собрать файл обмена из текущей конфигурации.
+    pub fn new(config: AppConfig) -> Self {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_secs() as i64)
+            .unwrap_or(0);
+        Self {
+            format: CONFIG_SHARE_FORMAT.to_string(),
+            version: CONFIG_SHARE_VERSION,
+            exported_at: Some(now),
+            config,
+        }
+    }
+
+    /// Разобрать и проверить содержимое файла обмена: чужой JSON и файлы
+    /// будущих версий отклоняются до применения настроек.
+    pub fn parse(content: &str) -> Result<AppConfig, AppError> {
+        let file: Self = serde_json::from_str(content).map_err(|e| {
+            AppError::Config(format!(
+                "Файл конфигурации не является корректным JSON: {e}"
+            ))
+        })?;
+        if file.format != CONFIG_SHARE_FORMAT {
+            return Err(AppError::Config(format!(
+                "Это не файл конфигурации KMAruda Phonebook (неизвестный формат «{}»)",
+                file.format
+            )));
+        }
+        if file.version > CONFIG_SHARE_VERSION {
+            return Err(AppError::Config(format!(
+                "Файл конфигурации создан более новой версией приложения (версия формата {} > {})",
+                file.version, CONFIG_SHARE_VERSION
+            )));
+        }
+        let mut config = file.config;
+        // Флаг «пароль сохранён» машины-источника на этой машине ложён:
+        // секреты хранятся в системном хранилище и не переносятся.
+        for org in &mut config.ldap_configs {
+            org.has_password = false;
+        }
+        Ok(config)
+    }
+
+    /// Pretty-JSON для записи в файл обмена.
+    pub fn render(&self) -> String {
+        serde_json::to_string_pretty(self).expect("файл обмена конфигурацией сериализуем")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,5 +259,47 @@ mod tests {
         let blank = r#"{"format":"kmaruda-phonebook/org-groups","version":1,
             "groups":[{"id":"a","name":"  ","orgs":[]}]}"#;
         assert!(OrgGroupsShareFile::parse(blank).is_err());
+    }
+
+    #[test]
+    fn config_share_roundtrip_keeps_settings() {
+        let config = AppConfig {
+            theme: "dark".to_string(),
+            external_phonebook_path: Some("C:\\PhoneBook\\yealink.xml".to_string()),
+            external_phonebook_enabled: true,
+            ldap_configs: vec![super::super::model::LdapOrgConfig {
+                organization: "КМАруда".to_string(),
+                ldap_url: "ldaps://dc1".to_string(),
+                base_dn: "dc=kmaruda,dc=ru".to_string(),
+                bind_dn: None,
+                use_start_tls: false,
+                allow_invalid_tls: true,
+                use_integrated_auth: true,
+                has_password: true,
+            }],
+            ..Default::default()
+        };
+
+        let rendered = ConfigShareFile::new(config.clone()).render();
+        let parsed = ConfigShareFile::parse(&rendered).expect("parse");
+        assert_eq!(parsed.theme, "dark");
+        assert_eq!(
+            parsed.external_phonebook_path,
+            config.external_phonebook_path
+        );
+        assert!(parsed.external_phonebook_enabled);
+        // Секрет не переносится: флаг пароля сбрасывается.
+        assert!(!parsed.ldap_configs[0].has_password);
+        assert!(parsed.ldap_configs[0].allow_invalid_tls);
+    }
+
+    #[test]
+    fn config_share_rejects_foreign_and_future_files() {
+        let foreign = r#"{"format":"other/app","version":1,"config":{}}"#;
+        assert!(ConfigShareFile::parse(foreign).is_err());
+        let future = r#"{"format":"kmaruda-phonebook/config","version":99,"config":{}}"#;
+        assert!(ConfigShareFile::parse(future).is_err());
+        let broken = "{ not json";
+        assert!(ConfigShareFile::parse(broken).is_err());
     }
 }

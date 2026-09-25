@@ -55,6 +55,8 @@ pub fn run() {
                 )
                 .build(),
         )
+        // Нативные диалоги файлов: выбор XML телефонной книги из настроек.
+        .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
@@ -112,6 +114,10 @@ pub fn run() {
             commands::config::set_ldap_password,
             commands::config::export_org_groups_file,
             commands::config::parse_org_groups_file,
+            commands::config::refresh_external_phonebook,
+            commands::config::pick_external_phonebook_file,
+            commands::config::export_config_file,
+            commands::config::parse_config_file,
             commands::config::test_ldap_connection,
             commands::contacts::search_contacts,
             commands::contacts::get_contact,

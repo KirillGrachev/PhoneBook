@@ -200,7 +200,7 @@ export function SettingsGroupsView() {
   };
 
   return (
-    <div className="flex flex-col gap-4 w-full" aria-labelledby="org-groups-heading">
+    <div className="flex flex-col gap-4 w-full">
       <p className="text-[13px] text-muted-foreground leading-snug px-1">{t('settings.orgGroupsDesc')}</p>
 
       <div className="flex flex-col gap-3">

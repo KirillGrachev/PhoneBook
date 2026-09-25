@@ -41,6 +41,9 @@ pub struct Employee {
     pub phone_mobile: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manager: Option<String>,
+    /// GUID руководителя для клика по карточке из карточки подчинённого.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manager_guid: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub usn_changed: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -71,6 +74,9 @@ pub struct UserRecord {
     pub phone_external: Option<String>,
     pub phone_mobile: Option<String>,
     pub manager: Option<String>,
+    /// GUID руководителя, если он присутствует в той же выборке AD
+    /// (иначе `None` и карточка ищется по имени).
+    pub manager_guid: Option<String>,
     /// TrueConf ID (AD-атрибут `pager`).
     pub pager: Option<String>,
     pub usn_changed: Option<i64>,
@@ -114,6 +120,13 @@ pub struct SearchParams {
     pub source_org: Option<String>,
     #[serde(default)]
     pub department: Option<String>,
+    /// Фильтр по должности (клик по должности в карточке).
+    #[serde(default)]
+    pub title: Option<String>,
+    /// Фильтр по кабинету (клик по кабинету в карточке): список людей
+    /// в том же кабинете — тот же точный фильтр, что отдел/должность.
+    #[serde(default)]
+    pub office: Option<String>,
     /// Точная выборка по GUID (вкладка «Мои контакты»).
     #[serde(default)]
     pub ids: Option<Vec<String>>,
@@ -123,6 +136,9 @@ pub struct SearchParams {
     pub hide_empty: bool,
     #[serde(default)]
     pub limit: Option<u32>,
+    /// Смещение порции выдачи (порционная загрузка каталога списком).
+    #[serde(default)]
+    pub offset: Option<u32>,
 }
 
 /// IPC-значение по умолчанию для [`SearchParams::hide_empty`].
