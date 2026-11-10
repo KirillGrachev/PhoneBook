@@ -159,7 +159,7 @@ export const configStorage: StateStorage = {
 };
 
 /** Немедленно сбросить накопленные изменения на диск (например, при выходе). */
-export function flushConfigSave(): void {
+export async function flushConfigSave(): Promise<void> {
   if (saveTimer) {
     clearTimeout(saveTimer);
     saveTimer = null;
@@ -167,6 +167,6 @@ export function flushConfigSave(): void {
   const value = pendingValue;
   pendingValue = null;
   if (value !== null) {
-    void persistNow(value);
+    await persistNow(value);
   }
 }

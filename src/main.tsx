@@ -16,7 +16,7 @@ import '@/index.css';
 // сбрасываем отложенный хвост на beforeunload (best-effort: IPC асинхронный,
 // но закрытие пользовательского окна обычно переживает эту гонку).
 window.addEventListener('beforeunload', () => {
-  flushConfigSave();
+  void flushConfigSave();
 });
 
 // Язык из сохранённой конфигурации — ещё до первого рендера.

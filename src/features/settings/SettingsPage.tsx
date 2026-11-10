@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import FocusLock from 'react-focus-lock';
 import { useTranslation } from 'react-i18next';
 
 import { isTauri } from '@/api/backend';
@@ -58,6 +59,17 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setViewState] = useState<SettingsView>(() => parseView(searchParams.get('view')));
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   const setView = (next: SettingsView) => {
     setViewState(next);
     const params = new URLSearchParams(searchParams);
@@ -73,33 +85,38 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     // Экран настроек открывается мгновенно: без собственной анимации
     // появления/закрытия. Общий тумблер «Анимации» продолжает управлять
     // остальными поверхностями приложения.
-    <div
-      className="absolute top-[32px] bottom-0 left-0 right-0 z-50 bg-background flex flex-col w-full text-foreground"
-      role="dialog"
-      aria-modal="true"
-    >
-      {/* Скролл-контейнер сам является flex-колонкой: внутренние авто-поля
+    <FocusLock returnFocus>
+      <div
+        className="absolute top-[32px] bottom-0 left-0 right-0 z-50 bg-background flex flex-col w-full text-foreground"
+        role="dialog"
+        aria-modal="true"
+      >
+        {/* Скролл-контейнер сам является flex-колонкой: внутренние авто-поля
           (my-auto) центрируют блок настроек по вертикали, пока он короче
           экрана, а при переполнении схлопываются до нуля — скролл начинается
           от верха без обрезки шапки (в отличие от justify-center). */}
-      <div className="flex-1 overflow-y-auto w-full relative flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="shrink-0 my-auto py-8 px-6 xl:px-12 mx-auto max-w-[600px] w-full flex flex-col">
-          <SettingsHeader title={t(VIEW_TITLE_KEYS[view])} onBack={view === 'main' ? onClose : () => setView('main')} />
-          {/* Раздел переключается мгновенно, без анимации: экран настроек
+        <div className="flex-1 overflow-y-auto w-full relative flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="shrink-0 my-auto py-8 px-6 xl:px-12 mx-auto max-w-[600px] w-full flex flex-col">
+            <SettingsHeader
+              title={t(VIEW_TITLE_KEYS[view])}
+              onBack={view === 'main' ? onClose : () => setView('main')}
+            />
+            {/* Раздел переключается мгновенно, без анимации: экран настроек
               не должен «подниматься» или мигать при навигации. */}
-          <div className="flex flex-col">
-            {view === 'main' && <SettingsMainView onNavigate={setView} />}
-            {view === 'interface' && <SettingsInterfaceView />}
-            {/* Внешний телефонный файл — функция десктоп-сборки: в браузере
+            <div className="flex flex-col">
+              {view === 'main' && <SettingsMainView onNavigate={setView} />}
+              {view === 'interface' && <SettingsInterfaceView />}
+              {/* Внешний телефонный файл — функция десктоп-сборки: в браузере
                 раздела нет ни в навигации, ни по прямой ссылке. */}
-            {view === 'external' && isTauri() && <SettingsExternalView />}
-            {view === 'transfer' && <SettingsTransferView />}
-            {view === 'about' && <SettingsAboutView />}
-            {view === 'ad' && <SettingsAdView />}
-            {view === 'groups' && <SettingsGroupsView />}
+              {view === 'external' && isTauri() && <SettingsExternalView />}
+              {view === 'transfer' && <SettingsTransferView />}
+              {view === 'about' && <SettingsAboutView />}
+              {view === 'ad' && <SettingsAdView />}
+              {view === 'groups' && <SettingsGroupsView />}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </FocusLock>
   );
 }
