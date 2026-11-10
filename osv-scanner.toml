@@ -1,0 +1,11 @@
+# Suppressions are deliberate and time-boxed. Remove an entry when the
+# upstream package is upgraded.
+#
+# glib 0.18 is a Linux-only transitive of the GTK/WebKit stack. The product is
+# Windows-first; the advisory is unsoundness in an iterator used by GLib
+# variants, not a remotely reachable path in this app. A fixed glib requires a
+# newer GTK stack than Tauri currently pulls in on Linux.
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0429"
+ignoreUntil = 2026-12-31
+reason = "glib 0.18 is Linux-only transitive; Windows app; no fixed glib in Tauri's GTK 0.18 stack."

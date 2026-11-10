@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 import i18n from '@/lib/i18n';
+import { logFrontend } from '@/lib/devlog';
 
 interface Props {
   children: ReactNode;
@@ -26,6 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error('[ErrorBoundary] uncaught error:', error, errorInfo.componentStack);
+    logFrontend('error', 'error-boundary', `${error.message}\n${errorInfo.componentStack ?? ''}`);
   }
 
   private handleReset = (): void => {

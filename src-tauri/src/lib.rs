@@ -133,6 +133,7 @@ pub fn run() {
             commands::system::open_external,
             commands::system::open_devtools,
             commands::system::dev_log,
+            commands::system::frontend_log,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|error| {
