@@ -268,8 +268,14 @@ impl Db {
         let mut sql = format!("SELECT COUNT(*) FROM users {LOOKUP_JOINS} WHERE {conditions}");
         let mut args = args.to_vec();
         if let Some(expr) = fts_expr {
+            // NOT IN с материализацией подзапроса: MATCH выполняется один раз
+            // (EXPLAIN: LIST SUBQUERY), а не для каждой строки users, как в
+            // коррелированном NOT EXISTS. `object_guid` в users_fts всегда
+            // заполнен (вставка из users.object_guid, PK), а IS NOT NULL
+            // страхует трёхзначную логику NOT IN: без него хотя бы один NULL
+            // сделал бы условие ложным для всех строк.
             sql.push_str(
-                " AND NOT EXISTS (SELECT 1 FROM users_fts WHERE users_fts.object_guid = users.object_guid AND users_fts MATCH ?)",
+                " AND users.object_guid NOT IN (SELECT object_guid FROM users_fts WHERE users_fts MATCH ? AND object_guid IS NOT NULL)",
             );
             args.push(SqlValue::Text(expr.to_string()));
         }
@@ -326,15 +332,17 @@ impl Db {
         let mut args: Vec<SqlValue> = Vec::new();
 
         if text.chars().count() >= 3 {
+            // IN с материализацией подзапроса: MATCH выполняется один раз,
+            // а не для каждой строки users (EXISTS с корреляцией).
             parts.push(
-                "EXISTS (SELECT 1 FROM users_substr                  WHERE users_substr.object_guid = users.object_guid                  AND users_substr MATCH ?)"
+                "users.object_guid IN (SELECT object_guid FROM users_substr WHERE users_substr MATCH ?)"
                     .to_string(),
             );
             args.push(SqlValue::Text(fts_phrase("hay", &text)));
         }
         if digits.len() >= 3 {
             parts.push(
-                "EXISTS (SELECT 1 FROM users_substr                  WHERE users_substr.object_guid = users.object_guid                  AND users_substr MATCH ?)"
+                "users.object_guid IN (SELECT object_guid FROM users_substr WHERE users_substr MATCH ?)"
                     .to_string(),
             );
             args.push(SqlValue::Text(fts_phrase("phones", &digits)));

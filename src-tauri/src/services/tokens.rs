@@ -172,36 +172,17 @@ pub fn build_fts_query(query: &str) -> Option<String> {
 
     let mut clauses: Vec<String> = Vec::new();
     for word in query.split_whitespace().take(MAX_WORDS) {
-        let normalize = |value: &str| -> String {
-            value
-                .chars()
-                .filter(|c| c.is_alphanumeric())
-                .flat_map(char::to_lowercase)
-                .collect()
-        };
-
-        // Раскладочные варианты строятся ДО отбрасывания пунктуации:
-        // запятая на русской раскладке — это «б», точка — «ю», и пользователь,
-        // набирающий `,j,f`, ищет «боба», а не «оа». После перевода берём
-        // только буквы и цифры — в FTS-токенах пунктуации не место.
-        let mut variants: Vec<String> = Vec::new();
-        for candidate in [word, &to_ru_layout(word), &to_en_layout(word)] {
-            let candidate = normalize(candidate);
-            if !candidate.is_empty() && !variants.contains(&candidate) {
-                variants.push(candidate);
+        // E-mail — не один FTS-токен: unicode61 режет адрес по «@» и «.».
+        // Разбиваем его на части и требуем их все (клаузы соединяются через
+        // AND), иначе «ivanov@kmaruda.ru» превращался в один склеенный токен
+        // «ivanovkmarudaru» и не находил ни email-колонку, ни tokens.
+        if word.contains('@') {
+            for part in word.split(['@', '.']) {
+                push_fts_clause(&mut clauses, part);
             }
+        } else {
+            push_fts_clause(&mut clauses, word);
         }
-        if variants.is_empty() {
-            continue;
-        }
-
-        // Токены содержат только буквы/цифры, поэтому кавычки FTS5 безопасны.
-        let ors = variants
-            .iter()
-            .map(|v| format!("\"{v}\"*"))
-            .collect::<Vec<_>>()
-            .join(" OR ");
-        clauses.push(format!("({ors})"));
     }
 
     if clauses.is_empty() {
@@ -209,6 +190,40 @@ pub fn build_fts_query(query: &str) -> Option<String> {
     } else {
         Some(clauses.join(" AND "))
     }
+}
+
+/// Добавляет AND-клаузу для одного слова запроса с учётом раскладок.
+fn push_fts_clause(clauses: &mut Vec<String>, word: &str) {
+    let normalize = |value: &str| -> String {
+        value
+            .chars()
+            .filter(|c| c.is_alphanumeric())
+            .flat_map(char::to_lowercase)
+            .collect()
+    };
+
+    // Раскладочные варианты строятся ДО отбрасывания пунктуации:
+    // запятая на русской раскладке — это «б», точка — «ю», и пользователь,
+    // набирающий `,j,f`, ищет «боба», а не «оа». После перевода берём
+    // только буквы и цифры — в FTS-токенах пунктуации не место.
+    let mut variants: Vec<String> = Vec::new();
+    for candidate in [word, &to_ru_layout(word), &to_en_layout(word)] {
+        let candidate = normalize(candidate);
+        if !candidate.is_empty() && !variants.contains(&candidate) {
+            variants.push(candidate);
+        }
+    }
+    if variants.is_empty() {
+        return;
+    }
+
+    // Токены содержат только буквы/цифры, поэтому кавычки FTS5 безопасны.
+    let ors = variants
+        .iter()
+        .map(|v| format!("\"{v}\"*"))
+        .collect::<Vec<_>>()
+        .join(" OR ");
+    clauses.push(format!("({ors})"));
 }
 
 #[cfg(test)]
@@ -271,5 +286,18 @@ mod tests {
         assert!(!q.contains(":"));
         // Все кавычки — только парные обрамления токенов.
         assert_eq!(q.matches('"').count() % 2, 0);
+    }
+
+    #[test]
+    fn fts_query_splits_email_into_searchable_tokens() {
+        // Адрес целиком не является одним FTS-токеном: unicode61 режет его
+        // по «@» и «.». Поэтому запрос должен требовать все части адреса,
+        // иначе «ivanov@kmaruda.ru» схлопывался в «ivanovkmarudaru» и не
+        // находил ни email-колонку, ни токены.
+        let q = build_fts_query("Ivanov@KMAruda.RU").expect("email query");
+        assert!(q.contains("\"ivanov\"*"), "{q}");
+        assert!(q.contains("\"kmaruda\"*"), "{q}");
+        assert!(q.contains("\"ru\"*"), "{q}");
+        assert!(!q.contains("ivanovkmarudaru"), "{q}");
     }
 }

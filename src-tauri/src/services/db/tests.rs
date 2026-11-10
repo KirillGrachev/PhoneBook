@@ -65,6 +65,41 @@ fn browse_returns_everything_sorted() {
 }
 
 #[test]
+fn hide_empty_toggle_filters_accounts_without_contacts() {
+    let db = Db::open_in_memory().expect("in-memory db");
+    let mut empty = record("g4", "КМАруда", "Пустой Пользователь", "IT отдел", "44");
+    empty.email = None;
+    empty.ip_phone = None;
+    empty.phone_external = None;
+    empty.phone_mobile = None;
+    db.replace_org_users(
+        "КМАруда",
+        &[
+            record("g1", "КМАруда", "Иванов Иван Иванович", "IT отдел", "11"),
+            empty,
+        ],
+    )
+    .expect("sync");
+
+    let hidden = db
+        .search(SearchParams {
+            hide_empty: true,
+            ..Default::default()
+        })
+        .expect("search hidden");
+    assert_eq!(hidden.total, 1, "учётка без почты и телефонов скрыта");
+    assert_eq!(hidden.items[0].object_guid, "g1");
+
+    let shown = db
+        .search(SearchParams {
+            hide_empty: false,
+            ..Default::default()
+        })
+        .expect("search shown");
+    assert_eq!(shown.total, 2, "выключенный тумблер показывает все учётки");
+}
+
+#[test]
 fn searches_by_name_prefix() {
     let db = sample_db();
     let found = db
@@ -76,6 +111,30 @@ fn searches_by_name_prefix() {
         .items;
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].object_guid, "g1");
+}
+
+#[test]
+fn searches_by_full_email() {
+    let db = sample_db();
+    // Адрес целиком: FTS-токенизатор режет его на части, запрос должен
+    // требовать все части, а не искать один склеенный токен.
+    let found = db
+        .search(SearchParams {
+            query: Some("g1@kmaruda.ru".into()),
+            ..Default::default()
+        })
+        .expect("email search")
+        .items;
+    assert_eq!(found.len(), 1, "найден ровно один адрес: {found:?}");
+    assert_eq!(found[0].object_guid, "g1");
+
+    let upper = db
+        .search(SearchParams {
+            query: Some("G1@KMARUDA.RU".into()),
+            ..Default::default()
+        })
+        .expect("email search uppercase");
+    assert_eq!(upper.total, 1, "регистр адреса не важен");
 }
 
 #[test]
@@ -136,6 +195,30 @@ fn trigram_substring_search_is_case_insensitive() {
         })
         .expect("search");
     assert_eq!(upper.total, 1, "верхний регистр находит строчное значение");
+}
+
+#[test]
+fn null_fts_guid_does_not_break_complement_count() {
+    let db = sample_db();
+    // Защита от трёхзначной логики NOT IN: строка FTS с NULL-guid не должна
+    // обнулять дополнительную выдачу (object_guid в рабочей базе всегда есть,
+    // но защита дешёвая и фиксирует контракт).
+    {
+        let conn = db.conn_for_tests().lock().expect("lock");
+        conn.execute(
+            "INSERT INTO users_fts (object_guid, display_name) VALUES (NULL, 'фантом')",
+            [],
+        )
+        .expect("insert null guid");
+    }
+    let found = db
+        .search(SearchParams {
+            query: Some("хгал".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(found.total, 1, "NULL-guid не ломает NOT IN: {found:?}");
+    assert_eq!(found.items[0].object_guid, "g2");
 }
 
 #[test]
