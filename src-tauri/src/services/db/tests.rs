@@ -1195,3 +1195,273 @@ fn external_records_are_excluded_from_duplicate_clusters() {
         preview.samples
     );
 }
+
+/// Нагрузочный замер поиска: 50k контактов, p50/p95/p99 по типовым запросам
+/// и конкурентная нагрузка 1/2/4/8 потоков.
+///
+/// Запуск вручную (в обычном `cargo test` не выполняется):
+///
+/// ```text
+/// cargo test --manifest-path src-tauri/Cargo.toml search_load_benchmark -- --ignored --nocapture
+/// ```
+///
+/// Размер базы и число итераций можно переопределить:
+/// `PB_BENCH_ROWS=100000 PB_BENCH_ITERS=200`.
+#[test]
+#[ignore = "manual load benchmark"]
+fn search_load_benchmark() {
+    use std::sync::{Arc, Barrier};
+    use std::time::{Duration, Instant};
+
+    use crate::services::tokens::{email_tokens, initials_tokens, phone_tokens};
+
+    const SURNAMES: &[&str] = &[
+        "Иванов",
+        "Петров",
+        "Смирнов",
+        "Кузнецов",
+        "Соколов",
+        "Попов",
+        "Лебедев",
+        "Козлов",
+        "Новиков",
+        "Морозов",
+    ];
+    const NAMES: &[&str] = &[
+        "Иван",
+        "Пётр",
+        "Алексей",
+        "Дмитрий",
+        "Сергей",
+        "Андрей",
+        "Михаил",
+        "Николай",
+    ];
+    const DEPARTMENTS: &[&str] = &[
+        "Бухгалтерия",
+        "IT отдел",
+        "Кадры",
+        "Продажи",
+        "Логистика",
+        "Склад",
+        "Главный инженер",
+    ];
+    const TITLES: &[&str] = &[
+        "Специалист",
+        "Ведущий инженер",
+        "Начальник отдела",
+        "Менеджер",
+        "Бухгалтер",
+    ];
+
+    fn load_record(i: usize) -> UserRecord {
+        let surname = SURNAMES[i % SURNAMES.len()];
+        let name = NAMES[(i / SURNAMES.len()) % NAMES.len()];
+        let department = DEPARTMENTS[(i / 7) % DEPARTMENTS.len()];
+        let title = TITLES[(i / 11) % TITLES.len()];
+        let display_name = format!("{surname} {name} {i:05}");
+        // Каждая 25-я учётка — «пустая»: проверяем hide_empty под нагрузкой.
+        let blank = i.is_multiple_of(25);
+        let email = (!blank).then(|| format!("user{i}@kmaruda.ru"));
+        let ip_phone = (!blank).then(|| format!("56{:04}", i % 10_000));
+        let phone_external = (!blank).then(|| format!("+7 (495) 123-{:02}-89", i % 100));
+        let phone_mobile =
+            (!blank).then(|| format!("+7 (9{:02}) 000-00-{:02}", i % 100, (i / 7) % 100));
+
+        let mut tokens = initials_tokens(&display_name);
+        tokens.extend(email_tokens(email.as_deref().unwrap_or_default()));
+        tokens.extend(phone_tokens(&[
+            ip_phone.as_deref(),
+            phone_external.as_deref(),
+            phone_mobile.as_deref(),
+        ]));
+        tokens.sort();
+        tokens.dedup();
+
+        UserRecord {
+            object_guid: format!("guid-{i:08}"),
+            sam_account_name: Some(format!("user{i}")),
+            first_name: Some(name.into()),
+            last_name: Some(surname.into()),
+            middle_name: Some("Иванович".into()),
+            display_name: display_name.clone(),
+            sort_key: display_name.to_lowercase(),
+            title: Some(title.into()),
+            department: Some(department.into()),
+            company: Some("КМАруда".into()),
+            office: Some(format!("Каб. {}", 100 + i % 50)),
+            email,
+            ip_phone,
+            phone_external,
+            phone_mobile,
+            manager: None,
+            manager_guid: None,
+            pager: Some(format!("tc-{i}")),
+            usn_changed: Some(i as i64),
+            tokens: tokens.join(" "),
+        }
+    }
+
+    fn percentile(sorted: &[Duration], p: f64) -> f64 {
+        let idx = ((sorted.len() as f64 * p).ceil() as usize)
+            .saturating_sub(1)
+            .min(sorted.len().saturating_sub(1));
+        sorted[idx].as_secs_f64() * 1000.0
+    }
+
+    let rows = std::env::var("PB_BENCH_ROWS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(50_000usize)
+        .clamp(1_000, 200_000);
+    let iters = std::env::var("PB_BENCH_ITERS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(100usize)
+        .clamp(10, 1_000);
+
+    eprintln!("=== PhoneBook search load test: rows={rows}, iters={iters} ===");
+    let records: Vec<UserRecord> = (0..rows).map(load_record).collect();
+    let db = Db::open_in_memory().expect("in-memory db");
+    let seed_start = Instant::now();
+    db.replace_org_users("КМАруда", &records).expect("seed");
+    eprintln!(
+        "seed: {:.2}s ({:.0} rows/s)",
+        seed_start.elapsed().as_secs_f64(),
+        rows as f64 / seed_start.elapsed().as_secs_f64()
+    );
+
+    type Case = (&'static str, fn() -> SearchParams);
+    let cases: Vec<Case> = vec![
+        ("browse 300", || SearchParams {
+            limit: Some(300),
+            hide_empty: true,
+            ..Default::default()
+        }),
+        ("name prefix", || SearchParams {
+            query: Some("Иван".into()),
+            limit: Some(300),
+            hide_empty: true,
+            ..Default::default()
+        }),
+        ("substring trigram", || SearchParams {
+            query: Some("хгал".into()),
+            limit: Some(300),
+            hide_empty: true,
+            ..Default::default()
+        }),
+        ("email exact", || SearchParams {
+            query: Some("user12345@kmaruda.ru".into()),
+            limit: Some(300),
+            hide_empty: true,
+            ..Default::default()
+        }),
+        ("phone tail 2 digits", || SearchParams {
+            query: Some("22-89".into()),
+            limit: Some(300),
+            hide_empty: true,
+            ..Default::default()
+        }),
+        ("name + org filter", || SearchParams {
+            query: Some("Иван".into()),
+            organization: Some("КМАруда".into()),
+            limit: Some(300),
+            hide_empty: true,
+            ..Default::default()
+        }),
+        ("name + hide empty", || SearchParams {
+            query: Some("Петров".into()),
+            limit: Some(300),
+            hide_empty: true,
+            ..Default::default()
+        }),
+        ("deep page offset", || SearchParams {
+            query: Some("Иван".into()),
+            limit: Some(100),
+            offset: Some(5_000),
+            hide_empty: true,
+            ..Default::default()
+        }),
+    ];
+
+    eprintln!(
+        "{:<22} {:>10} {:>10} {:>10} {:>10} {:>8}",
+        "case", "p50,ms", "p95,ms", "p99,ms", "avg,ms", "hits"
+    );
+    for (name, make) in &cases {
+        for _ in 0..10 {
+            std::hint::black_box(db.search(make()).expect("warmup"));
+        }
+        let mut latencies = Vec::with_capacity(iters);
+        let mut hits = 0u64;
+        for _ in 0..iters {
+            let start = Instant::now();
+            let page = db.search(make()).expect("search");
+            latencies.push(start.elapsed());
+            hits = page.total;
+        }
+        latencies.sort();
+        let avg = latencies.iter().map(|d| d.as_secs_f64()).sum::<f64>() / latencies.len() as f64
+            * 1000.0;
+        eprintln!(
+            "{:<22} {:>10.2} {:>10.2} {:>10.2} {:>10.2} {:>8}",
+            name,
+            percentile(&latencies, 0.50),
+            percentile(&latencies, 0.95),
+            percentile(&latencies, 0.99),
+            avg,
+            hits
+        );
+    }
+
+    eprintln!("--- concurrent search (shared SQLite connection) ---");
+    eprintln!(
+        "{:<8} {:>10} {:>10} {:>10} {:>10}",
+        "workers", "qps", "p50,ms", "p95,ms", "p99,ms"
+    );
+    for workers in [1usize, 2, 4, 8] {
+        let barrier = Arc::new(Barrier::new(workers + 1));
+        let per_worker = iters;
+        let mut handles = Vec::with_capacity(workers);
+        for _ in 0..workers {
+            let db = db.clone();
+            let barrier = barrier.clone();
+            handles.push(std::thread::spawn(move || {
+                let queries = ["Иван", "хгал", "user12345@kmaruda.ru", "22-89"];
+                let mut latencies = Vec::with_capacity(per_worker);
+                barrier.wait();
+                for i in 0..per_worker {
+                    let start = Instant::now();
+                    let page = db
+                        .search(SearchParams {
+                            query: Some(queries[i % queries.len()].into()),
+                            limit: Some(100),
+                            hide_empty: true,
+                            ..Default::default()
+                        })
+                        .expect("concurrent search");
+                    latencies.push(start.elapsed());
+                    std::hint::black_box(page.total);
+                }
+                latencies
+            }));
+        }
+        barrier.wait();
+        let start = Instant::now();
+        let mut latencies = Vec::with_capacity(workers * per_worker);
+        for handle in handles {
+            latencies.extend(handle.join().expect("worker"));
+        }
+        let elapsed = start.elapsed();
+        latencies.sort();
+        eprintln!(
+            "{:<8} {:>10.1} {:>10.2} {:>10.2} {:>10.2}",
+            workers,
+            (workers * per_worker) as f64 / elapsed.as_secs_f64(),
+            percentile(&latencies, 0.50),
+            percentile(&latencies, 0.95),
+            percentile(&latencies, 0.99)
+        );
+    }
+    eprintln!("=== done ===");
+}
