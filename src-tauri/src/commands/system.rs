@@ -1,7 +1,7 @@
 //! Системные команды: трей, открытие внешних ссылок, devtools, dev-лог.
 
 use tauri::AppHandle;
-use tracing::info;
+use tracing::{debug, error, info, warn};
 
 use crate::error::AppError;
 
@@ -115,6 +115,20 @@ pub fn open_devtools(window: tauri::WebviewWindow) {
 #[tauri::command]
 pub fn dev_log(scope: String, message: String) {
     info!(target: "frontend", "[phonebook:{scope}] {message}");
+}
+
+/// Запись фронтенд-ошибки в файловый лог release-сборки. Вызывается из
+/// ErrorBoundary и обработчиков окна, где `console.*` пользователю недоступен.
+#[tauri::command]
+pub fn frontend_log(level: String, scope: String, message: String) {
+    let scope: String = scope.chars().take(64).collect();
+    let message: String = message.chars().take(4096).collect();
+    match level.as_str() {
+        "error" => error!(target: "frontend", "[phonebook:{scope}] {message}"),
+        "warn" => warn!(target: "frontend", "[phonebook:{scope}] {message}"),
+        "debug" => debug!(target: "frontend", "[phonebook:{scope}] {message}"),
+        _ => info!(target: "frontend", "[phonebook:{scope}] {message}"),
+    }
 }
 
 #[cfg(test)]

@@ -11,6 +11,14 @@ import { invokeCommand, isTauri } from '@/api/backend';
  * Единственная точка входа для `console.log` в приложении — lint-правило
  * no-console отключено точечно.
  */
+/** Запись фронтенд-ошибки в файловый лог Rust (в release консоли нет). */
+export function logFrontend(level: 'error' | 'warn' | 'info' | 'debug', scope: string, message: string): void {
+  if (!isTauri()) {
+    return;
+  }
+  void invokeCommand<void>('frontend_log', { level, scope, message }).catch(() => {});
+}
+
 export function devLog(scope: string, ...args: unknown[]): void {
   if (!import.meta.env.DEV) {
     return;

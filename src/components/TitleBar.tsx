@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { isTauri } from '@/api/backend';
+import { logFrontend } from '@/lib/devlog';
 
 interface TitleBarProps {
   title: string;
@@ -38,7 +39,7 @@ export function TitleBar({ title }: TitleBarProps) {
     window
       .isMaximized()
       .then(setMaximized)
-      .catch((error) => console.warn('[titlebar] isMaximized failed', error));
+      .catch((error) => logFrontend('warn', 'titlebar', `isMaximized: ${String(error)}`));
 
     window
       .onResized(() => {
@@ -54,7 +55,7 @@ export function TitleBar({ title }: TitleBarProps) {
           unlisten = fn;
         }
       })
-      .catch((error) => console.warn('[titlebar] onResized failed', error));
+      .catch((error) => logFrontend('warn', 'titlebar', `onResized: ${String(error)}`));
 
     return () => {
       disposed = true;
@@ -78,7 +79,7 @@ export function TitleBar({ title }: TitleBarProps) {
 
   const window = getCurrentWindow();
   const run = (action: Promise<unknown>) =>
-    action.catch((error) => console.error('[titlebar] window action failed', error));
+    action.catch((error) => logFrontend('error', 'titlebar', `window action: ${String(error)}`));
 
   return (
     <div className="relative h-[32px] bg-surface shrink-0 z-[60] flex items-center justify-between select-none border-b border-border">
