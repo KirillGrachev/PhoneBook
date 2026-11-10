@@ -158,8 +158,21 @@ fn insert_users(
     )?;
     let mut insert_seen =
         tx.prepare("INSERT OR IGNORE INTO seen_guids (object_guid) VALUES (?1)")?;
-    let mut delete_fts = tx.prepare("DELETE FROM users_fts WHERE object_guid = ?1")?;
-    let mut delete_substr = tx.prepare("DELETE FROM users_substr WHERE object_guid = ?1")?;
+    // object_guid в FTS5-таблицах UNINDEXED: удаление по одному guid — это
+    // полный скан индекса на каждую запись (O(n²) на большой синхронизации).
+    // Собираем весь батч в seen_guids и чистим индексы одним проходом.
+    for user in users {
+        insert_seen.execute(rusqlite::params![user.object_guid])?;
+    }
+    drop(insert_seen);
+    tx.execute(
+        "DELETE FROM users_fts WHERE object_guid IN (SELECT object_guid FROM seen_guids)",
+        [],
+    )?;
+    tx.execute(
+        "DELETE FROM users_substr WHERE object_guid IN (SELECT object_guid FROM seen_guids)",
+        [],
+    )?;
     let mut insert_substr =
         tx.prepare("INSERT INTO users_substr (object_guid, hay, phones) VALUES (?1, ?2, ?3)")?;
     let mut insert_fts = tx.prepare(
@@ -205,9 +218,6 @@ fn insert_users(
             user.usn_changed,
             now,
         ])?;
-        insert_seen.execute(rusqlite::params![user.object_guid])?;
-        delete_fts.execute(rusqlite::params![user.object_guid])?;
-        delete_substr.execute(rusqlite::params![user.object_guid])?;
         let (hay, phones) = substr_columns(user);
         insert_substr.execute(rusqlite::params![user.object_guid, hay, phones])?;
         insert_fts.execute(rusqlite::params![
