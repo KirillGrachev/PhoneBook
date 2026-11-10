@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { isTauri } from '@/api/backend';
-import { contentRevealVariants } from '@/lib/motionPresets';
 
 import { SettingsAboutView } from './components/SettingsAboutView';
 import { SettingsAdView } from './components/SettingsAdView';
@@ -72,11 +70,10 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 10 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+    // Экран настроек открывается мгновенно: без собственной анимации
+    // появления/закрытия. Общий тумблер «Анимации» продолжает управлять
+    // остальными поверхностями приложения.
+    <div
       className="absolute top-[32px] bottom-0 left-0 right-0 z-50 bg-background flex flex-col w-full text-foreground"
       role="dialog"
       aria-modal="true"
@@ -88,30 +85,21 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
       <div className="flex-1 overflow-y-auto w-full relative flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="shrink-0 my-auto py-8 px-6 xl:px-12 mx-auto max-w-[600px] w-full flex flex-col">
           <SettingsHeader title={t(VIEW_TITLE_KEYS[view])} onBack={view === 'main' ? onClose : () => setView('main')} />
-          {/* Переход между разделами — кроссфейд из общих пресетов:
-              навигация хаба и возвраты не подменяют содержимое рывком. */}
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={view}
-              variants={contentRevealVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="flex flex-col"
-            >
-              {view === 'main' && <SettingsMainView onNavigate={setView} />}
-              {view === 'interface' && <SettingsInterfaceView />}
-              {/* Внешний телефонный файл — функция десктоп-сборки: в браузере
-                  раздела нет ни в навигации, ни по прямой ссылке. */}
-              {view === 'external' && isTauri() && <SettingsExternalView />}
-              {view === 'transfer' && <SettingsTransferView />}
-              {view === 'about' && <SettingsAboutView />}
-              {view === 'ad' && <SettingsAdView />}
-              {view === 'groups' && <SettingsGroupsView />}
-            </motion.div>
-          </AnimatePresence>
+          {/* Раздел переключается мгновенно, без анимации: экран настроек
+              не должен «подниматься» или мигать при навигации. */}
+          <div className="flex flex-col">
+            {view === 'main' && <SettingsMainView onNavigate={setView} />}
+            {view === 'interface' && <SettingsInterfaceView />}
+            {/* Внешний телефонный файл — функция десктоп-сборки: в браузере
+                раздела нет ни в навигации, ни по прямой ссылке. */}
+            {view === 'external' && isTauri() && <SettingsExternalView />}
+            {view === 'transfer' && <SettingsTransferView />}
+            {view === 'about' && <SettingsAboutView />}
+            {view === 'ad' && <SettingsAdView />}
+            {view === 'groups' && <SettingsGroupsView />}
+          </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
