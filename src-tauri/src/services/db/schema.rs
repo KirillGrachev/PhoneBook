@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS users (
     pager            TEXT,              -- TrueConf ID (AD pager)
     manager          TEXT,              -- имя руководителя (разрешается из DN при синхронизации)
     manager_guid     TEXT,              -- GUID руководителя: карточка открывается кликом без поиска по имени
-    usn_changed      INTEGER,           -- AD uSNChanged: метка изменений для инкрементальной синхронизации
+    usn_changed      INTEGER,           -- AD uSNChanged: пропуск неизменённых записей при переиндексации
     updated_at       INTEGER NOT NULL   -- время обновления записи, unix-секунды
 );
 

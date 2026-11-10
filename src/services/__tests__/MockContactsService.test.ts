@@ -96,6 +96,22 @@ describe('MockContactsService (демо-режим)', () => {
     expect(empty.total).toBe(0);
   });
 
+  it('ищет по строке внутри «Моих контактов»', async () => {
+    const all = await service.search({ activeTab: 'global' });
+    const saved = all.contacts.slice(0, 5);
+    const savedIds = saved.map((c) => c.id);
+    const token = saved[0].fullName.split(/\s+/)[0];
+    const filtered = await service.search({
+      activeTab: 'local',
+      savedIds,
+      search: token,
+    });
+    expect(filtered.total).toBe(filtered.contacts.length);
+    expect(filtered.contacts.length).toBeGreaterThan(0);
+    expect(filtered.contacts.length).toBeLessThanOrEqual(saved.length);
+    expect(filtered.contacts.every((c) => savedIds.includes(c.id))).toBe(true);
+  });
+
   it('getById отдаёт контакт или типизированную ошибку', async () => {
     const all = await service.search({ activeTab: 'global' });
     const found = await service.getById(all.contacts[0].id);

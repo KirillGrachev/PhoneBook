@@ -137,7 +137,10 @@ impl SyncManager {
 
     async fn run_inner(&self, app: &AppHandle, force: bool) -> Result<(), AppError> {
         let state = app.state::<AppState>().inner().clone();
-        let config = ConfigStore::load(&state.config_dir)?;
+        let config_dir = state.config_dir.clone();
+        let config = tokio::task::spawn_blocking(move || ConfigStore::load(&config_dir))
+            .await
+            .map_err(|e| AppError::Internal(format!("загрузка конфигурации: {e}")))??;
 
         if config.test_mode {
             info!("тестовый режим: синхронизация с AD пропущена");
@@ -189,7 +192,19 @@ impl SyncManager {
         self.set_org_running(&name, true);
         let started = Instant::now();
 
-        let password = ConfigStore::get_password(&name);
+        let password_org = name.clone();
+        let password =
+            match tokio::task::spawn_blocking(move || ConfigStore::get_password(&password_org))
+                .await
+            {
+                Ok(password) => password,
+                Err(error) => {
+                    let error = AppError::Internal(format!("keyring: {error}"));
+                    report_failure(app, db, &name, &error);
+                    self.set_org_running(&name, false);
+                    return;
+                }
+            };
         let credentials = DirectoryCredentials {
             ldap_url: org.ldap_url.as_str(),
             base_dn: org.base_dn.as_str(),

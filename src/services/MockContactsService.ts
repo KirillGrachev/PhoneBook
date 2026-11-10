@@ -48,9 +48,13 @@ export class MockContactsService implements ContactsService {
       if (query.office) {
         list = list.filter((contact) => contact.office === query.office);
       }
-      if (query.search?.trim()) {
-        list = list.filter((contact) => this.engine.match(contact, query.search as string));
-      }
+    }
+
+    // Текстовый поиск работает и в «Моих контактах»: избранное — это
+    // подмножество справочника, но строка поиска должна его фильтровать.
+    const text = query.search?.trim();
+    if (text) {
+      list = list.filter((contact) => this.engine.match(contact, text));
     }
 
     // «Кириллица сначала»: служебные учётки с латиницей не поднимаются наверх.

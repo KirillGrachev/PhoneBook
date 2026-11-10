@@ -4,7 +4,11 @@ import type { EmployeeDto, SearchParamsDto } from '@/api/contracts';
 import type { Contact } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 
+import { ContactSearchEngine } from './ContactSearchEngine';
 import type { ContactsPage, ContactsQuery, ContactsService } from './ContactsService';
+
+/** Поиск по избранному: набор небольшой, фильтруем на клиенте. */
+const localSearch = new ContactSearchEngine();
 
 /** Employee (DTO бэкенда) → Contact (модель UI). */
 export function mapEmployeeToContact(employee: EmployeeDto): Contact {
@@ -42,56 +46,77 @@ export function mapEmployeeToContact(employee: EmployeeDto): Contact {
  */
 export class TauriContactsService implements ContactsService {
   async search(query: ContactsQuery): Promise<ContactsPage> {
-    const params: SearchParamsDto = {
-      limit: query.limit ?? 0,
-      offset: query.offset ?? 0,
-      hideEmpty: query.hideEmpty ?? true,
-    };
-
     if (query.activeTab === 'local') {
       const ids = query.savedIds ?? [];
       if (ids.length === 0) {
         return { contacts: [], total: 0 };
       }
-      params.ids = ids;
-    } else {
-      if (query.activeTab === 'kmaruda') {
-        // Вкладка предприятия: поиск внутри союза организаций группы,
-        // отмеченной в настройках, а без группы — внутри организации первого
-        // настроенного AD-подключения (по атрибуту `company`, тот же механизм,
-        // что и «Фильтр по предприятию»): один источник синхронизации может
-        // держать весь домен холдинга, поэтому фильтр по sourceOrg границу
-        // предприятия не задаёт. sourceOrg дублируется как страховка: если ни
-        // одно имя группы не совпадает ни с одним `company` в AD, бэкенд
-        // откатится к источнику.
-        const { ldapConfigs, orgGroups, enterpriseGroupId } = useAppStore.getState();
-        const orgs = resolveEnterpriseOrgs(ldapConfigs, orgGroups, enterpriseGroupId);
-        if (orgs.length > 0) {
-          params.organizations = orgs;
-          const primaryOrg = ldapConfigs[0]?.organization?.trim();
-          if (primaryOrg) {
-            params.sourceOrg = primaryOrg;
-          }
-        }
-      } else if (query.organizations?.length) {
-        // Группа фильтра по организации (глобальная версия): союз организаций.
-        params.organizations = query.organizations;
-      } else if (query.organization) {
-        params.organization = query.organization;
+      // Забираем весь избранный набор (ids ограничен command-слоем),
+      // затем применяем текстовый поиск и только потом страницу.
+      const page = await contactsApi.search({
+        ids,
+        limit: ids.length,
+        offset: 0,
+        hideEmpty: false,
+      });
+      let contacts = page.items.map(mapEmployeeToContact);
+      const text = query.search?.trim();
+      if (text) {
+        contacts = contacts.filter((contact) => localSearch.match(contact, text));
       }
+      if (query.hideEmpty !== false) {
+        contacts = contacts.filter(
+          (contact) => contact.email || contact.mobilePhone || contact.ipPhone || contact.fullIpPhone,
+        );
+      }
+      const total = contacts.length;
+      const offset = query.offset ?? 0;
+      const limit = query.limit && query.limit > 0 ? query.limit : total;
+      return { contacts: contacts.slice(offset, offset + limit), total };
+    }
 
-      if (query.department) {
-        params.department = query.department;
+    const params: SearchParamsDto = {
+      limit: query.limit && query.limit > 0 ? query.limit : 300,
+      offset: query.offset ?? 0,
+      hideEmpty: query.hideEmpty ?? true,
+    };
+
+    if (query.activeTab === 'kmaruda') {
+      // Вкладка предприятия: поиск внутри союза организаций группы,
+      // отмеченной в настройках, а без группы — внутри организации первого
+      // настроенного AD-подключения (по атрибуту `company`, тот же механизм,
+      // что и «Фильтр по предприятию»): один источник синхронизации может
+      // держать весь домен холдинга, поэтому фильтр по sourceOrg границу
+      // предприятия не задаёт. sourceOrg дублируется как страховка: если ни
+      // одно имя группы не совпадает ни с одним `company` в AD, бэкенд
+      // откатится к источнику.
+      const { ldapConfigs, orgGroups, enterpriseGroupId } = useAppStore.getState();
+      const orgs = resolveEnterpriseOrgs(ldapConfigs, orgGroups, enterpriseGroupId);
+      if (orgs.length > 0) {
+        params.organizations = orgs;
+        const primaryOrg = ldapConfigs[0]?.organization?.trim();
+        if (primaryOrg) {
+          params.sourceOrg = primaryOrg;
+        }
       }
-      if (query.title) {
-        params.title = query.title;
-      }
-      if (query.office) {
-        params.office = query.office;
-      }
-      if (query.search?.trim()) {
-        params.query = query.search.trim();
-      }
+    } else if (query.organizations?.length) {
+      // Группа фильтра по организации (глобальная версия): союз организаций.
+      params.organizations = query.organizations;
+    } else if (query.organization) {
+      params.organization = query.organization;
+    }
+
+    if (query.department) {
+      params.department = query.department;
+    }
+    if (query.title) {
+      params.title = query.title;
+    }
+    if (query.office) {
+      params.office = query.office;
+    }
+    if (query.search?.trim()) {
+      params.query = query.search.trim();
     }
 
     const page = await contactsApi.search(params);

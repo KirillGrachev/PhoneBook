@@ -268,7 +268,9 @@ pub fn refresh(db: &Db, enabled: bool, path: Option<&str>) -> Result<ExternalRef
             ExternalRefresh::Disabled
         });
     }
-    let path = path.expect("проверено выше");
+    let path = path.ok_or_else(|| {
+        AppError::ExternalFile("не указан путь к внешней телефонной книге".into())
+    })?;
 
     let metadata = fs::metadata(path)
         .map_err(|e| AppError::ExternalFile(format!("не удалось открыть файл: {e}")))?;

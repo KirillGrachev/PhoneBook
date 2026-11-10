@@ -58,7 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
             {i18n.language === 'en'
               ? 'A part of the UI crashed. You can retry rendering or restart the application.'
               : 'Фрагмент интерфейса завершился с ошибкой. Можно повторить отрисовку или перезапустить приложение.'}
-            {this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <span className="block mt-4 text-xs font-mono bg-black/10 dark:bg-white/5 p-2 rounded text-left overflow-x-auto text-foreground/70">
                 {this.state.error.message}
               </span>

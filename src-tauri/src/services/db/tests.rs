@@ -308,6 +308,22 @@ fn source_org_filter_includes_accounts_without_company() {
 }
 
 #[test]
+fn ids_selection_respects_limit_and_offset() {
+    let db = sample_db();
+    let page = db
+        .search(SearchParams {
+            ids: Some(vec!["g3".into(), "g1".into(), "g2".into()]),
+            limit: Some(1),
+            offset: Some(1),
+            ..Default::default()
+        })
+        .expect("ids page");
+    assert_eq!(page.total, 3);
+    assert_eq!(page.items.len(), 1);
+    assert_eq!(page.items[0].object_guid, "g2");
+}
+
+#[test]
 fn by_ids_selection() {
     let db = sample_db();
     let picked = db
@@ -424,12 +440,47 @@ fn lookups_store_repeated_values_once() {
 }
 
 #[test]
+fn unchanged_usn_skips_index_rewrite_but_changed_usn_updates() {
+    let db = sample_db();
+    // Тот же uSNChanged: запись считается неизменённой, даже если в тестовом
+    // объекте поменяли поле (в AD такое невозможно без роста uSNChanged).
+    let mut same = record("g1", "КМАруда", "Иванов Иван Иванович", "IT отдел", "11");
+    same.display_name = "Подмена без uSNChanged".into();
+    db.replace_org_users("КМАруда", &[same]).expect("same usn");
+    let page = db
+        .search(SearchParams {
+            query: Some("Иванов".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(
+        page.items[0].display_name.as_deref(),
+        Some("Иванов Иван Иванович")
+    );
+
+    // Новый uSNChanged — запись переиндексируется.
+    let mut changed = record("g1", "КМАруда", "Иванов Иван Иванович", "IT отдел", "11");
+    changed.display_name = "Иванов Иван Обновлённый".into();
+    changed.usn_changed = Some(2);
+    db.replace_org_users("КМАруда", &[changed])
+        .expect("changed usn");
+    let page = db
+        .search(SearchParams {
+            query: Some("Обновлённый".into()),
+            ..Default::default()
+        })
+        .expect("search changed");
+    assert_eq!(page.items[0].object_guid, "g1");
+}
+
+#[test]
 fn stale_sync_prunes_unused_lookups() {
     let db = sample_db();
     // Петров переведён в «Кадры» без кабинета, Иванов уволен:
     // «IT отдел» и «Бухгалтерия» больше никому не нужны.
     let mut moved = record("g2", "КМАруда", "Петров Пётр Петрович", "Кадры", "22");
     moved.office = None;
+    moved.usn_changed = Some(2); // AD поднял uSNChanged при переводе
     db.replace_org_users("КМАруда", &[moved]).expect("resync");
 
     let guard = db.conn_for_tests().lock().expect("lock");
@@ -1001,6 +1052,56 @@ fn offset_pages_are_disjoint_and_stable() {
     deduped.sort_unstable();
     deduped.dedup();
     assert_eq!(guids.len(), deduped.len(), "порции не пересекаются");
+}
+
+#[test]
+fn mixed_fts_and_trigram_pages_are_exact() {
+    let db = Db::open_in_memory().expect("in-memory db");
+    let mut records = Vec::new();
+    // 5 совпадений по префиксу FTS: «Иванов» — отдельный токен.
+    for i in 0..5 {
+        records.push(record(
+            &format!("fts-{i}"),
+            "КМАруда",
+            "Иванов Иван",
+            "IT отдел",
+            "11",
+        ));
+    }
+    // 5 совпадений только по триграмме: «иван» — подстрока «Поливанов».
+    for i in 0..5 {
+        records.push(record(
+            &format!("sub-{i}"),
+            "КМАруда",
+            "Поливанов Пётр",
+            "Бухгалтерия",
+            "22",
+        ));
+    }
+    db.replace_org_users("КМАруда", &records).expect("sync");
+
+    let mut guids = Vec::new();
+    for offset in [0, 4, 8] {
+        let page = db
+            .search(SearchParams {
+                query: Some("Иван".into()),
+                limit: Some(4),
+                offset: Some(offset),
+                ..Default::default()
+            })
+            .expect("search page");
+        assert_eq!(page.total, 10, "total не зависит от страницы");
+        guids.extend(page.items.into_iter().map(|item| item.object_guid));
+    }
+    assert_eq!(guids.len(), 10, "все страницы вместе дают всю выдачу");
+    let mut unique = guids.clone();
+    unique.sort();
+    unique.dedup();
+    assert_eq!(
+        unique.len(),
+        10,
+        "страницы не пересекаются и не теряют записи"
+    );
 }
 
 #[test]

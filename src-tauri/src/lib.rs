@@ -9,6 +9,7 @@ mod error;
 mod services;
 mod state;
 
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use tauri::menu::{Menu, MenuItem};
@@ -73,7 +74,7 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
-            init_tracing();
+            init_tracing(app.handle());
             info!(
                 version = env!("CARGO_PKG_VERSION"),
                 "запуск телефонного справочника"
@@ -134,19 +135,45 @@ pub fn run() {
             commands::system::dev_log,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|error| {
+            tracing::error!(%error, "не удалось запустить Tauri-приложение");
+            std::process::exit(1);
+        });
 }
 
-fn init_tracing() {
+/// WorkerGuard файлового логгера должен жить весь процесс: при его drop
+/// неблокирующий writer может потерять хвост очереди.
+static LOG_GUARD: OnceLock<tracing_appender::non_blocking::WorkerGuard> = OnceLock::new();
+
+fn init_tracing(app: &AppHandle) {
     let default_filter = if cfg!(debug_assertions) {
         "app_lib=debug,info"
     } else {
         "info"
     };
+
+    // В release у GUI нет консоли (windows_subsystem = "windows"), поэтому
+    // файл — единственный способ получить диагностику с машины пользователя.
+    let log_dir = app
+        .path()
+        .app_log_dir()
+        .or_else(|_| app.path().app_data_dir())
+        .unwrap_or_else(|_| std::env::temp_dir());
+    let _ = std::fs::create_dir_all(&log_dir);
+    let file_appender = tracing_appender::rolling::daily(&log_dir, "phonebook.log");
+    let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
+    let _ = LOG_GUARD.set(guard);
+
     tracing_subscriber::registry()
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default_filter)))
-        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr))
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(false)
+                .with_writer(file_writer),
+        )
         .init();
+    info!(path = %log_dir.display(), "файловый лог инициализирован");
 }
 
 fn init_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {

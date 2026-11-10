@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { BookmarkMinus, DatabaseZap, RefreshCw, SearchX } from 'lucide-react';
 
-import { contentRevealVariants } from '@/lib/motionPresets';
+import { useMotionPresets } from '@/lib/motionPresets';
 import { cn } from '@/lib/utils';
 import type { Contact, TabType } from '@/types';
 
@@ -59,6 +59,7 @@ export function Sidebar({
   isFetchingMore = false,
 }: SidebarProps) {
   const { t } = useTranslation();
+  const presets = useMotionPresets();
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -181,7 +182,7 @@ export function Sidebar({
           {isError ? (
             <motion.div
               key="error"
-              variants={contentRevealVariants}
+              variants={presets.content}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -203,7 +204,7 @@ export function Sidebar({
           ) : isLoading && contacts.length === 0 ? (
             <motion.div
               key="loading"
-              variants={contentRevealVariants}
+              variants={presets.content}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -215,7 +216,7 @@ export function Sidebar({
           ) : contacts.length === 0 ? (
             <motion.div
               key="empty"
-              variants={contentRevealVariants}
+              variants={presets.content}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -231,7 +232,7 @@ export function Sidebar({
               {emptyAction}
             </motion.div>
           ) : (
-            <motion.div key="list" variants={contentRevealVariants} initial="hidden" animate="visible" exit="exit">
+            <motion.div key="list" variants={presets.content} initial="hidden" animate="visible" exit="exit">
               <div
                 style={{
                   height: `${virtualizer.getTotalSize()}px`,

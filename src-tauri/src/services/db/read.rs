@@ -32,17 +32,16 @@ impl Db {
         let conn = self.lock();
         let mut search = search;
         Self::normalize_org_filter(&conn, &mut search)?;
-        // limit = 0 означает «вся выдача»: каталог целиком уходит в виртуализированный список.
-        let raw_limit = search.limit.unwrap_or(300);
-        let limit = if raw_limit == 0 {
-            i64::MAX
-        } else {
-            i64::from(raw_limit.clamp(1, 10000))
-        };
+        // Верхняя граница защищает IPC/память от запроса «вся база»;
+        // 0 больше не означает «без лимита» — это просто дефолтная страница.
+        let limit = i64::from(search.limit.unwrap_or(300).clamp(1, 10_000));
+        let offset = i64::from(search.offset.unwrap_or(0));
 
         if let Some(ids) = search.ids.as_ref().filter(|ids| !ids.is_empty()) {
-            let items = Self::by_ids(&conn, ids)?;
-            let total = items.len() as u64;
+            let all = Self::by_ids(&conn, ids)?;
+            let total = all.len() as u64;
+            let skip = usize::try_from(offset).unwrap_or(usize::MAX);
+            let items: Vec<_> = all.into_iter().skip(skip).take(limit as usize).collect();
             return Ok(SearchPage { items, total });
         }
 
@@ -56,7 +55,6 @@ impl Db {
             .as_deref()
             .map(str::trim)
             .filter(|q| !q.is_empty());
-        let offset = i64::from(search.offset.unwrap_or(0));
         let (items, total) = if let Some(raw) = raw_query {
             let match_expr = crate::services::tokens::build_fts_query(raw);
             if let Some(expr) = match_expr.as_deref() {
@@ -67,31 +65,50 @@ impl Db {
                     .split_whitespace()
                     .collect::<Vec<_>>()
                     .join(" ");
-                let mut fts_count = Self::fts_count(&conn, expr, &search)?;
-                let mut items = Self::fts_search(&conn, expr, &search, limit, offset)?;
-                // Дополнение: подстроки, которые префиксный FTS не видит.
+                let fts_total = Self::fts_count(&conn, expr, &search)?;
+                let mut total = fts_total;
+
+                // Дополнение — только те подстроки, которых нет в FTS.
+                // Иначе при склейке двух выдач один и тот же контакт мог
+                // попасть и в FTS-страницу, и в complement-страницу.
                 if let Some((conditions, args)) = Self::complement_conditions(&san, &search) {
-                    if (items.len() as i64) < limit {
-                        for employee in
-                            Self::complement_search(&conn, &conditions, &args, limit, offset)?
-                        {
-                            if (items.len() as i64) >= limit {
-                                break;
-                            }
-                            if !items.iter().any(|r| r.object_guid == employee.object_guid) {
-                                items.push(employee);
-                            }
+                    let (only_conditions, only_args) = Self::exclude_fts(&conditions, &args, expr);
+                    let complement_total =
+                        Self::complement_only_count(&conn, &only_conditions, &only_args)?;
+                    total += complement_total;
+
+                    // Порядок выдачи: сначала все FTS-совпадения (bm25), затем
+                    // complement-only (по имени). При таком контракте offset
+                    // раскладывается на две части без пересечений и пропусков.
+                    if offset < fts_total as i64 {
+                        let mut page = Self::fts_search(&conn, expr, &search, limit, offset)?;
+                        if (page.len() as i64) < limit {
+                            let need = limit - page.len() as i64;
+                            let mut extra = Self::complement_search(
+                                &conn,
+                                &only_conditions,
+                                &only_args,
+                                need,
+                                0,
+                            )?;
+                            page.append(&mut extra);
                         }
+                        (page, total)
+                    } else {
+                        let complement_offset = offset - fts_total as i64;
+                        let page = Self::complement_search(
+                            &conn,
+                            &only_conditions,
+                            &only_args,
+                            limit,
+                            complement_offset,
+                        )?;
+                        (page, total)
                     }
-                    let complement_only = Self::complement_only_count(
-                        &conn,
-                        &conditions,
-                        &args,
-                        match_expr.as_deref(),
-                    )?;
-                    fts_count += complement_only;
+                } else {
+                    let page = Self::fts_search(&conn, expr, &search, limit, offset)?;
+                    (page, total)
                 }
-                (items, fts_count)
             } else {
                 let total = Self::browse_count(&conn, &search)?;
                 let items = Self::browse(&conn, &search, limit, offset)?;
@@ -258,28 +275,32 @@ impl Db {
         Ok(query_scalar(conn, &sql, &args)? as u64)
     }
 
+    /// Добавляет к условиям дополнения исключение FTS-совпадений.
+    ///
+    /// NOT IN с материализацией подзапроса: MATCH выполняется один раз
+    /// (EXPLAIN: LIST SUBQUERY), а не для каждой строки users, как в
+    /// коррелированном NOT EXISTS. `object_guid` в users_fts всегда заполнен
+    /// (вставка из users.object_guid, PK), а IS NOT NULL страхует
+    /// трёхзначную логику NOT IN.
+    fn exclude_fts(conditions: &str, args: &[SqlValue], fts_expr: &str) -> (String, Vec<SqlValue>) {
+        let mut conditions = conditions.to_string();
+        conditions.push_str(
+            " AND users.object_guid NOT IN (SELECT object_guid FROM users_fts WHERE users_fts MATCH ? AND object_guid IS NOT NULL)",
+        );
+        let mut args = args.to_vec();
+        args.push(SqlValue::Text(fts_expr.to_string()));
+        (conditions, args)
+    }
+
     /// Совпадения дополнения, которые FTS не нашёл (для точного общего числа).
+    /// Условия уже должны содержать [`Self::exclude_fts`].
     fn complement_only_count(
         conn: &Connection,
         conditions: &str,
         args: &[SqlValue],
-        fts_expr: Option<&str>,
     ) -> Result<u64, AppError> {
-        let mut sql = format!("SELECT COUNT(*) FROM users {LOOKUP_JOINS} WHERE {conditions}");
-        let mut args = args.to_vec();
-        if let Some(expr) = fts_expr {
-            // NOT IN с материализацией подзапроса: MATCH выполняется один раз
-            // (EXPLAIN: LIST SUBQUERY), а не для каждой строки users, как в
-            // коррелированном NOT EXISTS. `object_guid` в users_fts всегда
-            // заполнен (вставка из users.object_guid, PK), а IS NOT NULL
-            // страхует трёхзначную логику NOT IN: без него хотя бы один NULL
-            // сделал бы условие ложным для всех строк.
-            sql.push_str(
-                " AND users.object_guid NOT IN (SELECT object_guid FROM users_fts WHERE users_fts MATCH ? AND object_guid IS NOT NULL)",
-            );
-            args.push(SqlValue::Text(expr.to_string()));
-        }
-        Ok(query_scalar(conn, &sql, &args)? as u64)
+        let sql = format!("SELECT COUNT(*) FROM users {LOOKUP_JOINS} WHERE {conditions}");
+        Ok(query_scalar(conn, &sql, args)? as u64)
     }
 
     /// Общее число контактов по фильтрам (без запроса и LIMIT).
@@ -308,8 +329,10 @@ impl Db {
         push_empty_filter(&mut sql, search);
         // Веса bm25 по колонкам FTS: guid(0), ФИО, отдел, компания,
         // должность, e-mail, токены (инициалы/телефоны).
+        // GUID — детерминированный tie-break: без него одинаковые bm25
+        // могли менять порядок между страницами и ломать offset-пагинацию.
         sql.push_str(
-            " ORDER BY bm25(users_fts, 0.0, 10.0, 2.0, 1.0, 2.0, 3.0, 6.0) LIMIT ? OFFSET ?",
+            " ORDER BY bm25(users_fts, 0.0, 10.0, 2.0, 1.0, 2.0, 3.0, 6.0), users.object_guid LIMIT ? OFFSET ?",
         );
         args.push(SqlValue::Int(limit));
         args.push(SqlValue::Int(offset));

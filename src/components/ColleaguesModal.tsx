@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { IconButton } from '@/components/ui/IconButton';
-import { contentRevealVariants, listRevealVariants, listRowRevealVariants } from '@/lib/motionPresets';
+import { useMotionPresets } from '@/lib/motionPresets';
 import { cn } from '@/lib/utils';
 import { getContactsService } from '@/services/ContactsService';
 import { useAppStore } from '@/store/useAppStore';
@@ -47,6 +47,7 @@ const MODE_LABEL_KEY: Record<ColleaguesMode, string> = {
  */
 export function ColleaguesModal({ isOpen, onClose, mode, value, organization, onSelectContact }: ColleaguesModalProps) {
   const { t } = useTranslation();
+  const presets = useMotionPresets();
   const testMode = useAppStore((state) => state.testMode);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -178,7 +179,7 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
                   {isLoading ? (
                     <motion.div
                       key="loading"
-                      variants={contentRevealVariants}
+                      variants={presets.content}
                       initial="hidden"
                       animate="visible"
                       exit="exit"
@@ -189,7 +190,7 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
                   ) : paginatedContacts.length > 0 ? (
                     <motion.div
                       key={`list-${mode}-${value ?? ''}-${currentPage}`}
-                      variants={listRevealVariants}
+                      variants={presets.list}
                       initial="hidden"
                       animate="visible"
                       exit="exit"
@@ -199,7 +200,7 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
                         <motion.button
                           type="button"
                           key={contact.id}
-                          variants={listRowRevealVariants}
+                          variants={presets.row}
                           onClick={() => {
                             onSelectContact(contact.id);
                             onClose();
@@ -230,7 +231,7 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
                   ) : (
                     <motion.div
                       key="empty"
-                      variants={contentRevealVariants}
+                      variants={presets.content}
                       initial="hidden"
                       animate="visible"
                       exit="exit"

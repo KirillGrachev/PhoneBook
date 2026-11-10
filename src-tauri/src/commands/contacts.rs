@@ -39,8 +39,27 @@ use super::run_blocking;
 #[tauri::command]
 pub async fn search_contacts(
     state: State<'_, AppState>,
-    params: SearchParams,
+    mut params: SearchParams,
 ) -> Result<SearchPage, AppError> {
+    // IPC-граница не доверяет размеру запроса: без клампа один вызов мог
+    // попросить весь каталог, гигантский offset или десятки тысяч ids.
+    params.limit = Some(params.limit.unwrap_or(300).clamp(1, 1_000));
+    params.offset = Some(params.offset.unwrap_or(0).min(1_000_000));
+    if let Some(query) = params.query.as_mut() {
+        if query.chars().count() > 512 {
+            *query = query.chars().take(512).collect();
+        }
+    }
+    if let Some(ids) = params.ids.as_mut() {
+        if ids.is_empty() {
+            return Ok(SearchPage {
+                items: Vec::new(),
+                total: 0,
+            });
+        }
+        ids.truncate(5_000);
+    }
+
     let db = state.db.clone();
     run_blocking(move || db.search(params)).await
 }

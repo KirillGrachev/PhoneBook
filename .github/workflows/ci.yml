@@ -37,8 +37,8 @@ jobs:
         run: npm run check:locales
       - name: Version consistency
         run: npm run check:version
-      - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=high
+      - name: Dependency audit
+        run: npm audit --audit-level=high
       - name: Build
         run: npm run build
 

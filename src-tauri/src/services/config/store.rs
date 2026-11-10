@@ -7,6 +7,7 @@
 //! * При удалении организации её секрет гарантированно удаляется из keyring.
 
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use tracing::{info, warn};
@@ -121,7 +122,12 @@ impl ConfigStore {
         let json = serde_json::to_string_pretty(config)
             .map_err(|e| AppError::Internal(format!("сериализация конфигурации: {e}")))?;
         let tmp = path.with_extension("json.tmp");
-        fs::write(&tmp, json)?;
+        let mut file = fs::File::create(&tmp)?;
+        file.write_all(json.as_bytes())?;
+        // Синхронизируем содержимое до rename: иначе после сбоя питания
+        // можно получить пустой/частичный config.json.
+        file.sync_all()?;
+        drop(file);
         fs::rename(&tmp, path)?;
         info!("конфигурация сохранена");
         Ok(())

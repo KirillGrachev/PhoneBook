@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Toaster } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
@@ -15,6 +16,7 @@ import { useDesktopEnvironment } from '@/hooks/useDesktopEnvironment';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { useThemeApplier } from '@/hooks/useThemeApplier';
 import i18n from '@/lib/i18n';
+import { flushConfigSave } from '@/store/configStorage';
 import { useAppStore } from '@/store/useAppStore';
 
 /** Корневой компонент: провайдеры, гидрация, splash и роутинг. */
@@ -32,6 +34,31 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
 
   useThemeApplier(theme);
+
+  // Язык документа для скринридеров и правил переносов следует за UI.
+  useEffect(() => {
+    document.documentElement.lang = language || 'ru';
+  }, [language]);
+
+  // Закрытие окна: сначала дожидаемся debounce-сохранения конфигурации,
+  // иначе последний переключённый тумблер мог потеряться.
+  useEffect(() => {
+    if (!isTauri()) {
+      return;
+    }
+    const window = getCurrentWindow();
+    let unlisten: (() => void) | undefined;
+    void window
+      .onCloseRequested(async (event) => {
+        event.preventDefault();
+        await flushConfigSave();
+        await window.destroy();
+      })
+      .then((fn) => {
+        unlisten = fn;
+      });
+    return () => unlisten?.();
+  }, []);
 
   // Отключаем CSS/Motion-анимации глобально, если пользователь их выключил.
   useEffect(() => {
@@ -71,7 +98,7 @@ export default function App() {
     // он не влиял ни на что): явный выбор пользователя важнее системного.
     <MotionConfig
       transition={animationsEnabled ? undefined : { duration: 0 }}
-      reducedMotion={animationsEnabled ? 'never' : 'always'}
+      reducedMotion={animationsEnabled ? 'user' : 'always'}
     >
       <AnimatePresence mode="wait">
         {showSplash ? (
@@ -81,7 +108,7 @@ export default function App() {
             key="app"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            transition={animationsEnabled ? { duration: 0.3, ease: 'easeInOut' } : { duration: 0 }}
             className="flex flex-col h-[100dvh] w-full bg-background text-foreground overflow-hidden font-sans cursor-default transition-colors duration-300 ease-in-out relative select-none"
           >
             <FirstRunOverlay />

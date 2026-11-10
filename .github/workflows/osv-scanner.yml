@@ -20,7 +20,7 @@ jobs:
       scan-args: |-
         --lockfile=./package-lock.json
         --lockfile=./src-tauri/Cargo.lock
-      fail-on-vuln: false
+      fail-on-vuln: true
       upload-sarif: true
     permissions:
       actions: read
