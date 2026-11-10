@@ -153,6 +153,7 @@
     "syncIntervalHours_one": "{{count}} час",
     "syncIntervalHours_few": "{{count}} часа",
     "syncIntervalHours_many": "{{count}} часов",
+    "syncIntervalHours_other": "{{count}} часов",
     "lastSyncTitle": "Состояние синхронизации",
     "removeConfirm": "Удалить подключение «{{org}}»? Сохранённый пароль будет стёрт.",
     "orgRequired": "Заполните название организации",
