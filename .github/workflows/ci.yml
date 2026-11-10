@@ -2,70 +2,144 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   frontend:
-    name: Frontend (typecheck, lint, tests)
-    runs-on: ubuntu-latest
+    name: Frontend (format, typecheck, lint, tests, build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Format check
+        run: npm run format:check
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: Locale coverage
+        run: npm run check:locales
+      - name: Version consistency
+        run: npm run check:version
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Build
+        run: npm run build
 
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm test
-
-  backend:
-    name: Backend (fmt, clippy, tests) — ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  audit:
+    name: Rust dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
+        with:
+          tool: cargo-audit
+      - name: Cargo audit
+        run: cargo audit --file src-tauri/Cargo.lock
+
+  backend-linux:
+    name: Backend (fmt, clippy, tests) — Ubuntu
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # Фронтенд собирается ДО cargo: макрос tauri::generate_context!
       # встраивает ассеты из frontendDist (../dist), а dist/ в git не хранится.
       # Без этого шага cargo test/clippy падают на чистом checkout.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build
 
-      - name: Install Linux system dependencies
-        if: runner.os == 'Linux'
+      - name: Install Tauri system dependencies
+        timeout-minutes: 30
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
-            libayatana-appindicator3-dev librsvg2-dev libssl-dev \
-            pkg-config build-essential libkeyutils-dev
+          updated=0
+          for attempt in 1 2 3; do
+            if sudo timeout 120 apt-get update \
+              -o Acquire::Retries=3 \
+              -o Acquire::http::Timeout=20 \
+              -o Acquire::https::Timeout=20; then
+              updated=1
+              break
+            fi
+            echo "apt-get update attempt ${attempt} failed"
+            sleep 5
+          done
+          [ "$updated" = 1 ] || exit 1
+          installed=0
+          for attempt in 1 2; do
+            if sudo timeout 600 apt-get install -y --no-install-recommends \
+              -o Dpkg::Options::=--force-confdef \
+              -o Dpkg::Options::=--force-confold \
+              libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev \
+              libayatana-appindicator3-dev librsvg2-dev libssl-dev \
+              libkeyutils-dev pkg-config build-essential; then
+              installed=1
+              break
+            fi
+            echo "apt-get install attempt ${attempt} failed"
+            sudo dpkg --configure -a || true
+            sleep 5
+          done
+          [ "$installed" = 1 ] || exit 1
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           components: rustfmt, clippy
-
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: src-tauri
+      - name: Cargo format
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+      - name: Cargo clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - name: Cargo tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
 
-      - name: rustfmt
-        working-directory: src-tauri
-        run: cargo fmt --check
-
-      - name: Clippy
-        working-directory: src-tauri
-        run: cargo clippy --all-targets -- -D warnings
-
-      - name: Tests
-        working-directory: src-tauri
-        run: cargo test --locked
+  backend-windows:
+    name: Backend (fmt, clippy, tests) — Windows/MSVC
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: src-tauri
+      - name: Cargo format
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+      - name: Cargo clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - name: Cargo tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked

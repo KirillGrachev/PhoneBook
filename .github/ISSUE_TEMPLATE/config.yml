@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/KirillGrachev/PhoneBook/security/advisories/new
+    about: Report security issues privately instead of opening a public issue.
+  - name: Contributing guide
+    url: https://github.com/KirillGrachev/PhoneBook/blob/main/docs/CONTRIBUTING.md
+    about: Setup, style, tests and pull request checklist.
+  - name: Questions and ideas
+    url: https://github.com/KirillGrachev/PhoneBook/issues
+    about: Ask a question or discuss a design idea before opening an issue.

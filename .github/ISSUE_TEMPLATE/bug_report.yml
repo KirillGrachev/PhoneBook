@@ -1,0 +1,109 @@
+name: Bug report
+description: Report a crash, visual defect or incorrect behavior
+title: "[Bug]: "
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. Please search existing
+        issues first. For security vulnerabilities, use SECURITY.md instead of
+        this form.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+      placeholder: The contact card shows a stale mobile number after a sync.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps, with the screen and the state before the problem.
+      placeholder: |
+        1. Open Directory
+        2. Search for "Ivanov"
+        3. Open the contact card
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Directory / search
+        - Contact card
+        - Colleagues list
+        - AD synchronization
+        - Settings
+        - Organization groups
+        - External phonebook (Yealink)
+        - Config transfer
+        - vCard / QR code
+        - Installer / startup
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag, installer name or `git rev-parse --short HEAD`.
+      placeholder: 0.2.0 / 8ec258a
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 23H2, build 22631.4460
+    validations:
+      required: true
+  - type: input
+    id: directory
+    attributes:
+      label: Directory source
+      description: How the data reaches the app in your environment.
+      placeholder: AD over LDAPS with StartTLS, 1 organization, ~4200 accounts
+  - type: dropdown
+    id: theme
+    attributes:
+      label: Theme
+      options:
+        - Light
+        - Dark
+        - System
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste relevant console output or attach a screenshot. Remove usernames, employee names and personal paths.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I removed secrets, employee data, usernames and personal paths from the report.
+          required: true
+        - label: This is not a security vulnerability (those go through SECURITY.md).
+          required: true

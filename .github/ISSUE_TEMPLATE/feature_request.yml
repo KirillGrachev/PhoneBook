@@ -1,0 +1,58 @@
+name: Feature request
+description: Suggest a new capability or a workflow improvement
+title: "[Feature]: "
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem before the solution. Small, focused requests are
+        easier to discuss and implement than a redesign of the whole app.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the current workflow and where it breaks down.
+      placeholder: I cannot tell which organization a cached contact came from when two ADs share a surname.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should the app do instead? Include a sketch or a reference if useful.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches, existing tools or workarounds.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Directory / search
+        - Contact card
+        - Colleagues list
+        - AD synchronization
+        - Settings
+        - Organization groups
+        - External phonebook (Yealink)
+        - Config transfer
+        - vCard / QR code
+        - Installer / startup
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: The request does not require storing directory secrets outside the OS credential store.
+          required: true
