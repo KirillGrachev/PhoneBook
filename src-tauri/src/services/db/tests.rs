@@ -617,7 +617,10 @@ fn encrypted_container_full_lifecycle() {
         &[record("g1", "КМАруда", "Смирнов Иван", "ИТ", "11")],
     )
     .expect("sync");
-    let image = encryption::serialize(&db.lock()).expect("serialize");
+    let image = {
+        let mut conn = db.lock();
+        encryption::serialize(&mut conn).expect("serialize")
+    };
 
     // 2. На диске — только контейнер: ни SQLite-заголовка, ни данных.
     encryption::save(&path, &key, &image).expect("save");
