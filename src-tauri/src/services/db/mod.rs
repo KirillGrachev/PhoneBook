@@ -157,8 +157,8 @@ impl Db {
         let Some(path) = self.path.as_deref() else {
             return Ok(());
         };
-        let conn = self.lock();
-        let bytes = encryption::serialize(&conn)?;
+        let mut conn = self.lock();
+        let bytes = encryption::serialize(&mut conn)?;
         drop(conn);
         encryption::save(path, &self.key, &bytes)
     }

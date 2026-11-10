@@ -26,7 +26,7 @@ use std::path::{Path, PathBuf};
 
 use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
 use rusqlite::serialize::OwnedData;
-use rusqlite::{Connection, DatabaseName};
+use rusqlite::{Connection, MAIN_DB};
 use tracing::warn;
 
 use crate::error::AppError;
@@ -176,8 +176,8 @@ pub fn save(path: &Path, key: &[u8; KEY_BYTES], plaintext: &[u8]) -> Result<(), 
 }
 
 /// Сериализовать открытую базу в образ.
-pub fn serialize(conn: &Connection) -> Result<Vec<u8>, AppError> {
-    let data = conn.serialize(DatabaseName::Main)?;
+pub fn serialize(conn: &mut Connection) -> Result<Vec<u8>, AppError> {
+    let data = conn.serialize(MAIN_DB)?;
     Ok(data.to_vec())
 }
 
@@ -206,7 +206,7 @@ pub fn restore(conn: &mut Connection, bytes: &[u8]) -> Result<(), AppError> {
             Some(ptr) => OwnedData::from_raw_nonnull(ptr, bytes.len()),
             None => return Err(AppError::Internal("пустой образ кэша".into())),
         };
-        conn.deserialize(DatabaseName::Main, owned, false)?;
+        conn.deserialize(MAIN_DB, owned, false)?;
     }
     Ok(())
 }

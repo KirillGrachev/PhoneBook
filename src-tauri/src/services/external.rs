@@ -112,11 +112,10 @@ pub fn parse_phonebook_xml(xml: &str) -> Result<ParsedPhonebook, AppError> {
             },
             // Самозакрывающиеся элементы: меню без потомков не добавляет
             // уровня вложенности, `Unit` встречается и в такой форме.
-            Event::Empty(element) => {
-                if tag_name(&element).as_str() == "unit" {
-                    push_unit(&element, &menu_stack, &mut units);
-                }
+            Event::Empty(element) if tag_name(&element).as_str() == "unit" => {
+                push_unit(&element, &menu_stack, &mut units);
             }
+            Event::Empty(_) => {}
             Event::End(element) => {
                 match element.local_name().as_ref().to_ascii_lowercase().as_str() {
                     "menu" => {
