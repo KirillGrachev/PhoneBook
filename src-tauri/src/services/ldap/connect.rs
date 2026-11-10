@@ -18,6 +18,7 @@ pub(super) async fn connect(
             "Адрес сервера должен начинаться с ldap:// или ldaps://".into(),
         ));
     }
+    validate_transport_security(credentials)?;
 
     let mut settings = LdapConnSettings::new().set_conn_timeout(CONNECT_TIMEOUT);
     if credentials.use_start_tls && url.starts_with("ldap://") {
@@ -50,6 +51,24 @@ fn extract_host_fqdn(url: &str) -> String {
 
 /// Аутентификация: SASL GSSAPI под текущей сессией Windows (если включена),
 /// иначе простой bind учётной записью, иначе анонимно. Возвращает длительность, мс.
+/// Пароль LDAP — секрет, который нельзя отправлять по `ldap://` без
+/// StartTLS. Анонимный bind и GSSAPI не используют пароль, поэтому их
+/// ограничение не касается; для пароля обязателен `ldaps://` или StartTLS.
+fn validate_transport_security(credentials: &DirectoryCredentials<'_>) -> Result<(), AppError> {
+    let has_password = credentials
+        .password
+        .is_some_and(|password| !password.trim().is_empty());
+    let tls = credentials.ldap_url.trim().starts_with("ldaps://") || credentials.use_start_tls;
+    if has_password && !credentials.use_integrated_auth && !tls {
+        return Err(AppError::LdapTls(
+            "Пароль LDAP нельзя отправлять по ldap:// без StartTLS. \
+             Включите StartTLS или используйте ldaps://."
+                .into(),
+        ));
+    }
+    Ok(())
+}
+
 pub(super) async fn bind(
     ldap: &mut ldap3::Ldap,
     credentials: &DirectoryCredentials<'_>,
@@ -117,5 +136,58 @@ mod tests {
             "dc1.kmaruda.ru"
         );
         assert_eq!(extract_host_fqdn("ldap://10.0.0.5:389/"), "10.0.0.5");
+    }
+
+    fn credentials<'a>(
+        url: &'a str,
+        password: Option<&'a str>,
+        start_tls: bool,
+    ) -> DirectoryCredentials<'a> {
+        DirectoryCredentials {
+            ldap_url: url,
+            base_dn: "DC=example,DC=ru",
+            bind_dn: Some("CN=svc,DC=example,DC=ru"),
+            password,
+            use_start_tls: start_tls,
+            allow_invalid_tls: false,
+            use_integrated_auth: false,
+        }
+    }
+
+    #[test]
+    fn rejects_password_over_plain_ldap() {
+        let result = validate_transport_security(&credentials(
+            "ldap://dc1.example.ru",
+            Some("secret"),
+            false,
+        ));
+        assert!(matches!(result, Err(AppError::LdapTls(_))));
+    }
+
+    #[test]
+    fn allows_password_over_ldaps_or_starttls() {
+        assert!(validate_transport_security(&credentials(
+            "ldaps://dc1.example.ru:636",
+            Some("secret"),
+            false,
+        ))
+        .is_ok());
+        assert!(validate_transport_security(&credentials(
+            "ldap://dc1.example.ru",
+            Some("secret"),
+            true,
+        ))
+        .is_ok());
+    }
+
+    #[test]
+    fn allows_anonymous_or_integrated_auth_without_tls() {
+        assert!(
+            validate_transport_security(&credentials("ldap://dc1.example.ru", None, false,))
+                .is_ok()
+        );
+        let mut integrated = credentials("ldap://dc1.example.ru", Some("ignored"), false);
+        integrated.use_integrated_auth = true;
+        assert!(validate_transport_security(&integrated).is_ok());
     }
 }

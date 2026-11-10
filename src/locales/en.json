@@ -132,6 +132,7 @@
     "useStartTlsDesc": "Encrypt the connection over port 389",
     "allowInvalidTls": "Skip certificate validation",
     "allowInvalidTlsDesc": "For self-signed internal CA certificates (reduces security)",
+    "allowInvalidTlsConfirm": "Disable certificate validation? The connection becomes vulnerable to MITM attacks. Enable only for a self-signed internal CA certificate.",
     "test": "Test connection",
     "testing": "Testing…",
     "testOk": "Connected in {{ms}} ms",

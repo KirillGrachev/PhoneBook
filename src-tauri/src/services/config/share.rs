@@ -130,8 +130,9 @@ impl OrgGroupsShareFile {
     }
 
     /// Pretty-JSON для записи в файл обмена.
-    pub fn render(&self) -> String {
-        serde_json::to_string_pretty(self).expect("файл обмена группами сериализуем")
+    pub fn render(&self) -> Result<String, AppError> {
+        serde_json::to_string_pretty(self)
+            .map_err(|e| AppError::Internal(format!("сериализация групп: {e}")))
     }
 }
 
@@ -203,8 +204,9 @@ impl ConfigShareFile {
     }
 
     /// Pretty-JSON для записи в файл обмена.
-    pub fn render(&self) -> String {
-        serde_json::to_string_pretty(self).expect("файл обмена конфигурацией сериализуем")
+    pub fn render(&self) -> Result<String, AppError> {
+        serde_json::to_string_pretty(self)
+            .map_err(|e| AppError::Internal(format!("сериализация конфигурации: {e}")))
     }
 }
 
@@ -228,7 +230,7 @@ mod tests {
                 .collect(),
             Some("g1".into()),
         );
-        let parsed = OrgGroupsShareFile::parse(&file.render()).expect("roundtrip");
+        let parsed = OrgGroupsShareFile::parse(&file.render().expect("render")).expect("roundtrip");
         assert_eq!(parsed, file);
         // Нормализация: пробелы обрезаны, дубль организации схлопнут, пустая удалена.
         assert_eq!(parsed.groups[0].name, "КМАруда");
@@ -280,7 +282,9 @@ mod tests {
             ..Default::default()
         };
 
-        let rendered = ConfigShareFile::new(config.clone()).render();
+        let rendered = ConfigShareFile::new(config.clone())
+            .render()
+            .expect("render");
         let parsed = ConfigShareFile::parse(&rendered).expect("parse");
         assert_eq!(parsed.theme, "dark");
         assert_eq!(

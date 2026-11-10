@@ -454,7 +454,12 @@ export function SettingsAdView() {
                       </span>
                       <Switch
                         checked={config.allowInvalidTls}
-                        onChange={(checked) => updateOrg(index, { allowInvalidTls: checked })}
+                        onChange={(checked) => {
+                          if (checked && !window.confirm(t('settings.ad.allowInvalidTlsConfirm'))) {
+                            return;
+                          }
+                          updateOrg(index, { allowInvalidTls: checked });
+                        }}
                         ariaLabel={t('settings.ad.allowInvalidTls')}
                         activeClassName="bg-amber-500 border-amber-500"
                       />

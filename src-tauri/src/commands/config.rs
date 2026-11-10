@@ -69,7 +69,7 @@ pub async fn export_org_groups_file(
         );
         let dir = share_dir(&app)?;
         let path = dir.join(SHARE_FILE_NAME);
-        std::fs::write(&path, file.render())?;
+        std::fs::write(&path, file.render()?)?;
         Ok(path.to_string_lossy().into_owned())
     })
     .await
@@ -150,7 +150,7 @@ pub async fn export_config_file(
         let file = ConfigShareFile::new(config);
         let dir = share_dir(&app)?;
         let path = dir.join(CONFIG_SHARE_FILE_NAME);
-        std::fs::write(&path, file.render())?;
+        std::fs::write(&path, file.render()?)?;
         Ok(path.to_string_lossy().into_owned())
     })
     .await
@@ -185,7 +185,11 @@ pub async fn test_ldap_connection(
     org: LdapOrgInput,
     password_override: Option<String>,
 ) -> Result<ConnectionTest, AppError> {
-    let stored_password = ConfigStore::get_password(&org.organization);
+    // keyring на первом обращении может думать секунды — не блокируем
+    // async-runtime и главный поток окна.
+    let organization = org.organization.clone();
+    let stored_password =
+        run_blocking(move || Ok(ConfigStore::get_password(&organization))).await?;
     let password = password_override
         .as_deref()
         .map(str::trim)

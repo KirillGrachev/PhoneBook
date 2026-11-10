@@ -91,6 +91,9 @@ pub fn build_records(raw_users: Vec<RawUser>) -> Vec<UserRecord> {
             if let Some(sam) = user.sam_account_name.as_deref() {
                 token_parts.push(sam.to_lowercase());
             }
+            // Одинаковые e-mail/телефонные токены не должны раздувать FTS.
+            token_parts.sort();
+            token_parts.dedup();
 
             let sort_key = tokens::sort_key(&display_name);
             UserRecord {

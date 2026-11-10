@@ -1,6 +1,6 @@
 //! Операции записи: полная замена кэша источника и мета синхронизации.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use rusqlite::Transaction;
 
@@ -131,8 +131,8 @@ impl Db {
 }
 
 /// Вставляет записи источника вместе с поисковыми индексами (FTS и
-/// триграммный): строки индексов пересоздаются для каждого guid, чтобы
-/// повторная синхронизация не накапливала дубликаты.
+/// триграммный). Неизменённые по `uSNChanged` записи не перезаписываются:
+/// полная LDAP-выборка не должна каждый раз перестраивать весь FTS.
 ///
 /// Справочные значения разрешаются в id один раз на уникальное значение:
 /// тысячи сотрудников одного отдела не долбят базу.
@@ -144,8 +144,30 @@ fn insert_users(
 ) -> Result<(), AppError> {
     tx.execute_batch(
         "CREATE TEMP TABLE IF NOT EXISTS seen_guids (object_guid TEXT PRIMARY KEY);
-         DELETE FROM seen_guids;",
+         CREATE TEMP TABLE IF NOT EXISTS changed_guids (object_guid TEXT PRIMARY KEY);
+         DELETE FROM seen_guids;
+         DELETE FROM changed_guids;",
     )?;
+
+    // Какие записи реально изменились с прошлой синхронизации. uSNChanged
+    // монотонен в пределах домена; при первом синхронизации/для внешних
+    // файлов (None) считаем изменёнными все записи.
+    let existing: HashMap<String, Option<i64>> = {
+        let mut stmt =
+            tx.prepare("SELECT object_guid, usn_changed FROM users WHERE source_id = ?1")?;
+        let rows = stmt.query_map([source_id], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.collect::<Result<_, _>>()?
+    };
+    let mut changed: HashSet<String> = HashSet::new();
+    for user in users {
+        let unchanged = match (existing.get(&user.object_guid), user.usn_changed) {
+            (Some(Some(previous)), Some(next)) => *previous == next,
+            _ => false,
+        };
+        if !unchanged {
+            changed.insert(user.object_guid.clone());
+        }
+    }
 
     let mut insert_user = tx.prepare(
         "INSERT OR REPLACE INTO users (
@@ -158,19 +180,26 @@ fn insert_users(
     )?;
     let mut insert_seen =
         tx.prepare("INSERT OR IGNORE INTO seen_guids (object_guid) VALUES (?1)")?;
+    let mut insert_changed =
+        tx.prepare("INSERT OR IGNORE INTO changed_guids (object_guid) VALUES (?1)")?;
     // object_guid в FTS5-таблицах UNINDEXED: удаление по одному guid — это
     // полный скан индекса на каждую запись (O(n²) на большой синхронизации).
-    // Собираем весь батч в seen_guids и чистим индексы одним проходом.
+    // Собираем батч в seen_guids, а изменённые — в changed_guids: индексы
+    // чинятся одним проходом и только для реально изменившихся записей.
     for user in users {
         insert_seen.execute(rusqlite::params![user.object_guid])?;
+        if changed.contains(user.object_guid.as_str()) {
+            insert_changed.execute(rusqlite::params![user.object_guid])?;
+        }
     }
     drop(insert_seen);
+    drop(insert_changed);
     tx.execute(
-        "DELETE FROM users_fts WHERE object_guid IN (SELECT object_guid FROM seen_guids)",
+        "DELETE FROM users_fts WHERE object_guid IN (SELECT object_guid FROM changed_guids)",
         [],
     )?;
     tx.execute(
-        "DELETE FROM users_substr WHERE object_guid IN (SELECT object_guid FROM seen_guids)",
+        "DELETE FROM users_substr WHERE object_guid IN (SELECT object_guid FROM changed_guids)",
         [],
     )?;
     let mut insert_substr =
@@ -185,6 +214,9 @@ fn insert_users(
     let mut location_cache = HashMap::new();
 
     for user in users {
+        if !changed.contains(user.object_guid.as_str()) {
+            continue;
+        }
         let org_id = resolve_org(tx, &mut org_cache, user.company.as_deref())?;
         let department_id = resolve_lookup(
             tx,
