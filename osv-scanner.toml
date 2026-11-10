@@ -9,3 +9,51 @@
 id = "RUSTSEC-2024-0429"
 ignoreUntil = 2026-12-31
 reason = "glib 0.18 is Linux-only transitive; Windows app; no fixed glib in Tauri's GTK 0.18 stack."
+
+# Unmaintained GTK/Linux-only transitives. They are not used on Windows, and
+# the current Tauri GTK 0.18 stack has no replacement release yet. Re-evaluate
+# when the Linux dependencies are upgraded.
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0370"
+ignoreUntil = 2026-12-31
+reason = "proc-macro-error is an unmaintained GTK/Linux transitive; Windows-first app."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0081"
+ignoreUntil = 2026-12-31
+reason = "unic-char-property is an unmaintained GTK/Linux transitive; Windows-first app."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0075"
+ignoreUntil = 2026-12-31
+reason = "unic-char-range is an unmaintained GTK/Linux transitive; Windows-first app."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0080"
+ignoreUntil = 2026-12-31
+reason = "unic-common is an unmaintained GTK/Linux transitive; Windows-first app."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0100"
+ignoreUntil = 2026-12-31
+reason = "unic-ucd-ident is an unmaintained GTK/Linux transitive; Windows-first app."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0098"
+ignoreUntil = 2026-12-31
+reason = "unic-ucd-version is an unmaintained GTK/Linux transitive; Windows-first app."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0371"
+ignoreUntil = 2026-12-31
+reason = "zbus_names is an unmaintained GTK/Linux transitive; Windows-first app."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0370"
+ignoreUntil = 2026-12-31
+reason = "zvariant is an unmaintained GTK/Linux transitive; Windows-first app."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0372"
+ignoreUntil = 2026-12-31
+reason = "zvariant_derive is an unmaintained GTK/Linux transitive; Windows-first app."
