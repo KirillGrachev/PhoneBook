@@ -69,7 +69,15 @@ export default defineConfig({
           if (/[\\/]node_modules[\\/](tailwind-merge|clsx)[\\/]/.test(id)) {
             return 'vendor-utils';
           }
-          return 'vendor';
+          // Остальные пакеты — отдельными vendor-чанками по имени пакета,
+          // чтобы один «vendor» не разрастался до сотен килобайт.
+          const parts =
+            id
+              .split(/node_modules[\\/]/)
+              .pop()
+              ?.split(/[\\/]/) ?? [];
+          const pkg = parts[0]?.startsWith('@') ? `${parts[0]}-${parts[1] ?? ''}` : (parts[0] ?? 'misc');
+          return `vendor-${pkg.replace(/^@/, '').replace(/[^a-z0-9-]/gi, '-')}`;
         },
       },
     },
