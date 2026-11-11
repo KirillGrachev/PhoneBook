@@ -10,17 +10,16 @@ import { devLog } from '@/lib/devlog';
 import type { DuplicatesPreviewDto, LdapOrgConfigDto } from '@/api/contracts';
 import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
-import { TextField } from '@/components/ui/TextField';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { translateBackendError } from '@/lib/errors';
 import { useAppStore } from '@/store/useAppStore';
 
 import { primaryButton, toInput } from './settingsAdUtils';
 import { SettingsAdAuthToggle } from './SettingsAdAuthToggle';
+import { SettingsAdBindFields } from './SettingsAdBindFields';
 import { SettingsAdIdentityFields } from './SettingsAdIdentityFields';
 import { SettingsAdOrgFooter } from './SettingsAdOrgFooter';
 import { SettingsAdOrgHeader } from './SettingsAdOrgHeader';
-import { SettingsAdPasswordEditor } from './SettingsAdPasswordEditor';
 import { SettingsAdTlsFields } from './SettingsAdTlsFields';
 
 const EMPTY_ORG: LdapOrgConfigDto = {
@@ -264,28 +263,16 @@ export function SettingsAdView() {
                   <SettingsAdAuthToggle config={config} onChange={(patch) => updateOrg(index, patch)} />
 
                   {!config.useIntegratedAuth && (
-                    <>
-                      <TextField
-                        label={t('settings.ad.bindDn')}
-                        value={config.bindDn ?? ''}
-                        onChange={(event) => updateOrg(index, { bindDn: event.target.value || null })}
-                        placeholder="svc_phonebook@kmaruda.ru"
-                        hint={t('settings.ad.bindDnHint')}
-                        autoCapitalize="none"
-                        spellCheck={false}
-                        autoComplete="off"
-                      />
-
-                      <SettingsAdPasswordEditor
-                        config={config}
-                        password={passwordDrafts[config.organization] ?? ''}
-                        disabled={!config.organization.trim() || !(passwordDrafts[config.organization] ?? '').trim()}
-                        onPasswordChange={(value) =>
-                          setPasswordDrafts((drafts) => ({ ...drafts, [config.organization]: value }))
-                        }
-                        onSave={() => void savePassword(index)}
-                      />
-                    </>
+                    <SettingsAdBindFields
+                      config={config}
+                      password={passwordDrafts[config.organization] ?? ''}
+                      disabled={!config.organization.trim() || !(passwordDrafts[config.organization] ?? '').trim()}
+                      onChange={(patch) => updateOrg(index, patch)}
+                      onPasswordChange={(value) =>
+                        setPasswordDrafts((drafts) => ({ ...drafts, [config.organization]: value }))
+                      }
+                      onSave={() => void savePassword(index)}
+                    />
                   )}
 
                   <SettingsAdTlsFields config={config} onChange={(patch) => updateOrg(index, patch)} />
