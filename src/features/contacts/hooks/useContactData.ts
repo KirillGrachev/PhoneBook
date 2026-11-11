@@ -39,17 +39,17 @@ export function useVcard(contact: Contact | null | undefined): string {
     }
 
     const fallback = generateVcard(contact, { preferExternalPhone });
-    if (isMockMode()) {
-      setVcard(fallback);
-      return;
-    }
-
     devLog('vcard', {
       mode: activeTab,
       preferExternalPhone,
       ipPhone: contact.ipPhone ?? null,
       phoneExternal: contact.fullIpPhone ?? null,
+      mock: isMockMode(),
     });
+    if (isMockMode()) {
+      setVcard(fallback);
+      return;
+    }
 
     let cancelled = false;
     vcardApi

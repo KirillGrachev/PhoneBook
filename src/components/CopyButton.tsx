@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { devLog } from '@/lib/devlog';
 import { cn } from '@/lib/utils';
 
 interface CopyButtonProps {
@@ -33,6 +34,7 @@ export function CopyButton({ text, className, iconClassName, variant = 'light' }
       event.stopPropagation();
       try {
         await navigator.clipboard.writeText(text);
+        devLog('copy', { length: text.length });
         setCopied(true);
         if (resetTimer.current) {
           clearTimeout(resetTimer.current);
