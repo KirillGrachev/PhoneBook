@@ -7,6 +7,8 @@
     display: inline-block;
     width: 1em;
     height: 1em;
+    vertical-align: middle;
+    line-height: 1;
     background-color: currentColor;
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;

@@ -82,7 +82,7 @@ export function OrganizationFilter({
                   aria-expanded={isOpen}
                   aria-haspopup="menu"
                 >
-                  <Filter className="w-[16px] h-[16px]" aria-hidden />
+                  <Filter className="w-6 h-6" aria-hidden />
                   {filterActive && (
                     <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-white shadow-sm" aria-hidden />
                   )}

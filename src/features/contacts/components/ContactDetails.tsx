@@ -9,8 +9,8 @@ import {
   MapPin,
   Network,
   Smartphone,
+  TextScan,
   UserRound,
-  ZoomIn,
 } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
@@ -308,7 +308,7 @@ export function ContactDetails({
                         тёмный круг с белой иконкой — виден на любом фоне */}
                       <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                         <span className="bg-slate-900/90 p-4 rounded-full text-white shadow-xl ring-1 ring-white/30 scale-90 group-hover:scale-100 transition-transform duration-300">
-                          <ZoomIn className="w-7 h-7" aria-hidden />
+                          <TextScan className="w-7 h-7" aria-hidden />
                         </span>
                       </span>
                     </button>

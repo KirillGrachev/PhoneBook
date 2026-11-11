@@ -52,7 +52,6 @@ export const MonitorSmartphone = createIcon('monitor');
 export const Moon = createIcon('moon');
 export const Network = createIcon('org');
 export const Pencil = createIcon('text-scan');
-export const Phone = createIcon('file-phone');
 export const Pin = createIcon('map-pin');
 export const PlugZap = createIcon('terminal');
 export const RefreshCw = createIcon('refresh');
@@ -64,11 +63,12 @@ export const ShieldAlert = createIcon('shield-off');
 export const Smartphone = createIcon('mobile');
 export const Sun = createIcon('sun');
 export const Terminal = createIcon('terminal');
+export const TextScan = createIcon('text-scan');
 export const Trash2 = createIcon('trash');
 export const Upload = createIcon('frame-upload');
 export const UserRound = createIcon('user');
+export const UserPlus = createIcon('user-plus');
 export const UsersRound = createIcon('frame-users');
-export const ZoomIn = createIcon('search');
 
 export {
   AlertTriangle,
@@ -84,6 +84,7 @@ export {
   MessageCircle,
   Minus,
   Palette,
+  Phone,
   Plus,
   Square,
   TriangleAlert,
