@@ -326,6 +326,19 @@ impl Db {
 
     /// Общее число контактов по фильтрам (без запроса и LIMIT).
     fn browse_count(conn: &Connection, search: &SearchParams) -> Result<u64, AppError> {
+        // Без фильтров JOIN'ы не нужны: на 50k это заметно дешевле.
+        let unfiltered = search.organization.is_none()
+            && search.organizations.is_none()
+            && search.source_org.is_none()
+            && search.department.is_none()
+            && search.title.is_none()
+            && search.office.is_none()
+            && search.ids.is_none()
+            && !search.hide_empty;
+        if unfiltered {
+            return Ok(query_scalar(conn, "SELECT COUNT(*) FROM users", &[])? as u64);
+        }
+
         let mut sql = format!("SELECT COUNT(*) FROM users {LOOKUP_JOINS} WHERE 1=1");
         let mut args: Vec<SqlValue> = Vec::new();
         push_filters(&mut sql, &mut args, search);
