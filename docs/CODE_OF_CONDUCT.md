@@ -2,7 +2,7 @@
 
 ## Our commitment
 
-We want participation in KMAruda Phonebook to be a harassment-free experience
+We want participation in KMAruda PhoneBook to be a harassment-free experience
 for everyone, regardless of age, body size, disability, ethnicity, sex
 characteristics, gender identity and expression, level of experience, education,
 socio-economic status, nationality, personal appearance, race, religion or

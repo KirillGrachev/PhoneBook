@@ -1,11 +1,11 @@
-# Contributing to KMAruda Phonebook
+# Contributing to KMAruda PhoneBook
 
 Thanks for taking the time to improve the project. This guide covers the local
 setup, the architecture boundary and the conventions used in the repository.
 
 ## Before you start
 
-- Read [README.md](../README.md) for the product and architecture overview.
+- Read [README.md](README.md) for the product and architecture overview.
 - For a security issue, follow [SECURITY.md](SECURITY.md) instead of opening a
   public issue.
 - By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).

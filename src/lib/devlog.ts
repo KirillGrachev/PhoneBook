@@ -20,15 +20,15 @@ export function logFrontend(level: 'error' | 'warn' | 'info' | 'debug', scope: s
 }
 
 export function devLog(scope: string, ...args: unknown[]): void {
-  if (!import.meta.env.DEV) {
-    return;
+  const message = args.map(argToText).join(' ');
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console -- централизованный dev-лог
+    console.log(`[phonebook:${scope}]`, ...args);
   }
-  // eslint-disable-next-line no-console -- централизованный dev-лог, в prod вырезается сборкой
-  console.log(`[phonebook:${scope}]`, ...args);
 
   if (isTauri()) {
-    // Fire-and-forget: логирование не должно ломать UI, ошибки IPC глотаются.
-    invokeCommand<void>('dev_log', { scope, message: args.map(argToText).join(' ') }).catch(() => {});
+    // Fire-and-forget: действия пишутся в файловый лог и в release-сборке.
+    invokeCommand<void>('frontend_log', { level: 'info', scope, message }).catch(() => {});
   }
 }
 

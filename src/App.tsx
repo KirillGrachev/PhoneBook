@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -10,7 +10,10 @@ import { isTauri } from '@/api/backend';
 import { TitleBar } from '@/components/TitleBar';
 import { SplashScreen } from '@/components/SplashScreen';
 import { PhonebookView } from '@/features/contacts/PhonebookView';
-import { SettingsPage } from '@/features/settings/SettingsPage';
+
+const SettingsPage = lazy(() =>
+  import('@/features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage })),
+);
 import { useContactCount } from '@/hooks/useDirectory';
 import { useDesktopEnvironment } from '@/hooks/useDesktopEnvironment';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
@@ -114,15 +117,17 @@ export default function App() {
             <FirstRunOverlay />
 
             <header role="banner">
-              <TitleBar title="KMARUDA PHONEBOOK" />
+              <TitleBar title="KMAruda PhoneBook" />
             </header>
 
             <main className="flex-1 overflow-hidden relative flex flex-col min-h-0">
-              <Routes location={location}>
-                <Route path="/" element={<PhonebookView />} />
-                <Route path="/settings" element={<SettingsPage onClose={() => navigate('/')} />} />
-                <Route path="*" element={<PhonebookView />} />
-              </Routes>
+              <Suspense fallback={<div className="flex-1 flex items-center justify-center text-muted-foreground" />}>
+                <Routes location={location}>
+                  <Route path="/" element={<PhonebookView />} />
+                  <Route path="/settings" element={<SettingsPage onClose={() => navigate('/')} />} />
+                  <Route path="*" element={<PhonebookView />} />
+                </Routes>
+              </Suspense>
 
               <Toaster
                 position="bottom-right"

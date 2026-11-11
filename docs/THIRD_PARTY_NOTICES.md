@@ -1,6 +1,6 @@
 # Third-party notices
 
-KMAruda Phonebook is MIT licensed. The following third-party components are
+KMAruda PhoneBook is MIT licensed. The following third-party components are
 included or required at runtime.
 
 ## Application framework
