@@ -80,8 +80,8 @@ jobs:
         run: |
           # Azure mirror intermittently times out on hosted runners; fall back
           # to the upstream Ubuntu archive before retrying.
-          sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' \
-            /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+          sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' -o -name 'apt-mirrors.txt' \) \
+            -exec sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' {} + || true
           updated=0
           for attempt in 1 2 3; do
             if sudo timeout 120 apt-get update \
