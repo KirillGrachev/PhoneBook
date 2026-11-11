@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { formatRelativeTime } from '@/lib/utils';
 
-interface SyncMetaLineProps {
+export interface SyncMetaLineProps {
   organization: string;
   syncStates: {
     organization: string;
