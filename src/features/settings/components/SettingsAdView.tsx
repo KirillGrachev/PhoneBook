@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FlaskConical, Loader2, MonitorSmartphone, Plus, RefreshCw, Trash2, UsersRound } from 'lucide-react';
+import { FlaskConical, Loader2, MonitorSmartphone, Plus, RefreshCw, UsersRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -19,6 +19,7 @@ import { primaryButton, toInput } from './settingsAdUtils';
 import { SettingsAdAuthToggle } from './SettingsAdAuthToggle';
 import { SettingsAdIdentityFields } from './SettingsAdIdentityFields';
 import { SettingsAdOrgFooter } from './SettingsAdOrgFooter';
+import { SettingsAdOrgHeader } from './SettingsAdOrgHeader';
 import { SettingsAdPasswordEditor } from './SettingsAdPasswordEditor';
 import { SettingsAdTlsFields } from './SettingsAdTlsFields';
 
@@ -253,20 +254,11 @@ export function SettingsAdView() {
                   key={index}
                   className="flex flex-col gap-3 p-4 border border-border bg-surface rounded-[16px] shadow-sm"
                 >
-                  <header className="flex items-center justify-between">
-                    <h3 className="text-[13px] font-bold text-muted-foreground uppercase">
-                      {config.organization || `#${index + 1}`}
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => setRemovingOrg(index)}
-                      className="flex items-center gap-1.5 text-[13px] font-semibold text-red-500 hover:text-red-600 transition-colors cursor-pointer bg-transparent border-0 p-1 outline-none"
-                      aria-label={t('settings.ad.removeOrg')}
-                    >
-                      <Trash2 className="w-4 h-4" aria-hidden />
-                      {t('settings.ad.removeOrg')}
-                    </button>
-                  </header>
+                  <SettingsAdOrgHeader
+                    organization={config.organization}
+                    index={index}
+                    onRemove={() => setRemovingOrg(index)}
+                  />
 
                   <SettingsAdIdentityFields config={config} onChange={(patch) => updateOrg(index, patch)} />
                   <SettingsAdAuthToggle config={config} onChange={(patch) => updateOrg(index, patch)} />
