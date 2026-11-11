@@ -1,15 +1,5 @@
 import { useMemo, useState } from 'react';
-import {
-  FlaskConical,
-  Loader2,
-  MonitorSmartphone,
-  PlugZap,
-  Plus,
-  RefreshCw,
-  ShieldAlert,
-  Trash2,
-  UsersRound,
-} from 'lucide-react';
+import { FlaskConical, Loader2, MonitorSmartphone, PlugZap, Plus, RefreshCw, Trash2, UsersRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -23,12 +13,12 @@ import { Switch } from '@/components/ui/Switch';
 import { TextField } from '@/components/ui/TextField';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { translateBackendError } from '@/lib/errors';
-import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
 
-import { primaryButton, toInput, urlScheme } from './settingsAdUtils';
+import { primaryButton, toInput } from './settingsAdUtils';
 import { SettingsAdIdentityFields } from './SettingsAdIdentityFields';
 import { SettingsAdPasswordEditor } from './SettingsAdPasswordEditor';
+import { SettingsAdTlsFields } from './SettingsAdTlsFields';
 import { SyncMetaLine } from './SyncMetaLine';
 
 const EMPTY_ORG: LdapOrgConfigDto = {
@@ -324,53 +314,7 @@ export function SettingsAdView() {
                     </>
                   )}
 
-                  <div className="flex flex-col gap-2 pt-1">
-                    <label
-                      className={cn(
-                        'flex items-center justify-between gap-3',
-                        urlScheme(config.ldapUrl) === 'ldaps' ? 'opacity-60' : 'cursor-pointer',
-                      )}
-                    >
-                      <span className="flex flex-col">
-                        <span className="text-[14px] font-semibold text-foreground">
-                          {t('settings.ad.useStartTls')}
-                        </span>
-                        <span className="text-[12px] text-muted-foreground">
-                          {urlScheme(config.ldapUrl) === 'ldaps'
-                            ? t('settings.ad.startTlsNotNeeded')
-                            : t('settings.ad.useStartTlsDesc')}
-                        </span>
-                      </span>
-                      <Switch
-                        checked={urlScheme(config.ldapUrl) === 'ldaps' ? false : config.useStartTls}
-                        disabled={urlScheme(config.ldapUrl) === 'ldaps'}
-                        onChange={(checked) => updateOrg(index, { useStartTls: checked })}
-                        ariaLabel={t('settings.ad.useStartTls')}
-                      />
-                    </label>
-                    <label className="flex items-center justify-between gap-3 cursor-pointer">
-                      <span className="flex flex-col">
-                        <span className="text-[14px] font-semibold text-foreground flex items-center gap-1.5">
-                          <ShieldAlert className="w-4 h-4 text-amber-500" aria-hidden />
-                          {t('settings.ad.allowInvalidTls')}
-                        </span>
-                        <span className="text-[12px] text-muted-foreground">
-                          {t('settings.ad.allowInvalidTlsDesc')}
-                        </span>
-                      </span>
-                      <Switch
-                        checked={config.allowInvalidTls}
-                        onChange={(checked) => {
-                          if (checked && !window.confirm(t('settings.ad.allowInvalidTlsConfirm'))) {
-                            return;
-                          }
-                          updateOrg(index, { allowInvalidTls: checked });
-                        }}
-                        ariaLabel={t('settings.ad.allowInvalidTls')}
-                        activeClassName="bg-amber-500 border-amber-500"
-                      />
-                    </label>
-                  </div>
+                  <SettingsAdTlsFields config={config} onChange={(patch) => updateOrg(index, patch)} />
 
                   <footer className="flex flex-col items-center gap-2 pt-3 border-t border-border/60">
                     <button
