@@ -16,9 +16,17 @@ export default defineConfig({
     globals: true,
     include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
-      reporter: ['text', 'html'],
+      provider: 'v8',
+      reporter: ['text-summary', 'html'],
       include: ['src/**'],
       exclude: ['src/**/*.test.*', 'src/setupTests.ts', 'src/main.tsx'],
+      // Нижняя граница текущего покрытия: не даёт ему молча упасть.
+      thresholds: {
+        statements: 35,
+        branches: 25,
+        functions: 28,
+        lines: 35,
+      },
     },
   },
 });
