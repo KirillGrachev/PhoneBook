@@ -18,7 +18,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ApiError, isTauri } from '@/api/backend';
 import { configApi, contactsApi, syncApi } from '@/api/directory';
 import { devLog } from '@/lib/devlog';
-import type { DuplicatesPreviewDto, LdapOrgConfigDto, LdapOrgInput } from '@/api/contracts';
+import type { DuplicatesPreviewDto, LdapOrgConfigDto } from '@/api/contracts';
 import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
 import { TextField } from '@/components/ui/TextField';
@@ -27,6 +27,7 @@ import { translateBackendError } from '@/lib/errors';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
 
+import { primaryButton, toInput, urlScheme } from './settingsAdUtils';
 import { SyncMetaLine } from './SyncMetaLine';
 
 const EMPTY_ORG: LdapOrgConfigDto = {
@@ -41,37 +42,6 @@ const EMPTY_ORG: LdapOrgConfigDto = {
 };
 
 const SYNC_INTERVAL_OPTIONS = [1, 6, 12, 24, 72, 168];
-
-/** Схема LDAP-URL: 'ldap' | 'ldaps' | null. */
-function urlScheme(url: string): 'ldap' | 'ldaps' | null {
-  const normalized = url.trim().toLowerCase();
-  if (normalized.startsWith('ldaps://')) return 'ldaps';
-  if (normalized.startsWith('ldap://')) return 'ldap';
-  return null;
-}
-
-function toInput(config: LdapOrgConfigDto): LdapOrgInput {
-  return {
-    organization: config.organization,
-    ldapUrl: config.ldapUrl,
-    baseDn: config.baseDn,
-    bindDn: config.bindDn ?? null,
-    useStartTls: config.useStartTls,
-    allowInvalidTls: config.allowInvalidTls,
-    useIntegratedAuth: config.useIntegratedAuth,
-  };
-}
-
-/** Основная (активная) кнопка; в disabled — нейтральный стиль, а не «полупрозрачный primary». */
-function primaryButton(disabled: boolean, extra?: string): string {
-  return cn(
-    'flex items-center justify-center gap-2 rounded-[10px] text-[13px] font-bold transition-colors',
-    disabled
-      ? 'bg-input text-muted-foreground border border-border cursor-not-allowed'
-      : 'bg-primary text-white hover:bg-primary-hover cursor-pointer',
-    extra,
-  );
-}
 
 /**
  * Настройки Active Directory.
