@@ -1,12 +1,23 @@
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/b4ae04d7-b7ec-48f3-b002-dc637efafe34" width="100%">
+  <img src="../public/logo.png" width="96" height="96" alt="KMAruda PhoneBook logo">
 </p>
 
-# KMAruda PhoneBook
+<h1 align="center">KMAruda PhoneBook</h1>
 
-Корпоративный телефонный справочник на базе Active Directory: быстрый поиск
-по ФИО, подразделению, должности, кабинету, телефону и e-mail, карточка
-сотрудника, QR-визитка и выгрузка в vCard.
+<p align="center">
+  <b>Корпоративный телефонный справочник на базе Active Directory.</b><br>
+  Быстрый поиск по ФИО, подразделению, должности, кабинету, телефону и e-mail,
+  карточка сотрудника, QR-визитка и выгрузка в vCard.
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="screenshots/home-dark.png">
+    <img src="screenshots/home-light.png" alt="KMAruda PhoneBook: карточка сотрудника, контактные данные, QR-визитка и список контактов" width="100%">
+  </picture>
+  <br>
+  <sub>Поиск, карточка сотрудника и QR-визитка в одном окне.</sub>
+</p>
 
 Приложение — **Windows-first desktop** на Tauri 2: React/TypeScript-интерфейс,
 Rust-бэкенд, локальный зашифрованный кэш SQLite. В браузере доступен
