@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FolderOpen, RefreshCw } from 'lucide-react';
+import { FolderOpen, RefreshCw } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 

@@ -11,7 +11,7 @@ import {
   Smartphone,
   UserRound,
   ZoomIn,
-} from 'lucide-react';
+} from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { systemApi } from '@/api/directory';

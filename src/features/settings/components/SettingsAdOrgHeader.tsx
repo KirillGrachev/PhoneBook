@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react';
+import { Trash2 } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 interface SettingsAdOrgHeaderProps {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from '@/components/icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 import { cn } from '@/lib/utils';

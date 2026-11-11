@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
-import { Briefcase, Building2, ChevronLeft, ChevronRight, Network, Search, X } from 'lucide-react';
+import { Briefcase, Building2, ChevronLeft, ChevronRight, Network, Search, X } from '@/components/icons';
 import FocusLock, { AutoFocusInside } from 'react-focus-lock';
 import { useTranslation } from 'react-i18next';
 

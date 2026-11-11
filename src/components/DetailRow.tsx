@@ -1,5 +1,5 @@
-import type { LucideIcon } from 'lucide-react';
-import { ChevronRight } from 'lucide-react';
+import type { IconComponent } from '@/components/icons';
+import { ChevronRight } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { CopyButton } from '@/components/CopyButton';
@@ -7,7 +7,7 @@ import { devLog } from '@/lib/devlog';
 import { cn } from '@/lib/utils';
 
 interface DetailRowProps {
-  icon: LucideIcon;
+  icon: IconComponent;
   label: string;
   value?: string;
   isLink?: boolean;

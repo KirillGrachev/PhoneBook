@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Search, HelpCircle, X } from 'lucide-react';
+import { Search, HelpCircle, X } from '@/components/icons';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useTranslation } from 'react-i18next';
 

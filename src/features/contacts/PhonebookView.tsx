@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FlaskConical, Settings2 } from 'lucide-react';
+import { FlaskConical, Settings2 } from '@/components/icons';
 
 import { isTauri as isTauriEnv } from '@/api/backend';
 import { findOrgGroup, resolveEnterpriseName } from '@/lib/orgGroups';

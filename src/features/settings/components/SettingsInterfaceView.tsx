@@ -1,4 +1,4 @@
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Monitor, Moon, Sun } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { Switch } from '@/components/ui/Switch';

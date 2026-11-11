@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Filter, Check, Layers } from 'lucide-react';
+import { Filter, Check, Layers } from '@/components/icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { cva } from 'class-variance-authority';

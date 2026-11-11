@@ -1,6 +1,6 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FileDown, FileUp } from 'lucide-react';
+import { FileDown, FileUp } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 

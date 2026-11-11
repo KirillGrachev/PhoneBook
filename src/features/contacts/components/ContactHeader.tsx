@@ -1,4 +1,4 @@
-import { BookmarkCheck, BookmarkPlus, Mail, MessageCircle } from 'lucide-react';
+import { BookmarkCheck, BookmarkPlus, Mail, MessageCircle } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 

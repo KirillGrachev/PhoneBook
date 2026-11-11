@@ -7,7 +7,7 @@ import {
   Palette,
   Settings as SettingsIcon,
   Terminal,
-} from 'lucide-react';
+} from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { isTauri } from '@/api/backend';

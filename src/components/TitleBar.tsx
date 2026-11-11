@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Minus, Square, Copy as RestoreIcon, X } from 'lucide-react';
+import { Minus, Square, Copy as RestoreIcon, X } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 

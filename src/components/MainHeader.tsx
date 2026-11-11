@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { OrganizationFilter } from '@/components/OrganizationFilter';

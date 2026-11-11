@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X } from '@/components/icons';
 import FocusLock, { AutoFocusInside } from 'react-focus-lock';
 import { useTranslation } from 'react-i18next';
 

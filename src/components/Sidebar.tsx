@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, type KeyboardEvent, type ReactNode } fr
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { BookmarkMinus, DatabaseZap, RefreshCw, SearchX } from 'lucide-react';
+import { BookmarkMinus, DatabaseZap, RefreshCw, SearchX } from '@/components/icons';
 
 import { useMotionPresets } from '@/lib/motionPresets';
 import { cn } from '@/lib/utils';

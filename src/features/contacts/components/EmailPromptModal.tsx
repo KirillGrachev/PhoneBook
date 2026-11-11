@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { MailWarning } from 'lucide-react';
+import { MailWarning } from '@/components/icons';
 import FocusLock, { AutoFocusInside } from 'react-focus-lock';
 import { useTranslation } from 'react-i18next';
 

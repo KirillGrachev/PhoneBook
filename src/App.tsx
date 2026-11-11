@@ -4,7 +4,7 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Toaster } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from '@/components/icons';
 
 import { isTauri } from '@/api/backend';
 import { TitleBar } from '@/components/TitleBar';

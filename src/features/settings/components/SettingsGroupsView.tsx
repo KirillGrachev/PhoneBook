@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Check, Download, Layers, Pencil, Pin, Plus, Trash2, Upload, X } from 'lucide-react';
+import { Check, Download, Layers, Pencil, Pin, Plus, Trash2, Upload, X } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
