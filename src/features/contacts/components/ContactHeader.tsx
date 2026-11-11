@@ -1,4 +1,4 @@
-import { BookmarkCheck, BookmarkPlus, Mail, MessageCircle } from '@/components/icons';
+import { BookmarkCheck, Mail, MessageCircle, UserPlus } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -96,7 +96,7 @@ export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActio
             </>
           ) : (
             <>
-              <BookmarkPlus className="w-[16px] h-[16px] shrink-0" aria-hidden />
+              <UserPlus className="w-[18px] h-[18px] shrink-0" aria-hidden />
               <span className="text-[14px] font-medium leading-none select-none">{t('addToContacts')}</span>
             </>
           )}

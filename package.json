@@ -1,7 +1,7 @@
 {
   "name": "kmaruda-phonebook",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "description": "Корпоративный телефонный справочник КМАруда (Active Directory)",
   "author": "Kirill Grachev (https://github.com/KirillGrachev)",

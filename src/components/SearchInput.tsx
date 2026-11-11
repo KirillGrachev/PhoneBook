@@ -97,7 +97,7 @@ export function SearchInput({ value, onChange, placeholder, className }: SearchI
             <Tooltip.Trigger asChild>
               <button
                 type="button"
-                className="text-muted-foreground cursor-help hover:text-foreground transition-colors bg-transparent border-0 p-0 outline-none"
+                className="flex h-7 w-7 items-center justify-center text-muted-foreground cursor-help hover:text-foreground transition-colors bg-transparent border-0 p-0 outline-none"
                 aria-label={t('searchTooltip')}
                 tabIndex={-1}
               >

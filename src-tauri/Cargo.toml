@@ -1,6 +1,6 @@
 [package]
 name = "kmaruda-phonebook"
-version = "0.2.2"
+version = "0.2.3"
 description = "Корпоративный телефонный справочник КМАруда (Active Directory)"
 authors = ["Kirill Grachev"]
 repository = "https://github.com/KirillGrachev/PhoneBook"
