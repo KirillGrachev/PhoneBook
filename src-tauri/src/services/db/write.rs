@@ -27,6 +27,9 @@ impl Db {
             insert_users(&tx, source_id, users, now)?;
             delete_vanished(&tx, source_id)?;
             cleanup_orphans(&tx)?;
+            // Полная перестройка кэша меняет распределение данных: обновляем
+            // статистику планировщика после большой синхронизации.
+            tx.execute_batch("PRAGMA optimize;")?;
             upsert_sync_meta(&tx, source_id, users.len(), max_usn(users), true)?;
         }
         tx.commit()?;
@@ -85,6 +88,7 @@ impl Db {
                 rusqlite::params![source_kind::EXTERNAL, source_id],
             )?;
             cleanup_orphans(&tx)?;
+            tx.execute_batch("PRAGMA optimize;")?;
             upsert_sync_meta(&tx, source_id, users.len(), None, true)?;
         }
         tx.commit()?;
