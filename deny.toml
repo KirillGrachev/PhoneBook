@@ -1,0 +1,15 @@
+# cargo-deny policy. Suppressions mirror osv-scanner.toml and are time-boxed.
+[advisories]
+version = 2
+ignore = [
+    "RUSTSEC-2024-0429", # glib 0.18, Linux-only GTK transitive
+    "RUSTSEC-2024-0370", # proc-macro-error, Linux-only
+    "RUSTSEC-2025-0081", # unic-char-property, Linux-only
+    "RUSTSEC-2025-0075", # unic-char-range, Linux-only
+    "RUSTSEC-2025-0080", # unic-common, Linux-only
+    "RUSTSEC-2025-0100", # unic-ucd-ident, Linux-only
+    "RUSTSEC-2025-0098", # unic-ucd-version, Linux-only
+    "RUSTSEC-2026-0371", # zbus_names, Linux-only
+    "RUSTSEC-2026-0370", # zvariant, Linux-only
+    "RUSTSEC-2026-0372", # zvariant_derive, Linux-only
+]
