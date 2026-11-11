@@ -1,4 +1,4 @@
-name: KMAruda Phonebook CodeQL
+name: KMAruda PhoneBook CodeQL
 
 # Intentionally no paths or paths-ignore filters: every repository file is in
 # scope for the security scanner, including generated and vendored content.

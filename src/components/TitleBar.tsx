@@ -69,9 +69,7 @@ export function TitleBar({ title }: TitleBarProps) {
       <div className="relative h-[32px] bg-surface shrink-0 z-[60] flex items-center justify-between select-none border-b border-border">
         <div className="pl-3 flex items-center flex-1 h-full min-w-0">
           <img src="/logo.png" alt="" className="w-4 h-4 mr-2 rounded-[4px] shrink-0" draggable={false} />
-          <span className="text-[0.75rem] font-semibold text-foreground/85 uppercase pointer-events-none truncate">
-            {title}
-          </span>
+          <span className="text-[0.75rem] font-semibold text-foreground/85 pointer-events-none truncate">{title}</span>
         </div>
       </div>
     );
@@ -87,7 +85,7 @@ export function TitleBar({ title }: TitleBarProps) {
         <img src="/logo.png" alt="" className="w-4 h-4 mr-2 rounded-[4px] shrink-0" draggable={false} />
         <span
           data-tauri-drag-region
-          className="text-[0.75rem] font-semibold text-foreground/85 uppercase tracking-normal pointer-events-none truncate"
+          className="text-[0.75rem] font-semibold text-foreground/85 tracking-normal pointer-events-none truncate"
         >
           {title}
         </span>

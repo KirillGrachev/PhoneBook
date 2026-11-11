@@ -47,7 +47,7 @@ export function SettingsAboutView() {
       <div className="flex flex-col items-center gap-8 w-full pt-6 pb-10">
         <div className="flex flex-col items-center">
           <img src="/logo.png" alt="" className="w-24 h-24 rounded-[22px] shadow-xl mb-5" draggable={false} />
-          <h3 className="font-semibold text-foreground text-[32px] leading-none mb-4 text-center">KMARUDA PHONEBOOK</h3>
+          <h3 className="font-semibold text-foreground text-[32px] leading-none mb-4 text-center">KMAruda PhoneBook</h3>
           <p className="text-[18px] leading-relaxed text-muted-foreground font-medium max-w-[400px] text-center">
             {t('appDesc')}
           </p>

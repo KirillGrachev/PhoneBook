@@ -51,6 +51,24 @@ export default defineConfig({
           if (/[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/.test(id)) {
             return 'vendor-i18n';
           }
+          if (/[\\/]node_modules[\\/]lucide-react[\\/]/.test(id)) {
+            return 'vendor-icons';
+          }
+          if (/[\\/]node_modules[\\/](sonner)[\\/]/.test(id)) {
+            return 'vendor-toast';
+          }
+          if (/[\\/]node_modules[\\/](zustand)[\\/]/.test(id)) {
+            return 'vendor-state';
+          }
+          if (/[\\/]node_modules[\\/](react-qr-code|qrcode\.react)[\\/]/.test(id)) {
+            return 'vendor-qr';
+          }
+          if (/[\\/]node_modules[\\/](react-focus-lock|focus-lock)[\\/]/.test(id)) {
+            return 'vendor-focus';
+          }
+          if (/[\\/]node_modules[\\/](tailwind-merge|clsx)[\\/]/.test(id)) {
+            return 'vendor-utils';
+          }
           return 'vendor';
         },
       },

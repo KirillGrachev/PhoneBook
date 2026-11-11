@@ -63,7 +63,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v__VERSION__
-          releaseName: 'KMAruda Phonebook v__VERSION__'
+          releaseName: 'KMAruda PhoneBook v__VERSION__'
           releaseBody: 'Корпоративный телефонный справочник (Active Directory). Установщики для Windows: MSI и NSIS. WebView2 устанавливается автоматически (bootstrapper встроен в инсталлятор).'
           releaseDraft: true
           prerelease: false

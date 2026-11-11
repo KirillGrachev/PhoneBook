@@ -16,7 +16,7 @@ Never commit the private key or its password.
 
 Recommended: an EV code-signing certificate in an HSM/token, with the build
 running on a controlled release runner. The certificate must be valid for
-`KMAruda Phonebook` and the installer publisher name.
+`KMAruda PhoneBook` and the installer publisher name.
 
 ## Updates
 

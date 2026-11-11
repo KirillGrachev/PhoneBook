@@ -1,6 +1,6 @@
 # Security Policy
 
-KMAruda Phonebook binds to Active Directory with a service account, caches
+KMAruda PhoneBook binds to Active Directory with a service account, caches
 directory data (names, phone numbers, e-mail addresses, departments) on the
 local disk and opens external links. Treat LDAP attributes, XML phonebook
 content, imported configuration files and every IPC payload as untrusted input.

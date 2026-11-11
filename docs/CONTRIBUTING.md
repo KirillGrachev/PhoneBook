@@ -1,4 +1,4 @@
-# Contributing to KMAruda Phonebook
+# Contributing to KMAruda PhoneBook
 
 Thanks for taking the time to improve the project. This guide covers the local
 setup, the architecture boundary and the conventions used in the repository.
