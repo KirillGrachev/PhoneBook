@@ -127,6 +127,13 @@ pub fn email_tokens(email: &str) -> Vec<String> {
     if let Some((user, domain)) = email.split_once('@') {
         if !user.is_empty() {
             tokens.push(user.to_string());
+            // unicode61 может считать «_»/«-» частью токена; добавляем
+            // части явно, чтобы запрос «grachev_ke@…» находил адрес.
+            for part in user.split(['_', '-', '+', '.']) {
+                if !part.is_empty() {
+                    tokens.push(part.to_string());
+                }
+            }
         }
         if !domain.is_empty() {
             tokens.push(domain.to_string());
@@ -172,12 +179,12 @@ pub fn build_fts_query(query: &str) -> Option<String> {
 
     let mut clauses: Vec<String> = Vec::new();
     for word in query.split_whitespace().take(MAX_WORDS) {
-        // E-mail — не один FTS-токен: unicode61 режет адрес по «@» и «.».
-        // Разбиваем его на части и требуем их все (клаузы соединяются через
-        // AND), иначе «ivanov@kmaruda.ru» превращался в один склеенный токен
-        // «ivanovkmarudaru» и не находил ни email-колонку, ни tokens.
+        // E-mail — не один FTS-токен: unicode61 режет адрес по «@», «.»,
+        // «_», «-» и «+». Разбиваем его на части и требуем их все (клаузы
+        // соединяются через AND), иначе «grachev_ke@…» склеивался в
+        // «grachevke» и не находил ни email-колонку, ни tokens.
         if word.contains('@') {
-            for part in word.split(['@', '.']) {
+            for part in word.split(['@', '.', '_', '-', '+']) {
                 push_fts_clause(&mut clauses, part);
             }
         } else {
@@ -299,5 +306,12 @@ mod tests {
         assert!(q.contains("\"kmaruda\"*"), "{q}");
         assert!(q.contains("\"ru\"*"), "{q}");
         assert!(!q.contains("ivanovkmarudaru"), "{q}");
+
+        // Подчёркивание в локальной части — тоже разделитель unicode61.
+        let q = build_fts_query("Grachev_ke@metholding.com").expect("underscore email");
+        assert!(q.contains("\"grachev\"*"), "{q}");
+        assert!(q.contains("\"ke\"*"), "{q}");
+        assert!(q.contains("\"metholding\"*"), "{q}");
+        assert!(!q.contains("grachevke"), "{q}");
     }
 }

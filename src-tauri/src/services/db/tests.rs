@@ -422,6 +422,31 @@ fn shared_cache_serialize_restore_roundtrip() {
 }
 
 #[test]
+fn email_with_underscore_is_searchable() {
+    let db = sample_db();
+    let mut user = record("g1", "КМАруда", "Грачёв Кирилл", "ИТ", "11");
+    user.email = Some("Grachev_ke@metholding.com".into());
+    user.usn_changed = Some(2);
+    user.tokens = format!(
+        "{} {}",
+        user.tokens,
+        crate::services::tokens::email_tokens("Grachev_ke@metholding.com").join(" ")
+    );
+    db.replace_org_users("КМАруда", &[user]).expect("seed");
+    let page = db
+        .search(SearchParams {
+            query: Some("Grachev_ke@metholding.com".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(page.total, 1);
+    assert_eq!(
+        page.items[0].email.as_deref(),
+        Some("Grachev_ke@metholding.com")
+    );
+}
+
+#[test]
 fn shared_cache_readers_serve_search() {
     let db = Db::open_shared_in_memory().expect("shared db");
     db.replace_org_users(

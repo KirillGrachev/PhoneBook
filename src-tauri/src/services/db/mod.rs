@@ -177,6 +177,9 @@ impl Db {
             match Connection::open_with_flags(&db_uri, flags) {
                 Ok(reader) => {
                     Self::apply_pragmas(&reader)?;
+                    // DDL мог не попасть в shared-cache читателя (например,
+                    // после deserialize образа); схема должна быть видна.
+                    schema::ensure_schema(&reader)?;
                     readers.push(reader);
                 }
                 Err(error) => warn!(target: "db", %error, "read-соединение не открылось"),
@@ -231,6 +234,7 @@ impl Db {
         for _ in 0..2 {
             let reader = Connection::open_with_flags(&uri, flags)?;
             Self::apply_pragmas(&reader)?;
+            schema::ensure_schema(&reader)?;
             readers.push(reader);
         }
         Ok(Self {
