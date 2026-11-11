@@ -58,7 +58,7 @@ export function SettingsInterfaceView() {
               )}
             >
               <Icon className="w-4 h-4" aria-hidden />
-              <span>{t(labelKey)}</span>
+              <span className="leading-none">{t(labelKey)}</span>
             </button>
           ))}
         </div>
