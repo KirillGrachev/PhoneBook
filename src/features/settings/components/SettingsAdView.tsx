@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
 
 import { primaryButton, toInput, urlScheme } from './settingsAdUtils';
+import { SettingsAdIdentityFields } from './SettingsAdIdentityFields';
 import { SettingsAdPasswordEditor } from './SettingsAdPasswordEditor';
 import { SyncMetaLine } from './SyncMetaLine';
 
@@ -276,41 +277,7 @@ export function SettingsAdView() {
                     </button>
                   </header>
 
-                  <TextField
-                    label={t('settings.ad.organization')}
-                    value={config.organization}
-                    onChange={(event) => updateOrg(index, { organization: event.target.value })}
-                    placeholder={t('settings.ad.organizationPlaceholder')}
-                    autoComplete="off"
-                  />
-                  <TextField
-                    label={t('settings.ad.ldapUrl')}
-                    value={config.ldapUrl}
-                    onChange={(event) => updateOrg(index, { ldapUrl: event.target.value })}
-                    placeholder="ldap://dc1.kmaruda.ru или ldaps://dc1.kmaruda.ru:636"
-                    className="font-mono"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    autoComplete="off"
-                    hint={
-                      urlScheme(config.ldapUrl) === 'ldaps'
-                        ? t('settings.ad.schemeLdaps')
-                        : urlScheme(config.ldapUrl) === 'ldap'
-                          ? t('settings.ad.schemeLdap')
-                          : undefined
-                    }
-                  />
-                  <TextField
-                    label={t('settings.ad.baseDn')}
-                    value={config.baseDn}
-                    onChange={(event) => updateOrg(index, { baseDn: event.target.value })}
-                    placeholder="DC=kmaruda,DC=ru"
-                    hint={t('settings.ad.baseDnHint')}
-                    className="font-mono"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    autoComplete="off"
-                  />
+                  <SettingsAdIdentityFields config={config} onChange={(patch) => updateOrg(index, patch)} />
                   <div className="flex flex-col gap-2 pt-1">
                     <label className="flex items-center justify-between gap-3 cursor-pointer">
                       <span className="flex flex-col">
