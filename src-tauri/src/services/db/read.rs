@@ -44,9 +44,19 @@ impl Db {
 
         let page = match self.checkout_read() {
             Some(reader) => {
+                let fallback = search.clone();
                 let result = self.search_locked(&reader, search);
                 self.return_read(reader);
-                result?
+                match result {
+                    Ok(page) => page,
+                    // Shared-cache reader мог не увидеть схему (например,
+                    // после deserialize): повторяем на основном соединении.
+                    Err(AppError::Db(_)) => {
+                        let conn = self.lock();
+                        self.search_locked(&conn, fallback)?
+                    }
+                    Err(error) => return Err(error),
+                }
             }
             None => {
                 let conn = self.lock();
