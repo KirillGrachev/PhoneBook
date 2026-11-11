@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   FlaskConical,
-  KeyRound,
   Loader2,
   MonitorSmartphone,
   PlugZap,
@@ -28,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
 
 import { primaryButton, toInput, urlScheme } from './settingsAdUtils';
+import { SettingsAdPasswordEditor } from './SettingsAdPasswordEditor';
 import { SyncMetaLine } from './SyncMetaLine';
 
 const EMPTY_ORG: LdapOrgConfigDto = {
@@ -345,46 +345,15 @@ export function SettingsAdView() {
                         autoComplete="off"
                       />
 
-                      {/* Пароль: отдельный защищённый канал, не проходит через стор */}
-                      <div className="flex flex-col gap-2">
-                        <TextField
-                          label={t('settings.ad.password')}
-                          type="password"
-                          value={passwordDrafts[config.organization] ?? ''}
-                          onChange={(event) =>
-                            setPasswordDrafts((drafts) => ({ ...drafts, [config.organization]: event.target.value }))
-                          }
-                          placeholder={
-                            config.hasPassword ? t('settings.ad.passwordSaved') : t('settings.ad.passwordPlaceholder')
-                          }
-                          autoComplete="new-password"
-                        />
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => void savePassword(index)}
-                            disabled={
-                              !config.organization.trim() || !(passwordDrafts[config.organization] ?? '').trim()
-                            }
-                            className={primaryButton(
-                              !config.organization.trim() || !(passwordDrafts[config.organization] ?? '').trim(),
-                              'px-3 py-1.5',
-                            )}
-                          >
-                            <KeyRound className="w-3.5 h-3.5" aria-hidden />
-                            {t('settings.ad.savePassword')}
-                          </button>
-                          {config.hasPassword && (
-                            <button
-                              type="button"
-                              onClick={() => void savePassword(index)}
-                              className="px-3 py-1.5 rounded-[10px] border border-border text-foreground/70 text-[13px] font-semibold hover:bg-surface-hover transition-colors cursor-pointer"
-                            >
-                              {t('settings.ad.clearPassword')}
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <SettingsAdPasswordEditor
+                        config={config}
+                        password={passwordDrafts[config.organization] ?? ''}
+                        disabled={!config.organization.trim() || !(passwordDrafts[config.organization] ?? '').trim()}
+                        onPasswordChange={(value) =>
+                          setPasswordDrafts((drafts) => ({ ...drafts, [config.organization]: value }))
+                        }
+                        onSave={() => void savePassword(index)}
+                      />
                     </>
                   )}
 
