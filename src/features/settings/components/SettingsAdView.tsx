@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FlaskConical, Loader2, MonitorSmartphone, PlugZap, Plus, RefreshCw, Trash2, UsersRound } from 'lucide-react';
+import { FlaskConical, Loader2, MonitorSmartphone, Plus, RefreshCw, Trash2, UsersRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -17,9 +17,9 @@ import { useAppStore } from '@/store/useAppStore';
 
 import { primaryButton, toInput } from './settingsAdUtils';
 import { SettingsAdIdentityFields } from './SettingsAdIdentityFields';
+import { SettingsAdOrgFooter } from './SettingsAdOrgFooter';
 import { SettingsAdPasswordEditor } from './SettingsAdPasswordEditor';
 import { SettingsAdTlsFields } from './SettingsAdTlsFields';
-import { SyncMetaLine } from './SyncMetaLine';
 
 const EMPTY_ORG: LdapOrgConfigDto = {
   organization: '',
@@ -316,22 +316,14 @@ export function SettingsAdView() {
 
                   <SettingsAdTlsFields config={config} onChange={(patch) => updateOrg(index, patch)} />
 
-                  <footer className="flex flex-col items-center gap-2 pt-3 border-t border-border/60">
-                    <button
-                      type="button"
-                      onClick={() => void testOrg(index)}
-                      disabled={testingOrg !== null}
-                      className={primaryButton(testingOrg !== null, 'px-4 py-2')}
-                    >
-                      {testingOrg === index ? (
-                        <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-                      ) : (
-                        <PlugZap className="w-4 h-4" aria-hidden />
-                      )}
-                      {testingOrg === index ? t('settings.ad.testing') : t('settings.ad.test')}
-                    </button>
-                    <SyncMetaLine organization={config.organization} syncStates={syncStates} locale={i18n.language} />
-                  </footer>
+                  <SettingsAdOrgFooter
+                    organization={config.organization}
+                    testing={testingOrg === index}
+                    busy={testingOrg !== null}
+                    locale={i18n.language}
+                    syncStates={syncStates}
+                    onTest={() => void testOrg(index)}
+                  />
                 </article>
               ))}
 
