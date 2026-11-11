@@ -1,5 +1,7 @@
 //! Читательские запросы: поиск (FTS5 + LIKE-фолбэк), счётчики, выборки.
 
+use std::sync::atomic::Ordering;
+
 use rusqlite::{params_from_iter, Connection, OptionalExtension, Row, ToSql};
 
 use crate::error::AppError;
@@ -29,6 +31,17 @@ impl ToSql for SqlValue {
 }
 impl Db {
     pub fn search(&self, search: SearchParams) -> Result<SearchPage, AppError> {
+        // requestId — только для отмены устаревших запросов, на результат не
+        // влияет; иначе каждый новый id промахивался бы мимо кэша.
+        let mut cache_params = search.clone();
+        cache_params.request_id = None;
+        let cache_key = (self.search_generation.load(Ordering::SeqCst), cache_params);
+        if let Ok(cache) = self.search_cache.lock() {
+            if let Some(page) = cache.get(&cache_key) {
+                return Ok(page);
+            }
+        }
+
         let conn = self.lock();
         let mut search = search;
         Self::normalize_org_filter(&conn, &mut search)?;
@@ -119,7 +132,15 @@ impl Db {
             let items = Self::browse(&conn, &search, limit, offset)?;
             (items, total)
         };
-        Ok(SearchPage { items, total })
+        let page = SearchPage { items, total };
+        // Ограничиваем кэш небольшими страницами: 64×10k контактов — это
+        // лишняя память, а типовой UI просит 300.
+        if page.items.len() <= 500 {
+            if let Ok(mut cache) = self.search_cache.lock() {
+                cache.put(cache_key, page.clone());
+            }
+        }
+        Ok(page)
     }
 
     /// Привязывает фильтры `organization` / `organizations` к справочнику

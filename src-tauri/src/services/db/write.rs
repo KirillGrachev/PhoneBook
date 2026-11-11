@@ -19,6 +19,7 @@ impl Db {
         source_org: &str,
         users: &[UserRecord],
     ) -> Result<usize, AppError> {
+        self.invalidate_search_cache();
         let mut conn = self.lock();
         let now = unix_now();
         let tx = conn.transaction()?;
@@ -46,6 +47,7 @@ impl Db {
         source_org: &str,
         users: &[UserRecord],
     ) -> Result<usize, AppError> {
+        self.invalidate_search_cache();
         let mut conn = self.lock();
         let now = unix_now();
         let tx = conn.transaction()?;
@@ -75,6 +77,7 @@ impl Db {
         organization: &str,
         users: &[UserRecord],
     ) -> Result<usize, AppError> {
+        self.invalidate_search_cache();
         let mut conn = self.lock();
         let now = unix_now();
         let tx = conn.transaction()?;
@@ -101,6 +104,7 @@ impl Db {
     /// или путь не задан). Возвращает число записей, исчезнувших из выдачи.
     /// Мета синхронизации уходит каскадом вместе с источниками.
     pub fn clear_external_users(&self) -> Result<usize, AppError> {
+        self.invalidate_search_cache();
         let mut conn = self.lock();
         let tx = conn.transaction()?;
         let removed = tx.execute(
