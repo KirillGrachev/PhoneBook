@@ -464,6 +464,30 @@ fn shared_cache_readers_serve_search() {
 }
 
 #[test]
+fn reader_without_schema_falls_back_to_main_connection() {
+    let base = sample_db();
+    let db = Db {
+        conn: Arc::clone(&base.conn),
+        path: None,
+        key: [0u8; 32],
+        search_generation: Arc::new(AtomicU64::new(0)),
+        search_cache: Arc::new(Mutex::new(SearchCache::default())),
+        // Пустая БД без схемы ведёт себя как сломанный shared-cache reader.
+        readers: Arc::new(Mutex::new(vec![
+            Connection::open_in_memory().expect("empty reader")
+        ])),
+    };
+
+    let page = db
+        .search(SearchParams {
+            query: Some("Иванов".into()),
+            ..Default::default()
+        })
+        .expect("fallback search");
+    assert!(page.total > 0);
+}
+
+#[test]
 fn search_cache_is_invalidated_by_writes() {
     let db = sample_db();
     let params = SearchParams {
