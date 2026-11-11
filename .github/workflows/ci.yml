@@ -78,10 +78,15 @@ jobs:
       - name: Install Tauri system dependencies
         timeout-minutes: 30
         run: |
+          # Azure mirror intermittently times out on hosted runners; fall back
+          # to the upstream Ubuntu archive before retrying.
+          sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' -o -name 'apt-mirrors.txt' \) \
+            -exec sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' {} + || true
           updated=0
           for attempt in 1 2 3; do
             if sudo timeout 120 apt-get update \
               -o Acquire::Retries=3 \
+              -o Acquire::ForceIPv4=true \
               -o Acquire::http::Timeout=20 \
               -o Acquire::https::Timeout=20; then
               updated=1
