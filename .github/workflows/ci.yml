@@ -121,6 +121,17 @@ jobs:
       - name: Cargo tests
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked
 
+  cargo-deny:
+    name: Rust dependency policy (cargo-deny)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories
+          manifest-path: src-tauri/Cargo.toml
+
   backend-windows:
     name: Backend (fmt, clippy, tests) — Windows/MSVC
     runs-on: windows-latest
