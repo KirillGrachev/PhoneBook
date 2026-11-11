@@ -157,7 +157,7 @@ jobs:
       - name: Cargo tests
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked
 
-  e2e:
+  playwright:
     name: E2E (Playwright)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
