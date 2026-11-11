@@ -62,6 +62,24 @@ impl AppError {
             Self::Internal(_) => "INTERNAL",
         }
     }
+
+    /// Техническая часть для логов/диагностики. Для `LdapTimeout` её нет:
+    /// сообщение самодостаточно.
+    pub fn details(&self) -> Option<&str> {
+        match self {
+            Self::LdapTimeout => None,
+            Self::Config(message)
+            | Self::Validation(message)
+            | Self::LdapUnreachable(message)
+            | Self::LdapAuth(message)
+            | Self::LdapTls(message)
+            | Self::LdapProtocol(message)
+            | Self::Db(message)
+            | Self::ExternalFile(message)
+            | Self::NotFound(message)
+            | Self::Internal(message) => Some(message),
+        }
+    }
 }
 
 impl Serialize for AppError {
@@ -77,7 +95,7 @@ impl Serialize for AppError {
         Payload {
             code: self.code(),
             message: self.to_string(),
-            details: None,
+            details: self.details(),
         }
         .serialize(serializer)
     }
@@ -105,7 +123,11 @@ mod tests {
         let json = serde_json::to_value(&err).expect("serialize");
         assert_eq!(json["code"], "LDAP_AUTH");
         assert!(json["message"].as_str().unwrap().contains("неверный логин"));
-        assert!(json.get("details").is_none());
+        assert_eq!(json["details"], "неверный логин или пароль");
+        assert!(serde_json::to_value(AppError::LdapTimeout)
+            .expect("timeout")
+            .get("details")
+            .is_none());
     }
 
     #[test]
