@@ -37,6 +37,7 @@ export const contactsApi = {
         limit: params.limit ?? null,
         offset: params.offset ?? null,
         hideEmpty: params.hideEmpty ?? true,
+        requestId: params.requestId ?? null,
       },
     }),
 

@@ -139,6 +139,10 @@ pub struct SearchParams {
     /// Смещение порции выдачи (порционная загрузка каталога списком).
     #[serde(default)]
     pub offset: Option<u32>,
+    /// Монотонный номер поискового запроса: устаревшие запросы, ещё не
+    /// дошедшие до БД, отбрасываются.
+    #[serde(default)]
+    pub request_id: Option<u64>,
 }
 
 /// IPC-значение по умолчанию для [`SearchParams::hide_empty`].

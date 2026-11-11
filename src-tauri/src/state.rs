@@ -1,11 +1,13 @@
 //! Общее управляемое состояние приложения.
 
 use std::path::PathBuf;
+use std::sync::atomic::AtomicU64;
+use std::sync::{Arc, Mutex};
 
 use tauri::{AppHandle, Manager};
 
 use crate::error::AppError;
-use crate::services::db::Db;
+use crate::services::db::{Db, SearchPage};
 use crate::services::sync::SyncManager;
 
 /// Состояние, доступное всем командам через `State<'_, AppState>`.
@@ -18,6 +20,11 @@ pub struct AppState {
     pub config_dir: PathBuf,
     pub db: Db,
     pub sync: SyncManager,
+    /// Последний запрошенный поиск: старые запросы, ещё стоящие в очереди
+    /// за мьютексом БД, не должны выполняться.
+    pub search_latest: Arc<AtomicU64>,
+    /// Последняя завершённая страница — ответ для устаревшего запроса.
+    pub search_cache: Arc<Mutex<Option<(u64, SearchPage)>>>,
 }
 
 impl AppState {
@@ -32,6 +39,8 @@ impl AppState {
             config_dir,
             db,
             sync: SyncManager::new(),
+            search_latest: Arc::new(AtomicU64::new(0)),
+            search_cache: Arc::new(Mutex::new(None)),
         })
     }
 }
