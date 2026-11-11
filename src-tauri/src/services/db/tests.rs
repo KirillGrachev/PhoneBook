@@ -382,12 +382,31 @@ fn sync_meta_tracks_success_and_errors() {
     assert_eq!(kma.last_count, Some(2));
     assert!(kma.last_error.is_none());
     assert!(kma.last_sync_at.unwrap() > 0);
+    assert_eq!(kma.last_usn, Some(1));
+    assert!(kma.last_full_sync_at.is_some());
 
     db.set_sync_error("КМАруда", "сервер недоступен")
         .expect("set error");
     let meta = db.sync_meta().expect("meta");
     let kma = meta.iter().find(|m| m.organization == "КМАруда").unwrap();
     assert_eq!(kma.last_error.as_deref(), Some("сервер недоступен"));
+}
+
+#[test]
+fn delta_merge_does_not_delete_absent_users_and_tracks_usn() {
+    let db = sample_db();
+    let mut changed = record("g1", "КМАруда", "Иванов Иван Иванович", "IT отдел", "11");
+    changed.display_name = "Иванов Иван Обновлённый".into();
+    changed.usn_changed = Some(2);
+    let total = db.merge_org_users("КМАруда", &[changed]).expect("merge");
+    assert_eq!(total, 2, "g2 не удалён дельтой");
+    let meta = db.sync_meta().expect("meta");
+    let kma = meta
+        .iter()
+        .find(|m| m.organization == "КМАруда")
+        .expect("kma");
+    assert_eq!(kma.last_count, Some(2));
+    assert_eq!(kma.last_usn, Some(2));
 }
 
 #[test]

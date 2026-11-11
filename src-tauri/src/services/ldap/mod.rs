@@ -16,6 +16,15 @@ mod parse;
 
 pub use model::{ConnectionTest, DirectoryCredentials, RawUser, USER_FILTER};
 
+/// Фильтр для инкрементальной выборки: все живые пользователи, у которых
+/// `uSNChanged` не меньше `since` (включительно). `None` — полная выборка.
+pub fn user_filter_since(since: Option<i64>) -> String {
+    match since {
+        Some(usn) => format!("(&{USER_FILTER}(uSNChanged>={usn}))"),
+        None => USER_FILTER.to_string(),
+    }
+}
+
 use ldap3::adapters::{Adapter, EntriesOnly, PagedResults};
 use ldap3::{Scope, SearchEntry, SearchResult};
 use tracing::{debug, info};
@@ -33,6 +42,7 @@ use parse::{attr_ci, map_entry, non_empty};
 /// для live-событий синхронизации.
 pub async fn fetch_users<F>(
     credentials: DirectoryCredentials<'_>,
+    filter: &str,
     mut progress: F,
 ) -> Result<Vec<RawUser>, AppError>
 where
@@ -59,7 +69,7 @@ where
     // каждая страница ограничена OPERATION_TIMEOUT.
     let mut stream = ldap
         .with_timeout(OPERATION_TIMEOUT)
-        .streaming_search_with(adapters, base_dn, Scope::Subtree, USER_FILTER, attributes)
+        .streaming_search_with(adapters, base_dn, Scope::Subtree, filter, attributes)
         .await
         .map_err(|e| classify_error(credentials.ldap_url, &e))?;
 
@@ -162,6 +172,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn builds_full_and_incremental_filters() {
+        assert_eq!(user_filter_since(None), USER_FILTER);
+        let incremental = user_filter_since(Some(42));
+        assert!(incremental.contains("uSNChanged>=42"));
+        assert!(incremental.starts_with("(&"));
+        assert!(incremental.ends_with(')'));
+    }
+
+    #[test]
     fn rejects_invalid_urls() {
         let credentials = DirectoryCredentials {
             ldap_url: "http://dc1.kmaruda.ru",
@@ -175,7 +194,7 @@ mod tests {
         let result = tokio::runtime::Builder::new_current_thread()
             .build()
             .expect("runtime")
-            .block_on(fetch_users(credentials, |_| {}));
+            .block_on(fetch_users(credentials, USER_FILTER, |_| {}));
         assert!(matches!(result, Err(AppError::Validation(_))));
     }
 }

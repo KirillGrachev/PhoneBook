@@ -154,4 +154,10 @@ pub struct OrgSyncMeta {
     pub last_sync_at: Option<i64>,
     pub last_count: Option<i64>,
     pub last_error: Option<String>,
+    /// Максимальный `uSNChanged`, применённый к кэшу этого источника.
+    #[serde(default)]
+    pub last_usn: Option<i64>,
+    /// Время последней полной выборки: только она удаляет исчезнувших.
+    #[serde(default)]
+    pub last_full_sync_at: Option<i64>,
 }
