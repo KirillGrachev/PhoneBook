@@ -16,6 +16,7 @@ import { translateBackendError } from '@/lib/errors';
 import { useAppStore } from '@/store/useAppStore';
 
 import { primaryButton, toInput } from './settingsAdUtils';
+import { SettingsAdAuthToggle } from './SettingsAdAuthToggle';
 import { SettingsAdIdentityFields } from './SettingsAdIdentityFields';
 import { SettingsAdOrgFooter } from './SettingsAdOrgFooter';
 import { SettingsAdPasswordEditor } from './SettingsAdPasswordEditor';
@@ -268,26 +269,7 @@ export function SettingsAdView() {
                   </header>
 
                   <SettingsAdIdentityFields config={config} onChange={(patch) => updateOrg(index, patch)} />
-                  <div className="flex flex-col gap-2 pt-1">
-                    <label className="flex items-center justify-between gap-3 cursor-pointer">
-                      <span className="flex flex-col">
-                        <span className="text-[14px] font-semibold text-foreground">
-                          {t('settings.ad.integratedAuth')}
-                        </span>
-                        <span className="text-[12px] text-muted-foreground">{t('settings.ad.integratedAuthDesc')}</span>
-                      </span>
-                      <Switch
-                        checked={config.useIntegratedAuth}
-                        onChange={(checked) => updateOrg(index, { useIntegratedAuth: checked })}
-                        ariaLabel={t('settings.ad.integratedAuth')}
-                      />
-                    </label>
-                    {config.useIntegratedAuth && (
-                      <span className="text-[12px] text-muted-foreground leading-snug">
-                        {t('settings.ad.integratedAuthHint')}
-                      </span>
-                    )}
-                  </div>
+                  <SettingsAdAuthToggle config={config} onChange={(patch) => updateOrg(index, patch)} />
 
                   {!config.useIntegratedAuth && (
                     <>
