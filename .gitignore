@@ -18,3 +18,7 @@ Thumbs.db
 
 # Verification scratch (не часть поставки)
 cargo_check.log
+
+# Playwright
+playwright-report/
+test-results/
