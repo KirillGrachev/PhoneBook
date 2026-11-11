@@ -393,6 +393,35 @@ fn sync_meta_tracks_success_and_errors() {
 }
 
 #[test]
+fn shared_cache_serialize_restore_roundtrip() {
+    let flags = OpenFlags::SQLITE_OPEN_URI
+        | OpenFlags::SQLITE_OPEN_READ_WRITE
+        | OpenFlags::SQLITE_OPEN_CREATE;
+    let uri = format!(
+        "file:phonebook-enc-{}-{}?mode=memory&cache=shared",
+        std::process::id(),
+        unix_now()
+    );
+    let mut source = Connection::open_with_flags(&uri, flags).expect("source");
+    source
+        .execute_batch("CREATE TABLE probe(value TEXT); INSERT INTO probe VALUES ('ok');")
+        .expect("seed");
+    let bytes = encryption::serialize(&mut source).expect("serialize");
+
+    let target_uri = format!(
+        "file:phonebook-enc-restored-{}-{}?mode=memory&cache=shared",
+        std::process::id(),
+        unix_now()
+    );
+    let mut target = Connection::open_with_flags(&target_uri, flags).expect("target");
+    encryption::restore(&mut target, &bytes).expect("restore");
+    let value: String = target
+        .query_row("SELECT value FROM probe", [], |row| row.get(0))
+        .expect("query");
+    assert_eq!(value, "ok");
+}
+
+#[test]
 fn shared_cache_readers_serve_search() {
     let db = Db::open_shared_in_memory().expect("shared db");
     db.replace_org_users(
