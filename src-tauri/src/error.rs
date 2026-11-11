@@ -103,7 +103,30 @@ impl Serialize for AppError {
 
 impl From<rusqlite::Error> for AppError {
     fn from(value: rusqlite::Error) -> Self {
-        Self::Db(value.to_string())
+        let raw = value.to_string();
+        tracing::error!(target: "db", error = %raw, "SQLite error");
+        Self::Db(localize_db_error(&raw))
+    }
+}
+
+/// SQLite отдаёт диагностику по-английски. Пользователю показываем
+/// локализованную формулировку, сырой текст остаётся в tracing-логе.
+fn localize_db_error(raw: &str) -> String {
+    let lower = raw.to_lowercase();
+    if lower.contains("no such table") {
+        "таблица данных не найдена; кэш повреждён — выполните повторную синхронизацию".into()
+    } else if lower.contains("no such column") {
+        "структура кэша устарела; выполните повторную синхронизацию".into()
+    } else if lower.contains("database is locked") {
+        "база данных занята; повторите запрос".into()
+    } else if lower.contains("malformed") || lower.contains("not a database") {
+        "файл кэша повреждён; выполните повторную синхронизацию".into()
+    } else if lower.contains("disk i/o") {
+        "ошибка чтения или записи диска".into()
+    } else if lower.contains("readonly") {
+        "база данных доступна только для чтения".into()
+    } else {
+        "ошибка локальной базы данных".into()
     }
 }
 

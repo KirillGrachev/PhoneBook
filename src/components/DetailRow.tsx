@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { CopyButton } from '@/components/CopyButton';
+import { devLog } from '@/lib/devlog';
 import { cn } from '@/lib/utils';
 
 interface DetailRowProps {
@@ -26,6 +27,12 @@ export function DetailRow({
   copyable = false,
 }: DetailRowProps) {
   const { t } = useTranslation();
+  const handleClick = onClick
+    ? () => {
+        devLog('navigate', { label, value: value ?? null });
+        onClick();
+      }
+    : undefined;
 
   return (
     <div
@@ -33,13 +40,13 @@ export function DetailRow({
         'flex items-center gap-4 px-5 py-3 transition-colors group',
         onClick ? 'cursor-pointer hover:bg-surface-hover active:bg-surface-active' : 'hover:bg-surface-hover',
       )}
-      onClick={onClick}
+      onClick={handleClick}
       onKeyDown={
-        onClick
+        handleClick
           ? (event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                onClick();
+                handleClick();
               }
             }
           : undefined
