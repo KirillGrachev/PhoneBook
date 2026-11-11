@@ -263,6 +263,6 @@
   "settings.transferExportedBrowser": "Файл конфигурации скачан",
   "settings.transferImported": "Конфигурация импортирована",
   "settings.transferImportedNote": "Пароли LDAP введите заново на этом ПК",
-  "settings.transferImportFailed": "Это не файл конфигурации KMAruda Phonebook или файл повреждён",
+  "settings.transferImportFailed": "Это не файл конфигурации KMAruda PhoneBook или файл повреждён",
   "errors.EXTERNAL_FILE": "Ошибка внешнего телефонного файла"
 }

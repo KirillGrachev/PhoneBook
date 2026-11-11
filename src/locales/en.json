@@ -261,6 +261,6 @@
   "settings.transferExportedBrowser": "Configuration file downloaded",
   "settings.transferImported": "Configuration imported",
   "settings.transferImportedNote": "Re-enter LDAP passwords on this PC",
-  "settings.transferImportFailed": "Not a KMAruda Phonebook configuration file, or the file is corrupted",
+  "settings.transferImportFailed": "Not a KMAruda PhoneBook configuration file, or the file is corrupted",
   "errors.EXTERNAL_FILE": "External phonebook file error"
 }

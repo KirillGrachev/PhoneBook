@@ -134,7 +134,7 @@ pub fn report_missing_runtime() {
             w!("Не найден компонент Microsoft Edge WebView2, необходимый для интерфейса приложения.\n\
                 Открыть официальную страницу загрузки WebView2 Runtime? После установки \
                 запустите справочник повторно."),
-            w!("KMaruda Phonebook"),
+            w!("KMAruda PhoneBook"),
             MB_YESNO | MB_ICONWARNING,
         );
         if choice == IDYES {

@@ -77,7 +77,7 @@ impl OrgGroupsShareFile {
     pub fn validate(&self) -> Result<(), AppError> {
         if self.format != SHARE_FORMAT {
             return Err(AppError::Validation(format!(
-                "Это не файл групп организаций KMAruda Phonebook (неизвестный формат «{}»)",
+                "Это не файл групп организаций KMAruda PhoneBook (неизвестный формат «{}»)",
                 self.format
             )));
         }
@@ -184,7 +184,7 @@ impl ConfigShareFile {
         })?;
         if file.format != CONFIG_SHARE_FORMAT {
             return Err(AppError::Config(format!(
-                "Это не файл конфигурации KMAruda Phonebook (неизвестный формат «{}»)",
+                "Это не файл конфигурации KMAruda PhoneBook (неизвестный формат «{}»)",
                 file.format
             )));
         }
