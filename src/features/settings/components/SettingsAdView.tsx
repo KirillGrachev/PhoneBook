@@ -15,12 +15,7 @@ import { translateBackendError } from '@/lib/errors';
 import { useAppStore } from '@/store/useAppStore';
 
 import { primaryButton, toInput } from './settingsAdUtils';
-import { SettingsAdAuthToggle } from './SettingsAdAuthToggle';
-import { SettingsAdBindFields } from './SettingsAdBindFields';
-import { SettingsAdIdentityFields } from './SettingsAdIdentityFields';
-import { SettingsAdOrgFooter } from './SettingsAdOrgFooter';
-import { SettingsAdOrgHeader } from './SettingsAdOrgHeader';
-import { SettingsAdTlsFields } from './SettingsAdTlsFields';
+import { SettingsAdOrgCard } from './SettingsAdOrgCard';
 
 const EMPTY_ORG: LdapOrgConfigDto = {
   organization: '',
@@ -249,43 +244,23 @@ export function SettingsAdView() {
             {/* Организации */}
             <section className="flex flex-col gap-4" aria-label={t('settings.adSettings')}>
               {configs.map((config, index) => (
-                <article
+                <SettingsAdOrgCard
                   key={index}
-                  className="flex flex-col gap-3 p-4 border border-border bg-surface rounded-[16px] shadow-sm"
-                >
-                  <SettingsAdOrgHeader
-                    organization={config.organization}
-                    index={index}
-                    onRemove={() => setRemovingOrg(index)}
-                  />
-
-                  <SettingsAdIdentityFields config={config} onChange={(patch) => updateOrg(index, patch)} />
-                  <SettingsAdAuthToggle config={config} onChange={(patch) => updateOrg(index, patch)} />
-
-                  {!config.useIntegratedAuth && (
-                    <SettingsAdBindFields
-                      config={config}
-                      password={passwordDrafts[config.organization] ?? ''}
-                      disabled={!config.organization.trim() || !(passwordDrafts[config.organization] ?? '').trim()}
-                      onChange={(patch) => updateOrg(index, patch)}
-                      onPasswordChange={(value) =>
-                        setPasswordDrafts((drafts) => ({ ...drafts, [config.organization]: value }))
-                      }
-                      onSave={() => void savePassword(index)}
-                    />
-                  )}
-
-                  <SettingsAdTlsFields config={config} onChange={(patch) => updateOrg(index, patch)} />
-
-                  <SettingsAdOrgFooter
-                    organization={config.organization}
-                    testing={testingOrg === index}
-                    busy={testingOrg !== null}
-                    locale={i18n.language}
-                    syncStates={syncStates}
-                    onTest={() => void testOrg(index)}
-                  />
-                </article>
+                  config={config}
+                  index={index}
+                  passwordDraft={passwordDrafts[config.organization] ?? ''}
+                  testing={testingOrg === index}
+                  busy={testingOrg !== null}
+                  locale={i18n.language}
+                  syncStates={syncStates}
+                  onChange={(patch) => updateOrg(index, patch)}
+                  onPasswordChange={(value) =>
+                    setPasswordDrafts((drafts) => ({ ...drafts, [config.organization]: value }))
+                  }
+                  onSavePassword={() => void savePassword(index)}
+                  onRemove={() => setRemovingOrg(index)}
+                  onTest={() => void testOrg(index)}
+                />
               ))}
 
               <button
