@@ -393,4 +393,39 @@ mod tests {
         assert_ne!(left[0].object_guid, left[1].object_guid);
         assert!(left[0].object_guid.starts_with("ext-"));
     }
+
+    #[test]
+    fn xml_to_db_is_searchable_by_name_and_phone_tail() {
+        use crate::services::db::{Db, SearchParams};
+
+        let parsed = parse_phonebook_xml(SAMPLE).expect("parse");
+        let records = build_records(&parsed, "Yealink");
+        let db = Db::open_in_memory().expect("db");
+        db.replace_external_users("Yealink", &records)
+            .expect("load");
+
+        let by_name = db
+            .search(SearchParams {
+                query: Some("Тест".into()),
+                ..Default::default()
+            })
+            .expect("name search");
+        assert!(by_name.items.iter().any(|item| item
+            .display_name
+            .as_deref()
+            .unwrap_or_default()
+            .contains("Тест")));
+
+        let by_phone = db
+            .search(SearchParams {
+                query: Some("100".into()),
+                ..Default::default()
+            })
+            .expect("phone search");
+        assert!(by_phone.items.iter().any(|item| item
+            .display_name
+            .as_deref()
+            .unwrap_or_default()
+            .contains("Тест & Ко")));
+    }
 }
