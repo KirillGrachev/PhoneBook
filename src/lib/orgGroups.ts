@@ -121,7 +121,7 @@ export function validateOrgGroupsFile(value: unknown): OrgGroupsFileDto {
   const candidate = value as Partial<OrgGroupsFileDto>;
   if (candidate.format !== ORG_GROUPS_SHARE_FORMAT) {
     throw new OrgGroupsFileError(
-      `Это не файл групп организаций KMAruda Phonebook (неизвестный формат «${String(candidate.format)}»)`,
+      `Это не файл групп организаций KMAruda PhoneBook (неизвестный формат «${String(candidate.format)}»)`,
     );
   }
   if (typeof candidate.version !== 'number' || candidate.version > ORG_GROUPS_SHARE_VERSION) {

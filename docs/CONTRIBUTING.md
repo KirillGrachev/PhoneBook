@@ -42,7 +42,7 @@ are hidden in this mode.
 
 | Path                            | Responsibility                                     |
 | ------------------------------- | -------------------------------------------------- |
-| `src/features/contacts`         | Phonebook screen: search, results, contact details |
+| `src/features/contacts`         | PhoneBook screen: search, results, contact details |
 | `src/features/settings`         | Settings hub and its sections (AD, groups, etc.)   |
 | `src/components`                | Shared UI: sidebar, modals, header, QR code, splash |
 | `src/services`                  | Contact service contract, Tauri and mock backends  |

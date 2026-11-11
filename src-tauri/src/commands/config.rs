@@ -172,7 +172,7 @@ fn share_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
         .path()
         .document_dir()
         .map_err(|e| AppError::Config(format!("не удалось определить папку «Документы»: {e}")))?;
-    let dir = dir.join("KMARUDA Phonebook");
+    let dir = dir.join("KMAruda PhoneBook");
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
 }
