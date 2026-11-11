@@ -198,6 +198,8 @@ export interface SearchParamsDto {
   /** Смещение порции выдачи (порционная загрузка списком). */
   offset?: number | null;
   hideEmpty?: boolean | null;
+  /** Монотонный номер запроса: бэкенд отбрасывает устаревшие. */
+  requestId?: number | null;
 }
 
 /** Превью дубликатов учётных записей в кэше (camelCase-контракт бэкенда). */

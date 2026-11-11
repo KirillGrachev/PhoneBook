@@ -6,6 +6,8 @@
 //! (фоновая синхронизация держит его в большой транзакции) заморозило бы
 //! весь UI. Async-команда отдаёт ожидание в runtime, окно остаётся живым.
 
+use std::sync::atomic::Ordering;
+
 use tauri::State;
 
 use crate::error::AppError;
@@ -61,7 +63,41 @@ pub async fn search_contacts(
     }
 
     let db = state.db.clone();
-    run_blocking(move || db.search(params)).await
+    let latest = state.search_latest.clone();
+    let cache = state.search_cache.clone();
+    let request_id = params.request_id;
+    if let Some(id) = request_id {
+        latest.fetch_max(id, Ordering::SeqCst);
+    }
+
+    run_blocking(move || {
+        // Пока запрос ждал мьютекс БД, пользователь мог набрать следующий.
+        // Не выполняем устаревшую работу: отдаём последнюю готовую страницу.
+        if let Some(id) = request_id {
+            if id < latest.load(Ordering::SeqCst) {
+                if let Ok(guard) = cache.lock() {
+                    if let Some((_, page)) = guard.as_ref() {
+                        return Ok(page.clone());
+                    }
+                }
+                return Ok(SearchPage {
+                    items: Vec::new(),
+                    total: 0,
+                });
+            }
+        }
+
+        let page = db.search(params)?;
+        if let Some(id) = request_id {
+            if id >= latest.load(Ordering::SeqCst) {
+                if let Ok(mut guard) = cache.lock() {
+                    *guard = Some((id, page.clone()));
+                }
+            }
+        }
+        Ok(page)
+    })
+    .await
 }
 
 /// Карточка контакта по GUID.

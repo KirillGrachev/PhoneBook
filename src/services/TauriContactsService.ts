@@ -10,6 +10,13 @@ import type { ContactsPage, ContactsQuery, ContactsService } from './ContactsSer
 /** Поиск по избранному: набор небольшой, фильтруем на клиенте. */
 const localSearch = new ContactSearchEngine();
 
+/** Монотонный id запроса: backend отбрасывает устаревшие поиски. */
+let nextSearchRequestId = 0;
+function nextRequestId(): number {
+  nextSearchRequestId += 1;
+  return nextSearchRequestId;
+}
+
 /** Employee (DTO бэкенда) → Contact (модель UI). */
 export function mapEmployeeToContact(employee: EmployeeDto): Contact {
   const composedName = [employee.lastName, employee.firstName, employee.middleName]
@@ -58,6 +65,7 @@ export class TauriContactsService implements ContactsService {
         limit: ids.length,
         offset: 0,
         hideEmpty: false,
+        requestId: nextRequestId(),
       });
       let contacts = page.items.map(mapEmployeeToContact);
       const text = query.search?.trim();
@@ -79,6 +87,7 @@ export class TauriContactsService implements ContactsService {
       limit: query.limit && query.limit > 0 ? query.limit : 300,
       offset: query.offset ?? 0,
       hideEmpty: query.hideEmpty ?? true,
+      requestId: nextRequestId(),
     };
 
     if (query.activeTab === 'kmaruda') {
