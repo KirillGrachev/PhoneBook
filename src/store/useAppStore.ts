@@ -74,8 +74,15 @@ export type AppStore = SettingsSlice & UiSlice;
 const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]], [], SettingsSlice> = (set) => ({
   theme: 'system',
   setTheme: (theme) => set({ theme }),
-  language: 'ru',
-  setLanguage: (language) => set({ language }),
+  language: 'en',
+  setLanguage: (language) => {
+    try {
+      localStorage.setItem('phonebook-language-user', '1');
+    } catch {
+      // localStorage может быть недоступен в ограниченном WebView.
+    }
+    set({ language });
+  },
   globalMode: false,
   setGlobalMode: (globalMode) => set({ globalMode }),
   testMode: false,

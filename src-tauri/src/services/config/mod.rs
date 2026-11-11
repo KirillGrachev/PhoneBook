@@ -113,6 +113,6 @@ mod tests {
         assert_eq!(normalize_theme("dark"), "dark");
         assert_eq!(normalize_theme("hacker"), "system");
         assert_eq!(normalize_language("en"), "en");
-        assert_eq!(normalize_language("de"), "ru");
+        assert_eq!(normalize_language("de"), "en");
     }
 }
