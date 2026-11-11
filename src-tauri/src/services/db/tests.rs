@@ -393,6 +393,22 @@ fn sync_meta_tracks_success_and_errors() {
 }
 
 #[test]
+fn search_cache_is_invalidated_by_writes() {
+    let db = sample_db();
+    let params = SearchParams {
+        query: Some("Иванов".into()),
+        ..Default::default()
+    };
+    assert!(db.search(params.clone()).expect("before").total > 0);
+
+    let mut changed = record("g1", "КМАруда", "Сидоров Сидор", "ИТ отдел", "11");
+    changed.usn_changed = Some(2);
+    db.replace_org_users("КМАруда", &[changed]).expect("write");
+
+    assert_eq!(db.search(params).expect("after").total, 0);
+}
+
+#[test]
 fn delta_merge_does_not_delete_absent_users_and_tracks_usn() {
     let db = sample_db();
     let mut changed = record("g1", "КМАруда", "Иванов Иван Иванович", "IT отдел", "11");
@@ -710,6 +726,8 @@ fn encrypted_container_full_lifecycle() {
         conn: Arc::new(Mutex::new(conn)),
         path: Some(path.clone()),
         key,
+        search_generation: Arc::new(AtomicU64::new(0)),
+        search_cache: Arc::new(Mutex::new(SearchCache::default())),
     };
     assert_eq!(db2.count().expect("count"), 1);
 
@@ -740,6 +758,8 @@ fn encrypted_container_full_lifecycle() {
                 conn: Arc::new(Mutex::new(conn)),
                 path: None,
                 key: [0u8; 32],
+                search_generation: Arc::new(AtomicU64::new(0)),
+                search_cache: Arc::new(Mutex::new(SearchCache::default())),
             };
             assert_eq!(db3.count().expect("count"), 2);
         }

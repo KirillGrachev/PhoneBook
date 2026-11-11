@@ -94,7 +94,7 @@ pub struct SearchPage {
 }
 
 /// Параметры команды `search_contacts`.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Clone, Hash, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchParams {
     #[serde(default)]

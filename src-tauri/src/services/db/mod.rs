@@ -49,7 +49,9 @@
 //! пересоздаётся: данные восстановит синхронизация. Каждое изменение кэша
 //! сразу пересохраняет контейнер ([`Db::flush`]).
 
+use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -72,6 +74,35 @@ mod tests;
 pub use dedup::DuplicatesPreview;
 pub use model::{Employee, SearchPage, SearchParams, UserRecord};
 
+/// Небольшой кэш готовых страниц: повторный/обратный ввод не должен каждый
+/// раз сериализоваться на общем `Mutex<Connection>`.
+const SEARCH_CACHE_LIMIT: usize = 64;
+
+#[derive(Default)]
+struct SearchCache {
+    entries: VecDeque<((u64, SearchParams), SearchPage)>,
+}
+
+impl SearchCache {
+    fn get(&self, key: &(u64, SearchParams)) -> Option<SearchPage> {
+        self.entries
+            .iter()
+            .find(|(entry, _)| entry == key)
+            .map(|(_, page)| page.clone())
+    }
+
+    fn put(&mut self, key: (u64, SearchParams), page: SearchPage) {
+        if self.entries.len() >= SEARCH_CACHE_LIMIT {
+            self.entries.pop_front();
+        }
+        self.entries.push_back((key, page));
+    }
+
+    fn clear(&mut self) {
+        self.entries.clear();
+    }
+}
+
 pub struct Db {
     conn: Arc<Mutex<Connection>>,
     /// Путь зашифрованного контейнера; `None` у in-memory баз (тесты) —
@@ -79,6 +110,8 @@ pub struct Db {
     path: Option<PathBuf>,
     /// Ключ AES-256 контейнера (в тестах — нулевой, не используется).
     key: [u8; 32],
+    search_generation: Arc<AtomicU64>,
+    search_cache: Arc<Mutex<SearchCache>>,
 }
 
 impl Clone for Db {
@@ -87,6 +120,8 @@ impl Clone for Db {
             conn: Arc::clone(&self.conn),
             path: self.path.clone(),
             key: self.key,
+            search_generation: Arc::clone(&self.search_generation),
+            search_cache: Arc::clone(&self.search_cache),
         }
     }
 }
@@ -122,6 +157,8 @@ impl Db {
             conn: Arc::new(Mutex::new(conn)),
             path: Some(db_path.to_path_buf()),
             key,
+            search_generation: Arc::new(AtomicU64::new(0)),
+            search_cache: Arc::new(Mutex::new(SearchCache::default())),
         };
         // Фиксируем контейнер сразу: свежая база или образ после deserialize —
         // на диске всегда актуальный зашифрованный файл.
@@ -139,6 +176,8 @@ impl Db {
             conn: Arc::new(Mutex::new(conn)),
             path: None,
             key: [0u8; 32],
+            search_generation: Arc::new(AtomicU64::new(0)),
+            search_cache: Arc::new(Mutex::new(SearchCache::default())),
         })
     }
 
@@ -166,6 +205,14 @@ impl Db {
         // Отравленный мьютекс (паника в другой команде) не должен ронять
         // всё приложение — соединение остаётся валидным.
         self.conn.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn invalidate_search_cache(&self) {
+        self.search_generation.fetch_add(1, Ordering::SeqCst);
+        self.search_cache
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clear();
     }
 
     /// Доступ к соединению для тестов (например, подкрутка sync_meta).
