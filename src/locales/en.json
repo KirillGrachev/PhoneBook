@@ -169,6 +169,15 @@
     "DB_ERROR": "Local database error: {{details}}",
     "NOT_FOUND": "{{details}}",
     "INTERNAL": "Internal error: {{details}}",
+    "CONFIG_ERROR_en": "Configuration error",
+    "VALIDATION_en": "Invalid input",
+    "LDAP_UNREACHABLE_en": "Directory server unreachable",
+    "LDAP_AUTH_en": "Authentication failed",
+    "LDAP_TLS_en": "TLS error",
+    "LDAP_PROTOCOL_en": "LDAP protocol error",
+    "DB_ERROR_en": "Local database error",
+    "NOT_FOUND_en": "Not found",
+    "INTERNAL_en": "Internal error",
     "NOT_RUNNING_IN_DESKTOP": "Available in the desktop app only"
   },
   "pagination": {

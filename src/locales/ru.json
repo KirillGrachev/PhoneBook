@@ -171,6 +171,15 @@
     "DB_ERROR": "Ошибка локальной базы данных: {{details}}",
     "NOT_FOUND": "{{details}}",
     "INTERNAL": "Внутренняя ошибка: {{details}}",
+    "CONFIG_ERROR_en": "Configuration error",
+    "VALIDATION_en": "Invalid input",
+    "LDAP_UNREACHABLE_en": "Directory server unreachable",
+    "LDAP_AUTH_en": "Authentication failed",
+    "LDAP_TLS_en": "TLS error",
+    "LDAP_PROTOCOL_en": "LDAP protocol error",
+    "DB_ERROR_en": "Local database error",
+    "NOT_FOUND_en": "Not found",
+    "INTERNAL_en": "Internal error",
     "NOT_RUNNING_IN_DESKTOP": "Доступно только в десктоп-приложении"
   },
   "pagination": {
