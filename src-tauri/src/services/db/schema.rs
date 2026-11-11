@@ -14,10 +14,11 @@ use crate::error::AppError;
 /// LIKE-скана таблицы; v3: `users.manager_guid` — кликабельный руководитель
 /// (карточка открывается по GUID без поиска по имени); v4: `sources.kind` —
 /// источник «external» для записей внешнего телефонного файла (Yealink
-/// IPPhoneBook), загружаемых в справочник наравне с сотрудниками AD.
+/// IPPhoneBook), загружаемых в справочник наравне с сотрудниками AD;
+/// v5: `sync_meta.last_usn`/`last_full_sync_at` — дельта-синхронизация.
 /// Кэш — восстанавливаемое зеркало AD, поэтому смена версии просто
 /// пересоздаёт его ([`ensure_schema`]).
-pub(super) const SCHEMA_VERSION: i64 = 4;
+pub(super) const SCHEMA_VERSION: i64 = 5;
 
 /// Колонки выборки сотрудника — порядок строго соответствует
 /// [`row_to_employee`]. Значения справочников берутся через JOIN:
@@ -129,10 +130,14 @@ CREATE VIRTUAL TABLE IF NOT EXISTS users_substr USING fts5(
 
 -- Мета последней синхронизации каждого источника.
 CREATE TABLE IF NOT EXISTS sync_meta (
-    source_id    INTEGER PRIMARY KEY REFERENCES sources(id) ON DELETE CASCADE,
-    last_sync_at INTEGER,
-    last_count   INTEGER,
-    last_error   TEXT
+    source_id         INTEGER PRIMARY KEY REFERENCES sources(id) ON DELETE CASCADE,
+    last_sync_at      INTEGER,
+    last_count        INTEGER,
+    last_error        TEXT,
+    -- uSNChanged, до которого кэш гарантированно применён (для дельты).
+    last_usn          INTEGER,
+    -- Когда последний раз выполнялась полная выборка (для удалений).
+    last_full_sync_at INTEGER
 );
 ";
 
@@ -144,6 +149,7 @@ CREATE TABLE IF NOT EXISTS sync_meta (
 /// Каждый зонд — пустой `SELECT`: при отсутствии колонки он падает на этапе
 /// подготовки запроса, а на здоровой схеме не стоит ничего.
 const STRUCTURE_PROBES: &[&str] = &[
+    "SELECT last_usn FROM sync_meta LIMIT 0",       // v5
     "SELECT kind FROM sources LIMIT 0",             // v4
     "SELECT manager_guid FROM users LIMIT 0",       // v3
     "SELECT object_guid FROM users_substr LIMIT 0", // v2

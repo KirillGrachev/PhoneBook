@@ -34,6 +34,8 @@ pub const SYNC_EVENT: &str = "directory-sync";
 const STARTUP_DELAY: Duration = Duration::from_secs(6);
 /// Как часто планировщик проверяет свежесть кэша.
 const SCHEDULE_TICK: Duration = Duration::from_secs(20 * 60);
+/// Полная выборка нужна для удалений: дельта не видит tombstones AD.
+const FULL_SYNC_INTERVAL: i64 = 24 * 60 * 60;
 
 /// События синхронизации для фронтенда.
 #[derive(Debug, Clone, Serialize)]
@@ -176,12 +178,12 @@ impl SyncManager {
         // Организации синхронизируются последовательно: не создаём
         // параллельную нагрузку на контроллеры домена.
         for org in orgs {
-            self.sync_org(app, &state.db, org).await;
+            self.sync_org(app, &state.db, org, force).await;
         }
         Ok(())
     }
 
-    async fn sync_org(&self, app: &AppHandle, db: &Db, org: &LdapOrgConfig) {
+    async fn sync_org(&self, app: &AppHandle, db: &Db, org: &LdapOrgConfig, force: bool) {
         let name = org.organization.clone();
         emit(
             app,
@@ -191,6 +193,30 @@ impl SyncManager {
         );
         self.set_org_running(&name, true);
         let started = Instant::now();
+
+        // Дельта вместо полной выборки: uSNChanged — монотонная метка AD.
+        // Tombstones дельта не видит, поэтому раз в сутки или по ручному
+        // запуску делаем полную выборку и удаляем исчезнувших.
+        let meta = db
+            .sync_meta()
+            .unwrap_or_default()
+            .into_iter()
+            .find(|meta| meta.organization == name);
+        let needs_full = force
+            || meta.as_ref().and_then(|meta| meta.last_usn).is_none()
+            || meta
+                .as_ref()
+                .and_then(|meta| meta.last_full_sync_at)
+                .is_none_or(|last| {
+                    crate::services::db::unix_now().saturating_sub(last) >= FULL_SYNC_INTERVAL
+                });
+        let since = if needs_full {
+            None
+        } else {
+            meta.and_then(|meta| meta.last_usn)
+                .map(|usn| usn.saturating_add(1))
+        };
+        let filter = ldap::user_filter_since(since);
 
         let password_org = name.clone();
         let password =
@@ -217,7 +243,7 @@ impl SyncManager {
 
         let progress_app = app.clone();
         let progress_org = name.clone();
-        let fetched = ldap::fetch_users(credentials, move |count| {
+        let fetched = ldap::fetch_users(credentials, &filter, move |count| {
             emit(
                 &progress_app,
                 SyncEvent::Progress {
@@ -231,7 +257,12 @@ impl SyncManager {
         match fetched {
             Ok(raw_users) => {
                 let user_records = records::build_records(raw_users);
-                match db.replace_org_users(&name, &user_records) {
+                let write = if needs_full {
+                    db.replace_org_users(&name, &user_records)
+                } else {
+                    db.merge_org_users(&name, &user_records)
+                };
+                match write {
                     Ok(count) => {
                         info!(organization = %name, count, "синхронизация организации завершена");
                         emit(

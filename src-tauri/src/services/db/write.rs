@@ -27,13 +27,40 @@ impl Db {
             insert_users(&tx, source_id, users, now)?;
             delete_vanished(&tx, source_id)?;
             cleanup_orphans(&tx)?;
-            upsert_sync_meta(&tx, source_id, users.len())?;
+            upsert_sync_meta(&tx, source_id, users.len(), max_usn(users), true)?;
         }
         tx.commit()?;
         drop(conn);
         // Кэш изменён — контейнер на диске должен остаться актуальным.
         self.flush()?;
         Ok(users.len())
+    }
+
+    /// Применяет дельту `uSNChanged` без удаления исчезнувших: удаления
+    /// приходят только полной выборкой (периодической или ручной).
+    pub fn merge_org_users(
+        &self,
+        source_org: &str,
+        users: &[UserRecord],
+    ) -> Result<usize, AppError> {
+        let mut conn = self.lock();
+        let now = unix_now();
+        let tx = conn.transaction()?;
+        let total = {
+            let source_id = upsert_source(&tx, source_org, source_kind::AD)?;
+            insert_users(&tx, source_id, users, now)?;
+            let total: i64 = tx.query_row(
+                "SELECT COUNT(*) FROM users WHERE source_id = ?1",
+                [source_id],
+                |row| row.get(0),
+            )?;
+            upsert_sync_meta(&tx, source_id, total as usize, max_usn(users), false)?;
+            total as usize
+        };
+        tx.commit()?;
+        drop(conn);
+        self.flush()?;
+        Ok(total)
     }
 
     /// Полностью заменяет кэш внешнего телефонного файла
@@ -58,7 +85,7 @@ impl Db {
                 rusqlite::params![source_kind::EXTERNAL, source_id],
             )?;
             cleanup_orphans(&tx)?;
-            upsert_sync_meta(&tx, source_id, users.len())?;
+            upsert_sync_meta(&tx, source_id, users.len(), None, true)?;
         }
         tx.commit()?;
         drop(conn);
@@ -109,7 +136,8 @@ impl Db {
     pub fn sync_meta(&self) -> Result<Vec<OrgSyncMeta>, AppError> {
         let conn = self.lock();
         let mut stmt = conn.prepare(
-            "SELECT sources.name, sync_meta.last_sync_at, sync_meta.last_count, sync_meta.last_error
+            "SELECT sources.name, sync_meta.last_sync_at, sync_meta.last_count, sync_meta.last_error,
+                    sync_meta.last_usn, sync_meta.last_full_sync_at
              FROM sync_meta
              JOIN sources ON sources.id = sync_meta.source_id
              ORDER BY sources.name",
@@ -120,6 +148,8 @@ impl Db {
                 last_sync_at: row.get(1)?,
                 last_count: row.get(2)?,
                 last_error: row.get(3)?,
+                last_usn: row.get(4)?,
+                last_full_sync_at: row.get(5)?,
             })
         })?;
         let mut out = Vec::new();
@@ -299,15 +329,30 @@ fn cleanup_orphans(tx: &Transaction<'_>) -> Result<(), AppError> {
 
 /// Мета успешной синхронизации источника: время и число полученных записей,
 /// прежняя ошибка сбрасывается.
-fn upsert_sync_meta(tx: &Transaction<'_>, source_id: i64, count: usize) -> Result<(), AppError> {
+fn max_usn(users: &[UserRecord]) -> Option<i64> {
+    users.iter().filter_map(|user| user.usn_changed).max()
+}
+
+fn upsert_sync_meta(
+    tx: &Transaction<'_>,
+    source_id: i64,
+    count: usize,
+    last_usn: Option<i64>,
+    full: bool,
+) -> Result<(), AppError> {
+    let now = unix_now();
+    let full_at = full.then_some(now);
     tx.execute(
-        "INSERT INTO sync_meta (source_id, last_sync_at, last_count, last_error)
-         VALUES (?1, ?2, ?3, NULL)
+        "INSERT INTO sync_meta
+            (source_id, last_sync_at, last_count, last_error, last_usn, last_full_sync_at)
+         VALUES (?1, ?2, ?3, NULL, ?4, ?5)
          ON CONFLICT(source_id) DO UPDATE SET
-            last_sync_at = excluded.last_sync_at,
-            last_count   = excluded.last_count,
-            last_error   = NULL",
-        rusqlite::params![source_id, unix_now(), count as i64],
+            last_sync_at      = excluded.last_sync_at,
+            last_count        = excluded.last_count,
+            last_error        = NULL,
+            last_usn          = COALESCE(excluded.last_usn, sync_meta.last_usn),
+            last_full_sync_at = COALESCE(excluded.last_full_sync_at, sync_meta.last_full_sync_at)",
+        rusqlite::params![source_id, now, count as i64, last_usn, full_at],
     )?;
     Ok(())
 }
