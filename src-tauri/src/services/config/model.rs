@@ -10,7 +10,7 @@ pub(super) fn default_theme() -> String {
 }
 
 pub(super) fn default_language() -> String {
-    "ru".to_string()
+    "en".to_string()
 }
 
 fn default_sync_interval() -> u32 {

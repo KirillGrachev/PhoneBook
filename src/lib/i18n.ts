@@ -11,8 +11,8 @@ const resources = {
 
 void i18n.use(initReactI18next).init({
   resources,
-  lng: 'ru',
-  fallbackLng: 'ru',
+  lng: 'en',
+  fallbackLng: 'en',
   interpolation: {
     /** React экранирует значения самостоятельно. */
     escapeValue: false,

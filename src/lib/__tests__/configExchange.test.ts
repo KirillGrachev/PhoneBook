@@ -96,7 +96,7 @@ describe('parseConfigFileContent', () => {
       errorMessage,
     );
     expect(dto.theme).toBe('light');
-    expect(dto.language).toBe('ru');
+    expect(dto.language).toBe('en');
     expect(dto.syncIntervalHours).toBe(24);
     expect(dto.hideEmptyContacts).toBe(true);
     expect(dto.ldapConfigs).toEqual([]);

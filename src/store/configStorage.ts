@@ -60,7 +60,7 @@ async function persistNow(value: string): Promise<void> {
     const state = parsed.state ?? {};
     const saved = await configApi.save({
       theme: state.theme ?? 'system',
-      language: state.language ?? 'ru',
+      language: state.language ?? 'en',
       globalMode: state.globalMode ?? false,
       testMode: state.testMode ?? false,
       animationsEnabled: state.animationsEnabled ?? true,
@@ -121,10 +121,20 @@ export const configStorage: StateStorage = {
   getItem: async (): Promise<string | null> => {
     try {
       const config = await configApi.load();
+      let language = config.language;
+      try {
+        // Existing installs with the old RU default are migrated to English
+        // once; an explicit language choice is never overridden.
+        if (language === 'ru' && !localStorage.getItem('phonebook-language-user')) {
+          language = 'en';
+        }
+      } catch {
+        // localStorage may be unavailable; keep the backend value.
+      }
       return JSON.stringify({
         state: {
           theme: config.theme,
-          language: config.language,
+          language,
           globalMode: config.globalMode,
           testMode: config.testMode,
           animationsEnabled: config.animationsEnabled,

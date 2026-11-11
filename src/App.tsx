@@ -40,7 +40,7 @@ export default function App() {
 
   // Язык документа для скринридеров и правил переносов следует за UI.
   useEffect(() => {
-    document.documentElement.lang = language || 'ru';
+    document.documentElement.lang = language || 'en';
   }, [language]);
 
   // Закрытие окна: сначала дожидаемся debounce-сохранения конфигурации,

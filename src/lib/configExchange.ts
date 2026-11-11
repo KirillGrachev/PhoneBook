@@ -98,7 +98,7 @@ function normalizeConfigDto(raw: Record<string, unknown>): AppConfigDto {
   const str = (value: unknown, fallback: string): string => (typeof value === 'string' ? value : fallback);
   const theme = (value: unknown): ThemeName =>
     value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
-  const language = (value: unknown): LanguageCode => (value === 'en' ? 'en' : 'ru');
+  const language = (value: unknown): LanguageCode => (value === 'ru' ? 'ru' : 'en');
   const bool = (value: unknown, fallback: boolean): boolean => (typeof value === 'boolean' ? value : fallback);
   const num = (value: unknown, fallback: number): number => (typeof value === 'number' ? value : fallback);
   const strList = (value: unknown): string[] =>
