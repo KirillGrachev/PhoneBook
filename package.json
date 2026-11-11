@@ -59,6 +59,7 @@
     "@typescript-eslint/parser": "^8.60.0",
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/coverage-v8": "^4.1.12",
+    "axe-core": "^4.14.0",
     "eslint": "^10.4.1",
     "globals": "^15.14.0",
     "jsdom": "^29.1.1",
@@ -67,7 +68,8 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.8.2",
     "vite": "^8.0.16",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "vitest-axe": "^0.1.0"
   },
   "overrides": {
     "@typescript-eslint/typescript-estree": {
