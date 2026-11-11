@@ -1,10 +1,10 @@
 import type { ComponentProps } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import type { IconComponent } from '@/components/icons';
 
 import { cn } from '@/lib/utils';
 
 interface IconButtonProps extends ComponentProps<'button'> {
-  icon: LucideIcon;
+  icon: IconComponent;
   className?: string;
 }
 

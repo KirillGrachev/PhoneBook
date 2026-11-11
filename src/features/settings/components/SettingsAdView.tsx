@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FlaskConical, Loader2, MonitorSmartphone, Plus, RefreshCw, UsersRound } from 'lucide-react';
+import { FlaskConical, Loader2, MonitorSmartphone, Plus, RefreshCw, UsersRound } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';

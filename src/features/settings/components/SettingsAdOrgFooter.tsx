@@ -1,4 +1,4 @@
-import { Loader2, PlugZap } from 'lucide-react';
+import { Loader2, PlugZap } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { primaryButton } from './settingsAdUtils';

@@ -1,4 +1,4 @@
-import { Phone } from 'lucide-react';
+import { Phone } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { CopyButton } from '@/components/CopyButton';

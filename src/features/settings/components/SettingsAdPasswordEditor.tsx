@@ -1,4 +1,4 @@
-import { KeyRound } from 'lucide-react';
+import { KeyRound } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import type { LdapOrgConfigDto } from '@/api/contracts';

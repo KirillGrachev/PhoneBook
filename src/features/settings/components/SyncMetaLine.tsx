@@ -1,4 +1,4 @@
-import { TriangleAlert } from 'lucide-react';
+import { TriangleAlert } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { formatRelativeTime } from '@/lib/utils';
