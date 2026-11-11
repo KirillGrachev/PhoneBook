@@ -9,7 +9,6 @@ import {
   RefreshCw,
   ShieldAlert,
   Trash2,
-  TriangleAlert,
   UsersRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,8 +25,9 @@ import { TextField } from '@/components/ui/TextField';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { translateBackendError } from '@/lib/errors';
 import { cn } from '@/lib/utils';
-import { formatRelativeTime } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
+
+import { SyncMetaLine } from './SyncMetaLine';
 
 const EMPTY_ORG: LdapOrgConfigDto = {
   organization: '',
@@ -629,38 +629,4 @@ export function SettingsAdView() {
       )}
     </div>
   );
-}
-
-function SyncMetaLine({
-  organization,
-  syncStates,
-  locale,
-}: {
-  organization: string;
-  syncStates: { organization: string; lastSyncAt: number | null; lastCount: number | null; lastError: string | null }[];
-  locale: string;
-}) {
-  const { t } = useTranslation();
-  const meta = syncStates.find((state) => state.organization === organization);
-  if (!organization || !meta) {
-    return null;
-  }
-
-  if (meta.lastError) {
-    return (
-      <span className="flex items-center gap-1.5 text-[12px] text-red-500 font-medium min-w-0" title={meta.lastError}>
-        <TriangleAlert className="w-3.5 h-3.5 shrink-0" aria-hidden />
-        <span className="truncate">{meta.lastError}</span>
-      </span>
-    );
-  }
-  if (meta.lastSyncAt) {
-    return (
-      <span className="flex items-center gap-1.5 text-[12px] text-muted-foreground font-medium">
-        {t('sync.lastSync', { time: formatRelativeTime(meta.lastSyncAt, locale) })}
-        {meta.lastCount !== null && ` · ${t('sync.records', { count: meta.lastCount })}`}
-      </span>
-    );
-  }
-  return <span className="text-[12px] text-muted-foreground font-medium">{t('sync.never')}</span>;
 }
