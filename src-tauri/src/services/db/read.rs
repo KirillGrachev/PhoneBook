@@ -42,16 +42,40 @@ impl Db {
             }
         }
 
-        let conn = self.lock();
+        let page = match self.checkout_read() {
+            Some(reader) => {
+                let result = self.search_locked(&reader, search);
+                self.return_read(reader);
+                result?
+            }
+            None => {
+                let conn = self.lock();
+                self.search_locked(&conn, search)?
+            }
+        };
+
+        if page.items.len() <= 500 {
+            if let Ok(mut cache) = self.search_cache.lock() {
+                cache.put(cache_key, page.clone());
+            }
+        }
+        Ok(page)
+    }
+
+    fn search_locked(
+        &self,
+        conn: &Connection,
+        search: SearchParams,
+    ) -> Result<SearchPage, AppError> {
         let mut search = search;
-        Self::normalize_org_filter(&conn, &mut search)?;
+        Self::normalize_org_filter(conn, &mut search)?;
         // Верхняя граница защищает IPC/память от запроса «вся база»;
         // 0 больше не означает «без лимита» — это просто дефолтная страница.
         let limit = i64::from(search.limit.unwrap_or(300).clamp(1, 10_000));
         let offset = i64::from(search.offset.unwrap_or(0));
 
         if let Some(ids) = search.ids.as_ref().filter(|ids| !ids.is_empty()) {
-            let all = Self::by_ids(&conn, ids)?;
+            let all = Self::by_ids(conn, ids)?;
             let total = all.len() as u64;
             let skip = usize::try_from(offset).unwrap_or(usize::MAX);
             let items: Vec<_> = all.into_iter().skip(skip).take(limit as usize).collect();
@@ -78,7 +102,7 @@ impl Db {
                     .split_whitespace()
                     .collect::<Vec<_>>()
                     .join(" ");
-                let fts_total = Self::fts_count(&conn, expr, &search)?;
+                let fts_total = Self::fts_count(conn, expr, &search)?;
                 let mut total = fts_total;
 
                 // Дополнение — только те подстроки, которых нет в FTS.
@@ -87,18 +111,18 @@ impl Db {
                 if let Some((conditions, args)) = Self::complement_conditions(&san, &search) {
                     let (only_conditions, only_args) = Self::exclude_fts(&conditions, &args, expr);
                     let complement_total =
-                        Self::complement_only_count(&conn, &only_conditions, &only_args)?;
+                        Self::complement_only_count(conn, &only_conditions, &only_args)?;
                     total += complement_total;
 
                     // Порядок выдачи: сначала все FTS-совпадения (bm25), затем
                     // complement-only (по имени). При таком контракте offset
                     // раскладывается на две части без пересечений и пропусков.
                     if offset < fts_total as i64 {
-                        let mut page = Self::fts_search(&conn, expr, &search, limit, offset)?;
+                        let mut page = Self::fts_search(conn, expr, &search, limit, offset)?;
                         if (page.len() as i64) < limit {
                             let need = limit - page.len() as i64;
                             let mut extra = Self::complement_search(
-                                &conn,
+                                conn,
                                 &only_conditions,
                                 &only_args,
                                 need,
@@ -110,7 +134,7 @@ impl Db {
                     } else {
                         let complement_offset = offset - fts_total as i64;
                         let page = Self::complement_search(
-                            &conn,
+                            conn,
                             &only_conditions,
                             &only_args,
                             limit,
@@ -119,28 +143,20 @@ impl Db {
                         (page, total)
                     }
                 } else {
-                    let page = Self::fts_search(&conn, expr, &search, limit, offset)?;
+                    let page = Self::fts_search(conn, expr, &search, limit, offset)?;
                     (page, total)
                 }
             } else {
-                let total = Self::browse_count(&conn, &search)?;
-                let items = Self::browse(&conn, &search, limit, offset)?;
+                let total = Self::browse_count(conn, &search)?;
+                let items = Self::browse(conn, &search, limit, offset)?;
                 (items, total)
             }
         } else {
-            let total = Self::browse_count(&conn, &search)?;
-            let items = Self::browse(&conn, &search, limit, offset)?;
+            let total = Self::browse_count(conn, &search)?;
+            let items = Self::browse(conn, &search, limit, offset)?;
             (items, total)
         };
-        let page = SearchPage { items, total };
-        // Ограничиваем кэш небольшими страницами: 64×10k контактов — это
-        // лишняя память, а типовой UI просит 300.
-        if page.items.len() <= 500 {
-            if let Ok(mut cache) = self.search_cache.lock() {
-                cache.put(cache_key, page.clone());
-            }
-        }
-        Ok(page)
+        Ok(SearchPage { items, total })
     }
 
     /// Привязывает фильтры `organization` / `organizations` к справочнику

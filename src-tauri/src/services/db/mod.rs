@@ -53,9 +53,9 @@ use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OpenFlags};
 use tracing::warn;
 
 use crate::error::AppError;
@@ -112,6 +112,10 @@ pub struct Db {
     key: [u8; 32],
     search_generation: Arc<AtomicU64>,
     search_cache: Arc<Mutex<SearchCache>>,
+    /// Read-only connections к тому же shared-cache in-memory DB. Пусто в
+    /// тестах; production использует 4, чтобы холодные поиски не ждали
+    /// единственный `Mutex<Connection>`.
+    readers: Arc<Mutex<Vec<Connection>>>,
 }
 
 impl Clone for Db {
@@ -122,6 +126,7 @@ impl Clone for Db {
             key: self.key,
             search_generation: Arc::clone(&self.search_generation),
             search_cache: Arc::clone(&self.search_cache),
+            readers: Arc::clone(&self.readers),
         }
     }
 }
@@ -147,18 +152,44 @@ impl Db {
                 None
             }
         };
-        let mut conn = Connection::open_in_memory()?;
+        // Shared-cache in-memory DB даёт read-only соединениям видеть тот же
+        // кэш, не копируя его. Имя уникально в пределах процесса.
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let db_uri = format!(
+            "file:phonebook-{}-{nanos}?mode=memory&cache=shared",
+            std::process::id()
+        );
+        let flags = OpenFlags::SQLITE_OPEN_URI
+            | OpenFlags::SQLITE_OPEN_READ_WRITE
+            | OpenFlags::SQLITE_OPEN_CREATE;
+        let mut conn = Connection::open_with_flags(&db_uri, flags)?;
         Self::apply_pragmas(&conn)?;
         if let Some(bytes) = image.as_deref() {
             encryption::restore(&mut conn, bytes)?;
         }
         schema::ensure_schema(&conn)?;
+
+        let mut readers = Vec::new();
+        for _ in 0..4 {
+            match Connection::open_with_flags(&db_uri, flags) {
+                Ok(reader) => {
+                    Self::apply_pragmas(&reader)?;
+                    readers.push(reader);
+                }
+                Err(error) => warn!(target: "db", %error, "read-соединение не открылось"),
+            }
+        }
+
         let db = Self {
             conn: Arc::new(Mutex::new(conn)),
             path: Some(db_path.to_path_buf()),
             key,
             search_generation: Arc::new(AtomicU64::new(0)),
             search_cache: Arc::new(Mutex::new(SearchCache::default())),
+            readers: Arc::new(Mutex::new(readers)),
         };
         // Фиксируем контейнер сразу: свежая база или образ после deserialize —
         // на диске всегда актуальный зашифрованный файл.
@@ -178,6 +209,37 @@ impl Db {
             key: [0u8; 32],
             search_generation: Arc::new(AtomicU64::new(0)),
             search_cache: Arc::new(Mutex::new(SearchCache::default())),
+            readers: Arc::new(Mutex::new(Vec::new())),
+        })
+    }
+
+    /// Тестовая копия production-пути: shared-cache in-memory + read pool.
+    #[cfg(test)]
+    pub fn open_shared_in_memory() -> Result<Self, AppError> {
+        let uri = format!(
+            "file:phonebook-test-{}-{}?mode=memory&cache=shared",
+            std::process::id(),
+            unix_now()
+        );
+        let flags = OpenFlags::SQLITE_OPEN_URI
+            | OpenFlags::SQLITE_OPEN_READ_WRITE
+            | OpenFlags::SQLITE_OPEN_CREATE;
+        let conn = Connection::open_with_flags(&uri, flags)?;
+        Self::apply_pragmas(&conn)?;
+        schema::ensure_schema(&conn)?;
+        let mut readers = Vec::new();
+        for _ in 0..2 {
+            let reader = Connection::open_with_flags(&uri, flags)?;
+            Self::apply_pragmas(&reader)?;
+            readers.push(reader);
+        }
+        Ok(Self {
+            conn: Arc::new(Mutex::new(conn)),
+            path: None,
+            key: [0u8; 32],
+            search_generation: Arc::new(AtomicU64::new(0)),
+            search_cache: Arc::new(Mutex::new(SearchCache::default())),
+            readers: Arc::new(Mutex::new(readers)),
         })
     }
 
@@ -186,6 +248,9 @@ impl Db {
         // Внешние ключи в SQLite по умолчанию выключены: без этой прагмы
         // REFERENCES в схеме были бы просто документацией.
         conn.pragma_update(None, "foreign_keys", "ON")?;
+        // Shared-cache readers/writer могут ждать друг друга; не отдаём
+        // мгновенный SQLITE_BUSY, а ждём до 5 секунд.
+        conn.busy_timeout(Duration::from_secs(5))?;
         Ok(())
     }
 
@@ -205,6 +270,20 @@ impl Db {
         // Отравленный мьютекс (паника в другой команде) не должен ронять
         // всё приложение — соединение остаётся валидным.
         self.conn.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn checkout_read(&self) -> Option<Connection> {
+        self.readers
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .pop()
+    }
+
+    fn return_read(&self, conn: Connection) {
+        self.readers
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(conn);
     }
 
     fn invalidate_search_cache(&self) {

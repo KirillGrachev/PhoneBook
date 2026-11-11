@@ -393,6 +393,23 @@ fn sync_meta_tracks_success_and_errors() {
 }
 
 #[test]
+fn shared_cache_readers_serve_search() {
+    let db = Db::open_shared_in_memory().expect("shared db");
+    db.replace_org_users(
+        "КМАруда",
+        &[record("g1", "КМАруда", "Иванов Иван", "ИТ", "11")],
+    )
+    .expect("seed");
+    let page = db
+        .search(SearchParams {
+            query: Some("Иванов".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert_eq!(page.total, 1);
+}
+
+#[test]
 fn search_cache_is_invalidated_by_writes() {
     let db = sample_db();
     let params = SearchParams {
@@ -728,6 +745,7 @@ fn encrypted_container_full_lifecycle() {
         key,
         search_generation: Arc::new(AtomicU64::new(0)),
         search_cache: Arc::new(Mutex::new(SearchCache::default())),
+        readers: Arc::new(Mutex::new(Vec::new())),
     };
     assert_eq!(db2.count().expect("count"), 1);
 
@@ -760,6 +778,7 @@ fn encrypted_container_full_lifecycle() {
                 key: [0u8; 32],
                 search_generation: Arc::new(AtomicU64::new(0)),
                 search_cache: Arc::new(Mutex::new(SearchCache::default())),
+                readers: Arc::new(Mutex::new(Vec::new())),
             };
             assert_eq!(db3.count().expect("count"), 2);
         }
@@ -1462,7 +1481,7 @@ fn search_load_benchmark() {
 
     eprintln!("=== PhoneBook search load test: rows={rows}, iters={iters} ===");
     let records: Vec<UserRecord> = (0..rows).map(load_record).collect();
-    let db = Db::open_in_memory().expect("in-memory db");
+    let db = Db::open_shared_in_memory().expect("shared in-memory db");
     let seed_start = Instant::now();
     db.replace_org_users("КМАруда", &records).expect("seed");
     eprintln!(
