@@ -251,6 +251,7 @@
   "settings.externalRemove": "Remove file",
   "settings.externalLoaded": "Entries loaded: {{count}} from {{files}} file(s): {{org}}",
   "settings.externalCleared": "External files disabled: entries removed: {{count}}",
+  "settings.externalCached": "A source file is unavailable; keeping {{count}} cached entries. Restore the file to refresh it.",
   "settings.externalHintNeedFile": "Loading is on but no files are selected yet. Pick one or more Yealink IPPhoneBook (XML) files and their entries will join the phonebook.",
   "settings.externalHintDisabled": "Loading is off: the file entries are removed from search and filters. The paths are remembered — turn the toggle on and the files will load again.",
   "settings.externalHintOff": "Loading is off: the phonebook shows Active Directory records only. Turn the toggle on to enable file selection and loading.",

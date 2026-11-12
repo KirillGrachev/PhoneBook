@@ -64,6 +64,8 @@ export function SettingsExternalView() {
         );
       } else if (result.state === 'cleared') {
         toast.success(t('settings.externalCleared', { count: result.cleared ?? 0 }));
+      } else if (result.state === 'cached') {
+        toast.warning(t('settings.externalCached', { count: result.count ?? 0 }));
       }
     } catch (error) {
       toast.error(translateBackendError(error, t), { id: 'external-refresh-error' });

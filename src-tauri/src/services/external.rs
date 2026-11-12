@@ -25,7 +25,7 @@ use quick_xml::escape::unescape as unescape_xml;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde::Serialize;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::error::AppError;
 use crate::services::db::{Db, UserRecord};
@@ -74,6 +74,9 @@ pub enum ExternalRefresh {
         sources: Vec<ExternalSource>,
         count: usize,
     },
+    /// A source file disappeared or cannot be read; the previously cached
+    /// external entries are kept and `count` reports how many are still usable.
+    Cached { count: usize },
 }
 
 /// One imported external phone book source.
@@ -267,12 +270,28 @@ fn unit_guid(unit: &PhonebookUnit, organization: &str) -> String {
     format!("ext-{hash:016x}")
 }
 
+/// Keeps the already-cached external entries when a source file disappears.
+/// The database cache is encrypted like the rest of the directory; no
+/// plaintext XML copy is written next to the source.
+fn cached_fallback(db: &Db, path: &str, reason: String) -> Result<ExternalRefresh, AppError> {
+    let count = db.external_count()?;
+    if count == 0 {
+        return Err(AppError::ExternalFile(format!(
+            "не удалось прочитать файл {path}: {reason}"
+        )));
+    }
+    warn!(
+        path,
+        count, reason, "внешний файл недоступен — использую сохранённый кэш"
+    );
+    Ok(ExternalRefresh::Cached { count })
+}
+
 /// Загрузить внешние телефонные файлы в кэш согласно настройкам.
 ///
 /// Каждый файл становится отдельным источником справочника. Все файлы
 /// проверяются до записи в БД: битый файл не оставляет частично обновлённый
-/// кэш. Ошибка чтения/разбора возвращается как `Err`; решение о показе
-/// принимает слой команд.
+/// кэш. Если исходный файл исчез, сохраняется ранее зашифрованный кэш.
 pub fn refresh(db: &Db, enabled: bool, paths: &[String]) -> Result<ExternalRefresh, AppError> {
     let paths: Vec<&str> = paths
         .iter()
@@ -292,19 +311,28 @@ pub fn refresh(db: &Db, enabled: bool, paths: &[String]) -> Result<ExternalRefre
     let mut used_names = HashSet::new();
 
     for path in paths {
-        let metadata = fs::metadata(path)
-            .map_err(|e| AppError::ExternalFile(format!("не удалось открыть файл {path}: {e}")))?;
+        let metadata = match fs::metadata(path) {
+            Ok(metadata) => metadata,
+            Err(error) => {
+                return cached_fallback(db, path, format!("не удалось открыть файл: {error}"));
+            }
+        };
         if metadata.len() > MAX_FILE_BYTES {
             return Err(AppError::ExternalFile(format!(
                 "файл {path} слишком большой для телефонной книги: {} байт",
                 metadata.len()
             )));
         }
-        let content = fs::read_to_string(path).map_err(|e| {
-            AppError::ExternalFile(format!(
-                "не удалось прочитать файл {path} как UTF-8: {e}. Сохраните выгрузку в кодировке UTF-8"
-            ))
-        })?;
+        let content = match fs::read_to_string(path) {
+            Ok(content) => content,
+            Err(error) => {
+                return cached_fallback(
+                    db,
+                    path,
+                    format!("не удалось прочитать файл как UTF-8: {error}"),
+                );
+            }
+        };
         let parsed = parse_phonebook_xml(&content)?;
 
         let fallback = Path::new(path)
@@ -504,5 +532,24 @@ mod tests {
         assert!(orgs.contains(&"Source B".to_string()));
 
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn missing_source_keeps_cached_entries() {
+        use crate::services::db::Db;
+
+        let db = Db::open_in_memory().expect("db");
+        let parsed = parse_phonebook_xml(SAMPLE).expect("parse");
+        let records = build_records(&parsed, "Yealink");
+        db.replace_external_sources(&[("Yealink".to_string(), records)])
+            .expect("load");
+
+        let missing = std::env::temp_dir()
+            .join("kmpb-external-missing.xml")
+            .to_string_lossy()
+            .into_owned();
+        let result = refresh(&db, true, &[missing]).expect("cached fallback");
+        assert_eq!(result, ExternalRefresh::Cached { count: 4 });
+        assert_eq!(db.external_count().expect("count"), 4);
     }
 }

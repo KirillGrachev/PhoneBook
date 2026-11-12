@@ -137,7 +137,7 @@ export interface ExternalSourceDto {
 }
 
 export interface ExternalRefreshDto {
-  state: 'disabled' | 'cleared' | 'loaded';
+  state: 'disabled' | 'cleared' | 'loaded' | 'cached';
   cleared?: number;
   count?: number;
   sources?: ExternalSourceDto[];
