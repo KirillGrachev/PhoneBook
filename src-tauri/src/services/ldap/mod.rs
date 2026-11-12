@@ -55,8 +55,8 @@ where
         ));
     }
 
-    let mut ldap = connect(&credentials).await?;
-    bind(&mut ldap, &credentials).await?;
+    let mut session = connect(&credentials).await?;
+    bind(&mut session.ldap, &credentials).await?;
 
     let attributes: Vec<&str> = USER_ATTRIBUTES.to_vec();
 
@@ -67,7 +67,8 @@ where
 
     // with_timeout переходит во внутренний клон Ldap потока поиска:
     // каждая страница ограничена OPERATION_TIMEOUT.
-    let mut stream = ldap
+    let mut stream = session
+        .ldap
         .with_timeout(OPERATION_TIMEOUT)
         .streaming_search_with(adapters, base_dn, Scope::Subtree, filter, attributes)
         .await
@@ -94,7 +95,8 @@ where
         return Err(classify_search_result(credentials.ldap_url, &result));
     }
 
-    let _ = ldap.unbind().await;
+    let _ = session.ldap.unbind().await;
+    // session.drop останавливает драйвер и закрывает сокет детерминированно.
     info!(count = users.len(), "LDAP: выборка пользователей завершена");
     Ok(users)
 }
@@ -103,11 +105,12 @@ where
 pub async fn test_connection(
     credentials: DirectoryCredentials<'_>,
 ) -> Result<ConnectionTest, AppError> {
-    let mut ldap = connect(&credentials).await?;
-    let bind_ms = bind(&mut ldap, &credentials).await?;
+    let mut session = connect(&credentials).await?;
+    let bind_ms = bind(&mut session.ldap, &credentials).await?;
 
     // rootDSE: имя сервера и корень домена (подсказка для Base DN).
-    let SearchResult(root_entries, root_result) = ldap
+    let SearchResult(root_entries, root_result) = session
+        .ldap
         .with_timeout(OPERATION_TIMEOUT)
         .search(
             "",
@@ -137,7 +140,8 @@ pub async fn test_connection(
     let mut sample_names = Vec::new();
     let mut sample_is_truncated = false;
     if !base.is_empty() {
-        let SearchResult(entries, result) = ldap
+        let SearchResult(entries, result) = session
+            .ldap
             .with_timeout(OPERATION_TIMEOUT)
             .search(base, Scope::Subtree, USER_FILTER, vec!["displayName"])
             .await
@@ -158,7 +162,7 @@ pub async fn test_connection(
         }
     }
 
-    let _ = ldap.unbind().await;
+    let _ = session.ldap.unbind().await;
     Ok(ConnectionTest {
         bind_ms,
         server_dns_name,
