@@ -1,6 +1,7 @@
 //! Установка соединения и аутентификация (StartTLS/LDAPS, GSSAPI/SSPI).
 
 use ldap3::{LdapConnAsync, LdapConnSettings};
+use tokio::task::JoinHandle;
 use tracing::{debug, info};
 
 use crate::error::AppError;
@@ -9,9 +10,26 @@ use super::errors::{auth_error_text, classify_error};
 use super::model::{DirectoryCredentials, CONNECT_TIMEOUT, OPERATION_TIMEOUT};
 use super::parse::non_empty;
 
+/// LDAP-соединение вместе с задачей драйвера.
+///
+/// `ldap3::drive!` запускает драйвер отдельной задачей и теряет её handle.
+/// После `unbind` такая задача может ещё жить до закрытия сокета сервером и
+/// позже писать `socket shutdown error` в лог. Держим handle сами и
+/// останавливаем драйвер при уничтожении сессии.
+pub(super) struct LdapSession {
+    pub(super) ldap: ldap3::Ldap,
+    driver: JoinHandle<()>,
+}
+
+impl Drop for LdapSession {
+    fn drop(&mut self) {
+        self.driver.abort();
+    }
+}
+
 pub(super) async fn connect(
     credentials: &DirectoryCredentials<'_>,
-) -> Result<ldap3::Ldap, AppError> {
+) -> Result<LdapSession, AppError> {
     let url = credentials.ldap_url.trim();
     if !(url.starts_with("ldap://") || url.starts_with("ldaps://")) {
         return Err(AppError::Validation(
@@ -32,13 +50,21 @@ pub(super) async fn connect(
         .await
         .map_err(|e| classify_error(url, &e))?;
 
-    // Драйвер соединения должен жить всё время работы с LDAP.
-    ldap3::drive!(conn);
+    // Драйвер соединения должен жить всё время работы с LDAP. В отличие от
+    // `ldap3::drive!`, сохраняем handle, чтобы завершить задачу вместе с
+    // сессией, а не оставлять сокет до таймаута контроллера домена.
+    let driver = tokio::spawn(async move {
+        if let Err(error) = conn.drive().await {
+            // Штатное закрытие соединения после unbind тоже приходит сюда;
+            // это не ошибка синхронизации, поэтому только debug.
+            debug!(error = %error, "LDAP: драйвер соединения завершён");
+        }
+    });
 
     if credentials.use_start_tls {
         info!("StartTLS запрошен для {url}");
     }
-    Ok(ldap)
+    Ok(LdapSession { ldap, driver })
 }
 
 /// Извлекает FQDN хоста из LDAP-URL (нужен для SPN `ldap/<fqdn>` в GSSAPI).
