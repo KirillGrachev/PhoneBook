@@ -77,11 +77,13 @@ export function SettingsExternalView() {
 
   const handleEnabledToggle = (checked: boolean) => {
     setExternalPhonebookEnabled(checked);
-    flushConfigSave();
-    if (checked && externalPhonebookPaths.length === 0) {
-      return;
-    }
-    void runRefresh(false);
+    void (async () => {
+      await flushConfigSave();
+      if (checked && externalPhonebookPaths.length === 0) {
+        return;
+      }
+      await runRefresh(false);
+    })();
   };
 
   const handlePickExternalFiles = async () => {
@@ -97,9 +99,9 @@ export function SettingsExternalView() {
         }
       }
       setExternalPhonebookPaths(merged);
-      flushConfigSave();
+      await flushConfigSave();
       if (useAppStore.getState().externalPhonebookEnabled) {
-        void runRefresh(true);
+        await runRefresh(true);
       }
     } catch (error) {
       toast.error(translateBackendError(error, t), { id: 'external-pick-error' });
@@ -109,16 +111,20 @@ export function SettingsExternalView() {
   const handleRemove = (path: string) => {
     const next = externalPhonebookPaths.filter((existing) => existing !== path);
     setExternalPhonebookPaths(next);
-    flushConfigSave();
-    if (useAppStore.getState().externalPhonebookEnabled) {
-      // With no paths left this clears the external sources.
-      void runRefresh(true);
-    }
+    void (async () => {
+      await flushConfigSave();
+      if (useAppStore.getState().externalPhonebookEnabled) {
+        // With no paths left this clears the external sources.
+        await runRefresh(true);
+      }
+    })();
   };
 
   const handleLoadNow = () => {
-    flushConfigSave();
-    void runRefresh(true);
+    void (async () => {
+      await flushConfigSave();
+      await runRefresh(true);
+    })();
   };
 
   const hasFiles = externalPhonebookPaths.length > 0;
