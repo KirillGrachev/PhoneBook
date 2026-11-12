@@ -241,18 +241,41 @@ impl SyncManager {
             use_integrated_auth: org.use_integrated_auth,
         };
 
-        let progress_app = app.clone();
-        let progress_org = name.clone();
-        let fetched = ldap::fetch_users(credentials, &filter, move |count| {
-            emit(
-                &progress_app,
-                SyncEvent::Progress {
-                    organization: progress_org.clone(),
-                    fetched: count,
-                },
-            );
-        })
-        .await;
+        // A transient DC reset should not discard the whole organization:
+        // retry the complete fetch with a short exponential backoff. The
+        // cache is only written after a successful fetch, so an interrupted
+        // attempt cannot leave partial rows.
+        let mut attempt = 0u32;
+        let fetched = loop {
+            let progress_app = app.clone();
+            let progress_org = name.clone();
+            let result = ldap::fetch_users(credentials.clone(), &filter, move |count| {
+                emit(
+                    &progress_app,
+                    SyncEvent::Progress {
+                        organization: progress_org.clone(),
+                        fetched: count,
+                    },
+                );
+            })
+            .await;
+
+            match result {
+                Err(error) if attempt < 2 && is_transient_ldap_error(&error) => {
+                    attempt += 1;
+                    let delay = Duration::from_millis(500 * 2u64.pow(attempt));
+                    warn!(
+                        organization = %name,
+                        attempt,
+                        delay_ms = delay.as_millis() as u64,
+                        error = %error,
+                        "временная ошибка LDAP — повторяю выборку"
+                    );
+                    tokio::time::sleep(delay).await;
+                }
+                other => break other,
+            }
+        };
 
         match fetched {
             Ok(raw_users) => {
@@ -361,6 +384,11 @@ impl SyncManager {
     }
 }
 
+/// Network/timeout failures are worth retrying; auth, TLS and validation are not.
+fn is_transient_ldap_error(error: &AppError) -> bool {
+    matches!(error, AppError::LdapUnreachable(_) | AppError::LdapTimeout)
+}
+
 /// Загрузка внешнего телефонного файла по текущей конфигурации.
 /// Ошибка (файл удалён, битый XML) не прерывает синхронизацию: логируется.
 fn refresh_external(db: &Db, config: &AppConfig) {
@@ -399,4 +427,26 @@ fn report_failure(app: &AppHandle, db: &Db, organization: &str, error: &AppError
             message: error.to_string(),
         },
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn retries_only_transient_ldap_errors() {
+        assert!(is_transient_ldap_error(&AppError::LdapTimeout));
+        assert!(is_transient_ldap_error(&AppError::LdapUnreachable(
+            "reset".into()
+        )));
+        assert!(!is_transient_ldap_error(&AppError::LdapAuth(
+            "bad password".into()
+        )));
+        assert!(!is_transient_ldap_error(&AppError::LdapTls(
+            "bad certificate".into()
+        )));
+        assert!(!is_transient_ldap_error(&AppError::Validation(
+            "bad input".into()
+        )));
+    }
 }
