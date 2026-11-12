@@ -103,6 +103,7 @@ cargo test --release --manifest-path src-tauri/Cargo.toml search_load_benchmark 
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Code signing and updates](CODE_SIGNING.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
+- [Changelog](../CHANGELOG.md)
 
 ## License
 
