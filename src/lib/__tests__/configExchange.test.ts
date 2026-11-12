@@ -40,6 +40,7 @@ function sampleConfig(): AppConfigDto {
     orgGroups: [{ id: 'grp-1', name: 'Холдинг', orgs: ['КМАруда', 'Глобал Строй'] }],
     enterpriseGroupId: 'grp-1',
     externalPhonebookPath: 'C:\\PhoneBook\\yealink.xml',
+    externalPhonebookPaths: ['C:\\PhoneBook\\yealink.xml', 'C:\\PhoneBook\\office.xml'],
     externalPhonebookEnabled: true,
     version: '0.2.0',
   };
@@ -53,6 +54,7 @@ describe('buildConfigPatch', () => {
     expect(patch.globalMode).toBe(true);
     expect(patch.syncIntervalHours).toBe(6);
     expect(patch.externalPhonebookPath).toBe('C:\\PhoneBook\\yealink.xml');
+    expect(patch.externalPhonebookPaths).toEqual(['C:\\PhoneBook\\yealink.xml', 'C:\\PhoneBook\\office.xml']);
     expect(patch.externalPhonebookEnabled).toBe(true);
     expect(patch.orgGroups).toHaveLength(1);
     expect(patch.enterpriseGroupId).toBe('grp-1');
@@ -101,6 +103,7 @@ describe('parseConfigFileContent', () => {
     expect(dto.hideEmptyContacts).toBe(true);
     expect(dto.ldapConfigs).toEqual([]);
     expect(dto.externalPhonebookPath).toBeNull();
+    expect(dto.externalPhonebookPaths).toEqual([]);
     expect(dto.externalPhonebookEnabled).toBe(false);
   });
 

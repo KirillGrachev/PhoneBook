@@ -99,38 +99,39 @@ pub async fn refresh_external_phonebook(
         external::refresh(
             &db,
             config.external_phonebook_enabled,
-            config.external_phonebook_path.as_deref(),
+            &config.external_phonebook_paths,
         )
     })
     .await
 }
 
-/// Нативный диалог выбора XML-файла телефонной книги. Возвращает `None`,
-/// если пользователь закрыл диалог: отмена — не ошибка.
+/// Нативный диалог выбора XML-файлов телефонной книги. Возвращает пустой
+/// список, если пользователь закрыл диалог: отмена — не ошибка.
 #[tauri::command]
-pub async fn pick_external_phonebook_file(app: AppHandle) -> Result<Option<String>, AppError> {
+pub async fn pick_external_phonebook_files(app: AppHandle) -> Result<Vec<String>, AppError> {
     let (sender, receiver) = tokio::sync::oneshot::channel();
     app.dialog()
         .file()
-        .set_title("Выберите файл телефонной книги")
+        .set_title("Select phone book files")
         .add_filter("XML (*.xml)", &["xml"])
-        .pick_file(move |picked| {
+        .pick_files(move |picked| {
             // `into_path` возвращает Result: выбор из диалога теоретически может
             // быть URL, а не локальным путём. Для файлового диалога это недостижимо,
-            // но молча терять путь нельзя — логируем и трактуем как отмену.
-            let _ = sender.send(picked.and_then(|value| match value.into_path() {
-                Ok(path) => Some(path),
-                Err(error) => {
-                    warn!(error = %error, "выбранный файл не является локальным путём");
-                    None
-                }
-            }));
+            // но молча терять путь нельзя — логируем и пропускаем запись.
+            let paths = picked
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|value| match value.into_path() {
+                    Ok(path) => Some(path.to_string_lossy().into_owned()),
+                    Err(error) => {
+                        warn!(error = %error, "выбранный файл не является локальным путём");
+                        None
+                    }
+                })
+                .collect();
+            let _ = sender.send(paths);
         });
-    Ok(receiver
-        .await
-        .ok()
-        .flatten()
-        .map(|path| path.to_string_lossy().into_owned()))
+    Ok(receiver.await.unwrap_or_default())
 }
 
 /// Экспорт всей конфигурации в файл обмена: «Документы/KMARUDA Phonebook/

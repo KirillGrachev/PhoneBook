@@ -35,7 +35,7 @@ interface PersistedState {
   savedContactIds: string[];
   orgGroups: AppConfigDto['orgGroups'];
   enterpriseGroupId: string | null;
-  externalPhonebookPath: string | null;
+  externalPhonebookPaths: string[];
   externalPhonebookEnabled: boolean;
 }
 
@@ -70,7 +70,8 @@ async function persistNow(value: string): Promise<void> {
       savedContactIds: state.savedContactIds ?? [],
       orgGroups: state.orgGroups ?? [],
       enterpriseGroupId: state.enterpriseGroupId ?? null,
-      externalPhonebookPath: state.externalPhonebookPath ?? null,
+      externalPhonebookPath: (state.externalPhonebookPaths ?? [])[0] ?? null,
+      externalPhonebookPaths: state.externalPhonebookPaths ?? [],
       externalPhonebookEnabled: state.externalPhonebookEnabled ?? false,
       // Черновики без названия не сохраняем: бэкенд валидирует имя,
       // а незаполненная карточка — это ещё не организация.
@@ -148,7 +149,12 @@ export const configStorage: StateStorage = {
           // и созданные группы дефолтным пустым значением.
           orgGroups: config.orgGroups,
           enterpriseGroupId: config.enterpriseGroupId,
-          externalPhonebookPath: config.externalPhonebookPath,
+          externalPhonebookPaths:
+            config.externalPhonebookPaths?.length > 0
+              ? config.externalPhonebookPaths
+              : config.externalPhonebookPath
+                ? [config.externalPhonebookPath]
+                : [],
           externalPhonebookEnabled: config.externalPhonebookEnabled,
         },
         version: 0,

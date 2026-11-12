@@ -42,10 +42,10 @@ interface SettingsSlice {
   setOrgGroups: (groups: OrgGroupDto[]) => void;
   /** Группа для вкладки «КМАруда» (не глобальная версия). */
   enterpriseGroupId: string | null;
-  /** Путь к внешнему телефонному файлу (Yealink IPPhoneBook); null — не подключён. */
-  externalPhonebookPath: string | null;
-  setExternalPhonebookPath: (path: string | null) => void;
-  /** Загружать внешний телефонный файл в справочник. */
+  /** External phone book files (Yealink IPPhoneBook XML), one source per file. */
+  externalPhonebookPaths: string[];
+  setExternalPhonebookPaths: (paths: string[]) => void;
+  /** Load external phone book files into the directory. */
   externalPhonebookEnabled: boolean;
   setExternalPhonebookEnabled: (enabled: boolean) => void;
   setEnterpriseGroupId: (id: string | null) => void;
@@ -117,8 +117,8 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
     })),
   enterpriseGroupId: null,
   setEnterpriseGroupId: (enterpriseGroupId) => set({ enterpriseGroupId }),
-  externalPhonebookPath: null,
-  setExternalPhonebookPath: (externalPhonebookPath) => set({ externalPhonebookPath }),
+  externalPhonebookPaths: [],
+  setExternalPhonebookPaths: (externalPhonebookPaths) => set({ externalPhonebookPaths }),
   externalPhonebookEnabled: false,
   setExternalPhonebookEnabled: (externalPhonebookEnabled) => set({ externalPhonebookEnabled }),
   savedContactIds: [],
@@ -165,7 +165,7 @@ export const useAppStore = create<AppStore>()(
       savedContactIds: state.savedContactIds,
       orgGroups: state.orgGroups,
       enterpriseGroupId: state.enterpriseGroupId,
-      externalPhonebookPath: state.externalPhonebookPath,
+      externalPhonebookPaths: state.externalPhonebookPaths,
       externalPhonebookEnabled: state.externalPhonebookEnabled,
     }),
     /** Гидрация асинхронная (чтение config.json через IPC) — запускается из App. */

@@ -12,12 +12,12 @@ vi.mock('react-i18next', () => ({
 }));
 
 const refreshExternalPhonebook = vi.fn();
-const pickExternalPhonebookFile = vi.fn();
+const pickExternalPhonebookFiles = vi.fn();
 
 vi.mock('@/api/directory', () => ({
   configApi: {
     refreshExternalPhonebook: (...args: unknown[]) => refreshExternalPhonebook(...args),
-    pickExternalPhonebookFile: (...args: unknown[]) => pickExternalPhonebookFile(...args),
+    pickExternalPhonebookFiles: (...args: unknown[]) => pickExternalPhonebookFiles(...args),
   },
 }));
 
@@ -44,7 +44,8 @@ describe('SettingsExternalView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     refreshExternalPhonebook.mockResolvedValue({ state: 'disabled' });
-    useAppStore.setState({ externalPhonebookPath: null, externalPhonebookEnabled: false });
+    pickExternalPhonebookFiles.mockResolvedValue([]);
+    useAppStore.setState({ externalPhonebookPaths: [], externalPhonebookEnabled: false });
   });
 
   it('тумблер без выбранного файла не отправляет запрос обновления', async () => {
@@ -61,11 +62,25 @@ describe('SettingsExternalView', () => {
 
   it('тумблер с заданным путём перезагружает файл в фоне', async () => {
     const user = userEvent.setup();
-    act(() => useAppStore.setState({ externalPhonebookPath: 'C:/phonebook.xml' }));
+    act(() => useAppStore.setState({ externalPhonebookPaths: ['C:/phonebook.xml'] }));
     renderView();
 
     await user.click(screen.getByRole('switch', { name: 'settings.externalEnabled' }));
 
+    await waitFor(() => expect(refreshExternalPhonebook).toHaveBeenCalledTimes(1));
+  });
+
+  it('добавляет несколько выбранных файлов и перезагружает источники', async () => {
+    const user = userEvent.setup();
+    pickExternalPhonebookFiles.mockResolvedValue(['C:/phonebook-a.xml', 'C:/phonebook-b.xml']);
+    renderView();
+
+    await user.click(screen.getByRole('switch', { name: 'settings.externalEnabled' }));
+    await user.click(screen.getByRole('button', { name: 'settings.externalChoose' }));
+
+    await waitFor(() =>
+      expect(useAppStore.getState().externalPhonebookPaths).toEqual(['C:/phonebook-a.xml', 'C:/phonebook-b.xml']),
+    );
     await waitFor(() => expect(refreshExternalPhonebook).toHaveBeenCalledTimes(1));
   });
 
@@ -76,7 +91,7 @@ describe('SettingsExternalView', () => {
     expect(screen.getByRole('button', { name: 'settings.externalLoadNow' })).toBeDisabled();
 
     // Путь задан, но тумблер выключен — загрузка всё ещё бессмысленна.
-    act(() => useAppStore.setState({ externalPhonebookPath: 'C:/phonebook.xml' }));
+    act(() => useAppStore.setState({ externalPhonebookPaths: ['C:/phonebook.xml'] }));
     expect(screen.getByRole('button', { name: 'settings.externalLoadNow' })).toBeDisabled();
 
     await user.click(screen.getByRole('switch', { name: 'settings.externalEnabled' }));
@@ -92,7 +107,7 @@ describe('SettingsExternalView', () => {
 
     // Путь запомнен с прошлого включения: кнопки по-прежнему неактивны,
     // подсказка меняется на «путь запомнен — включите тумблер».
-    act(() => useAppStore.setState({ externalPhonebookPath: 'C:/phonebook.xml' }));
+    act(() => useAppStore.setState({ externalPhonebookPaths: ['C:/phonebook.xml'] }));
     expect(screen.getByRole('button', { name: 'settings.externalChoose' })).toBeDisabled();
     expect(screen.getByText('settings.externalHintDisabled')).toBeTruthy();
   });

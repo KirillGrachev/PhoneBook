@@ -97,9 +97,11 @@ export interface AppConfigDto {
   orgGroups: OrgGroupDto[];
   /** Группа для вкладки «КМАруда» (не глобальная версия). */
   enterpriseGroupId: string | null;
-  /** Путь к внешнему телефонному файлу (Yealink IPPhoneBook); null — не подключён. */
+  /** Legacy single path, kept for config compatibility. */
   externalPhonebookPath: string | null;
-  /** Загружать внешний телефонный файл в справочник. */
+  /** External Yealink XML files, each imported as a separate source. */
+  externalPhonebookPaths: string[];
+  /** Load external phone book files into the directory. */
   externalPhonebookEnabled: boolean;
   version?: string | null;
 }
@@ -120,6 +122,7 @@ export interface SaveConfigRequest {
   /** Группа для вкладки «КМАруда»; `null` — наследуемое поведение. */
   enterpriseGroupId: string | null;
   externalPhonebookPath: string | null;
+  externalPhonebookPaths: string[];
   externalPhonebookEnabled: boolean;
 }
 
@@ -128,11 +131,16 @@ export interface SaveConfigRequest {
  * [`ExternalRefresh`]): `loaded` — файл в кэше, `cleared` — кэш очищен
  * (записей больше нет), `disabled` — опция выключена.
  */
+export interface ExternalSourceDto {
+  organization: string;
+  count: number;
+}
+
 export interface ExternalRefreshDto {
   state: 'disabled' | 'cleared' | 'loaded';
   cleared?: number;
-  organization?: string | null;
   count?: number;
+  sources?: ExternalSourceDto[];
 }
 
 /** Результат диагностики подключения к каталогу. */
