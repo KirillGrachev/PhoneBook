@@ -35,7 +35,7 @@ rusqlite = { version = "0.41", features = ["bundled", "serialize"] }
 # Шифрование кэша: AES-256-GCM (pure Rust, без OpenSSL/Perl/NASM).
 aes-gcm = "0.10"
 # Нативный LDAP-клиент: больше не нужны PowerShell и модуль RSAT.
-ldap3 = "0.11"
+ldap3 = "0.12"
 # Разбор внешнего телефонного файла (Yealink IPPhoneBook, XML): потоковый
 # парсер без построения DOM — файл читается одним проходом.
 quick-xml = "0.42"
