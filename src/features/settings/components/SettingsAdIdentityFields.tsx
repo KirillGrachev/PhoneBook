@@ -32,18 +32,16 @@ export function SettingsAdIdentityFields({ config, onChange }: SettingsAdIdentit
         autoCapitalize="none"
         spellCheck={false}
         autoComplete="off"
-        hint={
-          [
-            urlScheme(config.ldapUrl) === 'ldaps'
-              ? t('settings.ad.schemeLdaps')
-              : urlScheme(config.ldapUrl) === 'ldap'
-                ? t('settings.ad.schemeLdap')
-                : null,
-            t('settings.ad.dcFailoverHint'),
-          ]
-            .filter(Boolean)
-            .join(' ')
-        }
+        hint={[
+          urlScheme(config.ldapUrl) === 'ldaps'
+            ? t('settings.ad.schemeLdaps')
+            : urlScheme(config.ldapUrl) === 'ldap'
+              ? t('settings.ad.schemeLdap')
+              : null,
+          t('settings.ad.dcFailoverHint'),
+        ]
+          .filter(Boolean)
+          .join(' ')}
       />
       <TextField
         label={t('settings.ad.baseDn')}
