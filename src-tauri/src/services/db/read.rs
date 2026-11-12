@@ -565,6 +565,19 @@ impl Db {
         let conn = self.lock();
         Ok(conn.query_row("SELECT COUNT(*) FROM users", [], |row| row.get::<_, i64>(0))? as u64)
     }
+
+    /// Number of users currently cached from external phone book sources.
+    pub fn external_count(&self) -> Result<usize, AppError> {
+        let conn = self.lock();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM users
+             JOIN sources ON sources.id = users.source_id
+             WHERE sources.kind = 'external'",
+            [],
+            |row| row.get(0),
+        )?;
+        Ok(count as usize)
+    }
 }
 
 /// Фильтр «не пустая учётка»: есть почта ИЛИ любой телефон.
