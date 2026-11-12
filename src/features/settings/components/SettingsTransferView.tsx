@@ -56,6 +56,8 @@ export function SettingsTransferView() {
           testMode: state.testMode,
           animationsEnabled: state.animationsEnabled,
           syncIntervalHours: state.syncIntervalHours,
+          ldapConnectTimeoutSecs: state.ldapConnectTimeoutSecs,
+          ldapOperationTimeoutSecs: state.ldapOperationTimeoutSecs,
           hideEmptyContacts: state.hideEmptyContacts,
           emailOverrides: state.emailOverrides,
           orgGroups: state.orgGroups,

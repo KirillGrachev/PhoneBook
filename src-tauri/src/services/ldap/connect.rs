@@ -7,7 +7,7 @@ use tracing::{debug, info};
 use crate::error::AppError;
 
 use super::errors::{auth_error_text, classify_error};
-use super::model::{DirectoryCredentials, CONNECT_TIMEOUT, OPERATION_TIMEOUT};
+use super::model::DirectoryCredentials;
 use super::parse::non_empty;
 
 /// LDAP-соединение вместе с задачей драйвера.
@@ -38,7 +38,7 @@ pub(super) async fn connect(
     }
     validate_transport_security(credentials)?;
 
-    let mut settings = LdapConnSettings::new().set_conn_timeout(CONNECT_TIMEOUT);
+    let mut settings = LdapConnSettings::new().set_conn_timeout(credentials.connect_timeout());
     if credentials.use_start_tls && url.starts_with("ldap://") {
         settings = settings.set_starttls(true);
     }
@@ -108,7 +108,7 @@ pub(super) async fn bind(
             let fqdn = extract_host_fqdn(credentials.ldap_url);
             debug!(fqdn = %fqdn, "LDAP: интегрированная аутентификация (GSSAPI/SSPI)");
             let result = ldap
-                .with_timeout(OPERATION_TIMEOUT)
+                .with_timeout(credentials.operation_timeout())
                 .sasl_gssapi_bind(&fqdn)
                 .await
                 .map_err(|e| classify_error(credentials.ldap_url, &e))?;
@@ -139,7 +139,7 @@ pub(super) async fn bind(
     };
 
     let result = ldap
-        .with_timeout(OPERATION_TIMEOUT)
+        .with_timeout(credentials.operation_timeout())
         .simple_bind(bind_dn, password)
         .await
         .map_err(|e| classify_error(credentials.ldap_url, &e))?;
@@ -177,6 +177,8 @@ mod tests {
             use_start_tls: start_tls,
             allow_invalid_tls: false,
             use_integrated_auth: false,
+            connect_timeout_secs: 15,
+            operation_timeout_secs: 30,
         }
     }
 

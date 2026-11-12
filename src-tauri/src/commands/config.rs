@@ -185,6 +185,8 @@ fn share_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
 pub async fn test_ldap_connection(
     org: LdapOrgInput,
     password_override: Option<String>,
+    connect_timeout_secs: Option<u32>,
+    operation_timeout_secs: Option<u32>,
 ) -> Result<ConnectionTest, AppError> {
     // keyring на первом обращении может думать секунды — не блокируем
     // async-runtime и главный поток окна.
@@ -206,6 +208,8 @@ pub async fn test_ldap_connection(
         use_start_tls: org.use_start_tls,
         allow_invalid_tls: org.allow_invalid_tls,
         use_integrated_auth: org.use_integrated_auth,
+        connect_timeout_secs: u64::from(connect_timeout_secs.unwrap_or(15).clamp(1, 300)),
+        operation_timeout_secs: u64::from(operation_timeout_secs.unwrap_or(30).clamp(1, 300)),
     };
     ldap::test_connection(credentials).await
 }

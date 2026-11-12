@@ -36,6 +36,8 @@ export interface ConfigPatch {
   testMode: boolean;
   animationsEnabled: boolean;
   syncIntervalHours: number;
+  ldapConnectTimeoutSecs: number;
+  ldapOperationTimeoutSecs: number;
   hideEmptyContacts: boolean;
   emailOverrides: Record<string, string>;
   ldapConfigs: LdapOrgConfigDto[];
@@ -56,6 +58,8 @@ export function buildConfigPatch(config: AppConfigDto): ConfigPatch {
     testMode: config.testMode,
     animationsEnabled: config.animationsEnabled,
     syncIntervalHours: config.syncIntervalHours,
+    ldapConnectTimeoutSecs: config.ldapConnectTimeoutSecs,
+    ldapOperationTimeoutSecs: config.ldapOperationTimeoutSecs,
     hideEmptyContacts: config.hideEmptyContacts,
     emailOverrides: config.emailOverrides,
     // Флаг «пароль сохранён» с чужой машины ложён на этой: секреты не переносятся.
@@ -145,6 +149,8 @@ function normalizeConfigDto(raw: Record<string, unknown>): AppConfigDto {
     testMode: bool(raw.testMode, false),
     animationsEnabled: bool(raw.animationsEnabled, true),
     syncIntervalHours: num(raw.syncIntervalHours, 24),
+    ldapConnectTimeoutSecs: num(raw.ldapConnectTimeoutSecs, 15),
+    ldapOperationTimeoutSecs: num(raw.ldapOperationTimeoutSecs, 30),
     hideEmptyContacts: bool(raw.hideEmptyContacts, true),
     emailOverrides:
       typeof raw.emailOverrides === 'object' && raw.emailOverrides !== null

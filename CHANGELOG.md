@@ -13,6 +13,9 @@ follows [Semantic Versioning](https://semver.org/).
   encrypted directory cache is kept and a warning is shown instead of a sync
   error.
 - Montserrat as the application font, with local 400/500/600/700 weights.
+- Configurable LDAP connection and operation timeouts (1–300 seconds) in AD
+  settings.
+- Transient LDAP resets/timeouts are retried twice with exponential backoff.
 
 ## [0.2.5] - 2026-11-12
 

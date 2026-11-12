@@ -89,10 +89,17 @@ export const configApi = {
   parseConfigFile: (content: string): Promise<AppConfigDto> =>
     invokeCommand<AppConfigDto>('parse_config_file', { content }),
 
-  testConnection: (org: LdapOrgInput, passwordOverride?: string | null): Promise<ConnectionTestDto> =>
+  testConnection: (
+    org: LdapOrgInput,
+    passwordOverride?: string | null,
+    connectTimeoutSecs = 15,
+    operationTimeoutSecs = 30,
+  ): Promise<ConnectionTestDto> =>
     invokeCommand<ConnectionTestDto>('test_ldap_connection', {
       org,
       passwordOverride: passwordOverride ?? null,
+      connectTimeoutSecs,
+      operationTimeoutSecs,
     }),
 };
 
