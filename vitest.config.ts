@@ -20,12 +20,12 @@ export default defineConfig({
       reporter: ['text-summary', 'html'],
       include: ['src/**'],
       exclude: ['src/**/*.test.*', 'src/setupTests.ts', 'src/main.tsx'],
-      // Нижняя граница текущего покрытия: не даёт ему молча упасть.
+      // Raise the floor with the current suite; prevent silent regressions.
       thresholds: {
-        statements: 35,
-        branches: 25,
-        functions: 28,
-        lines: 35,
+        statements: 39,
+        branches: 28,
+        functions: 30,
+        lines: 40,
       },
     },
   },
