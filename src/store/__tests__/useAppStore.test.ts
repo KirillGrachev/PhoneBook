@@ -58,11 +58,22 @@ describe('useAppStore', () => {
     expect(Object.keys(persisted)).toContain('ldapConfigs');
     expect(Object.keys(persisted)).toContain('orgGroups');
     expect(Object.keys(persisted)).toContain('enterpriseGroupId');
+    expect(Object.keys(persisted)).toContain('ldapConnectTimeoutSecs');
+    expect(Object.keys(persisted)).toContain('ldapOperationTimeoutSecs');
     expect(Object.keys(persisted)).not.toContain('search');
     expect(Object.keys(persisted)).not.toContain('selectedId');
     expect(Object.keys(persisted)).not.toContain('activeTab');
     expect(Object.keys(persisted)).not.toContain('selectedGroupId');
     expect(Object.keys(persisted)).not.toContain('selectedOrg');
+  });
+
+  it('setLdapConnectTimeoutSecs/setLdapOperationTimeoutSecs обновляют таймауты', () => {
+    useAppStore.getState().setLdapConnectTimeoutSecs(20);
+    useAppStore.getState().setLdapOperationTimeoutSecs(45);
+
+    const state = useAppStore.getState();
+    expect(state.ldapConnectTimeoutSecs).toBe(20);
+    expect(state.ldapOperationTimeoutSecs).toBe(45);
   });
 
   it('setTheme/setLanguage обновляют только свои поля', () => {
