@@ -25,6 +25,8 @@ pub fn user_filter_since(since: Option<i64>) -> String {
     }
 }
 
+use std::time::Instant;
+
 use ldap3::adapters::{Adapter, EntriesOnly, PagedResults};
 use ldap3::{Scope, SearchEntry, SearchResult};
 use tracing::{debug, info};
@@ -74,6 +76,8 @@ where
         .await
         .map_err(|e| classify_error(credentials.ldap_url, &e))?;
 
+    let fetch_started = Instant::now();
+    let mut pages = 0usize;
     let mut users = Vec::new();
     loop {
         let entry = stream
@@ -83,7 +87,13 @@ where
         let Some(entry) = entry else { break };
         users.push(map_entry(entry));
         if users.len() % PAGE_SIZE as usize == 0 {
-            debug!(fetched = users.len(), "LDAP: страница получена");
+            pages += 1;
+            debug!(
+                fetched = users.len(),
+                pages,
+                elapsed_ms = fetch_started.elapsed().as_millis() as u64,
+                "LDAP: страница получена"
+            );
             progress(users.len());
         }
     }
@@ -97,7 +107,12 @@ where
 
     let _ = session.ldap.unbind().await;
     // session.drop останавливает драйвер и закрывает сокет детерминированно.
-    info!(count = users.len(), "LDAP: выборка пользователей завершена");
+    info!(
+        count = users.len(),
+        pages,
+        elapsed_ms = fetch_started.elapsed().as_millis() as u64,
+        "LDAP: выборка пользователей завершена"
+    );
     Ok(users)
 }
 
