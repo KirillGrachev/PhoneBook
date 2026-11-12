@@ -16,6 +16,7 @@ follows [Semantic Versioning](https://semver.org/).
 - Configurable LDAP connection and operation timeouts (1–300 seconds) in AD
   settings.
 - Transient LDAP resets/timeouts are retried twice with exponential backoff.
+- LDAP fetch logs include page count, elapsed time and retry context.
 
 ## [0.2.5] - 2026-11-12
 
