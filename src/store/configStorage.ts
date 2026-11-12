@@ -29,6 +29,8 @@ interface PersistedState {
   testMode: boolean;
   animationsEnabled: boolean;
   syncIntervalHours: number;
+  ldapConnectTimeoutSecs: number;
+  ldapOperationTimeoutSecs: number;
   hideEmptyContacts: boolean;
   emailOverrides: Record<string, string>;
   ldapConfigs: AppConfigDto['ldapConfigs'];
@@ -65,6 +67,8 @@ async function persistNow(value: string): Promise<void> {
       testMode: state.testMode ?? false,
       animationsEnabled: state.animationsEnabled ?? true,
       syncIntervalHours: state.syncIntervalHours ?? 24,
+      ldapConnectTimeoutSecs: state.ldapConnectTimeoutSecs ?? 15,
+      ldapOperationTimeoutSecs: state.ldapOperationTimeoutSecs ?? 30,
       hideEmptyContacts: state.hideEmptyContacts ?? true,
       emailOverrides: state.emailOverrides ?? {},
       savedContactIds: state.savedContactIds ?? [],
@@ -140,6 +144,8 @@ export const configStorage: StateStorage = {
           testMode: config.testMode,
           animationsEnabled: config.animationsEnabled,
           syncIntervalHours: config.syncIntervalHours,
+          ldapConnectTimeoutSecs: config.ldapConnectTimeoutSecs ?? 15,
+          ldapOperationTimeoutSecs: config.ldapOperationTimeoutSecs ?? 30,
           hideEmptyContacts: config.hideEmptyContacts,
           emailOverrides: config.emailOverrides,
           ldapConfigs: config.ldapConfigs,

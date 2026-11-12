@@ -35,6 +35,8 @@ function sampleConfig(): AppConfigDto {
     testMode: false,
     animationsEnabled: false,
     syncIntervalHours: 6,
+    ldapConnectTimeoutSecs: 12,
+    ldapOperationTimeoutSecs: 45,
     hideEmptyContacts: false,
     emailOverrides: { g2: 'svc@kmaruda.ru' },
     orgGroups: [{ id: 'grp-1', name: 'Холдинг', orgs: ['КМАруда', 'Глобал Строй'] }],
@@ -53,6 +55,8 @@ describe('buildConfigPatch', () => {
     expect(patch.language).toBe('en');
     expect(patch.globalMode).toBe(true);
     expect(patch.syncIntervalHours).toBe(6);
+    expect(patch.ldapConnectTimeoutSecs).toBe(12);
+    expect(patch.ldapOperationTimeoutSecs).toBe(45);
     expect(patch.externalPhonebookPath).toBe('C:\\PhoneBook\\yealink.xml');
     expect(patch.externalPhonebookPaths).toEqual(['C:\\PhoneBook\\yealink.xml', 'C:\\PhoneBook\\office.xml']);
     expect(patch.externalPhonebookEnabled).toBe(true);

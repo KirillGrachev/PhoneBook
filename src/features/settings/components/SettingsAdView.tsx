@@ -10,6 +10,7 @@ import { devLog } from '@/lib/devlog';
 import type { DuplicatesPreviewDto, LdapOrgConfigDto } from '@/api/contracts';
 import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
+import { TextField } from '@/components/ui/TextField';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { translateBackendError } from '@/lib/errors';
 import { useAppStore } from '@/store/useAppStore';
@@ -50,6 +51,10 @@ export function SettingsAdView() {
   const setLdapConfigs = useAppStore((state) => state.setLdapConfigs);
   const syncIntervalHours = useAppStore((state) => state.syncIntervalHours);
   const setSyncIntervalHours = useAppStore((state) => state.setSyncIntervalHours);
+  const ldapConnectTimeoutSecs = useAppStore((state) => state.ldapConnectTimeoutSecs);
+  const setLdapConnectTimeoutSecs = useAppStore((state) => state.setLdapConnectTimeoutSecs);
+  const ldapOperationTimeoutSecs = useAppStore((state) => state.ldapOperationTimeoutSecs);
+  const setLdapOperationTimeoutSecs = useAppStore((state) => state.setLdapOperationTimeoutSecs);
 
   const { running: syncRunning, organizations: syncStates } = useSyncStatus();
 
@@ -100,7 +105,12 @@ export function SettingsAdView() {
     setTestingOrg(index);
     try {
       const draftPassword = passwordDrafts[config.organization]?.trim();
-      const result = await configApi.testConnection(toInput(config), draftPassword || null);
+      const result = await configApi.testConnection(
+        toInput(config),
+        draftPassword || null,
+        ldapConnectTimeoutSecs,
+        ldapOperationTimeoutSecs,
+      );
 
       const details = [
         result.serverDnsName ? t('settings.ad.testServer', { server: result.serverDnsName }) : null,
@@ -290,6 +300,31 @@ export function SettingsAdView() {
                     value: hours,
                     label: t('settings.ad.syncIntervalHours', { count: hours }),
                   }))}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <TextField
+                  type="number"
+                  min={1}
+                  max={300}
+                  label={t('settings.ad.connectTimeout')}
+                  hint={t('settings.ad.connectTimeoutHint')}
+                  value={ldapConnectTimeoutSecs}
+                  onChange={(event) =>
+                    setLdapConnectTimeoutSecs(Math.min(300, Math.max(1, Number(event.target.value) || 1)))
+                  }
+                />
+                <TextField
+                  type="number"
+                  min={1}
+                  max={300}
+                  label={t('settings.ad.operationTimeout')}
+                  hint={t('settings.ad.operationTimeoutHint')}
+                  value={ldapOperationTimeoutSecs}
+                  onChange={(event) =>
+                    setLdapOperationTimeoutSecs(Math.min(300, Math.max(1, Number(event.target.value) || 1)))
+                  }
                 />
               </div>
 

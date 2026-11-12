@@ -33,7 +33,7 @@ use crate::error::AppError;
 
 use connect::{bind, connect};
 use errors::{classify_error, classify_search_result};
-use model::{OPERATION_TIMEOUT, PAGE_SIZE, USER_ATTRIBUTES};
+use model::{PAGE_SIZE, USER_ATTRIBUTES};
 use parse::{attr_ci, map_entry, non_empty};
 
 /// Полный цикл выборки пользователей каталога с постраничным поиском.
@@ -66,10 +66,10 @@ where
     ];
 
     // with_timeout переходит во внутренний клон Ldap потока поиска:
-    // каждая страница ограничена OPERATION_TIMEOUT.
+    // каждая страница ограничена настраиваемым operation timeout.
     let mut stream = session
         .ldap
-        .with_timeout(OPERATION_TIMEOUT)
+        .with_timeout(credentials.operation_timeout())
         .streaming_search_with(adapters, base_dn, Scope::Subtree, filter, attributes)
         .await
         .map_err(|e| classify_error(credentials.ldap_url, &e))?;
@@ -111,7 +111,7 @@ pub async fn test_connection(
     // rootDSE: имя сервера и корень домена (подсказка для Base DN).
     let SearchResult(root_entries, root_result) = session
         .ldap
-        .with_timeout(OPERATION_TIMEOUT)
+        .with_timeout(credentials.operation_timeout())
         .search(
             "",
             Scope::Base,
@@ -142,7 +142,7 @@ pub async fn test_connection(
     if !base.is_empty() {
         let SearchResult(entries, result) = session
             .ldap
-            .with_timeout(OPERATION_TIMEOUT)
+            .with_timeout(credentials.operation_timeout())
             .search(base, Scope::Subtree, USER_FILTER, vec!["displayName"])
             .await
             .map_err(|e| classify_error(credentials.ldap_url, &e))?;
@@ -194,6 +194,8 @@ mod tests {
             use_start_tls: false,
             allow_invalid_tls: false,
             use_integrated_auth: true,
+            connect_timeout_secs: 15,
+            operation_timeout_secs: 30,
         };
         let result = tokio::runtime::Builder::new_current_thread()
             .build()

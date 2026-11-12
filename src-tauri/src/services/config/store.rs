@@ -109,6 +109,8 @@ impl ConfigStore {
             test_mode: request.test_mode,
             animations_enabled: request.animations_enabled,
             sync_interval_hours: request.sync_interval_hours.clamp(1, 168),
+            ldap_connect_timeout_secs: request.ldap_connect_timeout_secs.clamp(1, 300),
+            ldap_operation_timeout_secs: request.ldap_operation_timeout_secs.clamp(1, 300),
             hide_empty_contacts: request.hide_empty_contacts,
             email_overrides: request.email_overrides,
             org_groups,

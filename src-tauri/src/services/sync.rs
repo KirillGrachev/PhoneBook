@@ -178,12 +178,28 @@ impl SyncManager {
         // Организации синхронизируются последовательно: не создаём
         // параллельную нагрузку на контроллеры домена.
         for org in orgs {
-            self.sync_org(app, &state.db, org, force).await;
+            self.sync_org(
+                app,
+                &state.db,
+                org,
+                force,
+                config.ldap_connect_timeout_secs,
+                config.ldap_operation_timeout_secs,
+            )
+            .await;
         }
         Ok(())
     }
 
-    async fn sync_org(&self, app: &AppHandle, db: &Db, org: &LdapOrgConfig, force: bool) {
+    async fn sync_org(
+        &self,
+        app: &AppHandle,
+        db: &Db,
+        org: &LdapOrgConfig,
+        force: bool,
+        connect_timeout_secs: u32,
+        operation_timeout_secs: u32,
+    ) {
         let name = org.organization.clone();
         emit(
             app,
@@ -239,6 +255,8 @@ impl SyncManager {
             use_start_tls: org.use_start_tls,
             allow_invalid_tls: org.allow_invalid_tls,
             use_integrated_auth: org.use_integrated_auth,
+            connect_timeout_secs: u64::from(connect_timeout_secs),
+            operation_timeout_secs: u64::from(operation_timeout_secs),
         };
 
         // A transient DC reset should not discard the whole organization:

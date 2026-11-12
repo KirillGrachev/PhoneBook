@@ -5,10 +5,6 @@ use std::time::Duration;
 use serde::Serialize;
 
 pub(super) const PAGE_SIZE: i32 = 500;
-/// Таймаут установки соединения (и StartTLS-рукопожатия).
-pub(super) const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
-/// Таймаут отдельной LDAP-операции (bind, поиск страницы, rootDSE).
-pub(super) const OPERATION_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Фильтр «живых» пользователей AD: person + user, без заблокированных
 /// (флаг ACCOUNTDISABLE в userAccountControl).
@@ -46,6 +42,20 @@ pub struct DirectoryCredentials<'a> {
     pub use_start_tls: bool,
     pub allow_invalid_tls: bool,
     pub use_integrated_auth: bool,
+    /// Per-connection TCP/TLS handshake timeout.
+    pub connect_timeout_secs: u64,
+    /// Timeout for one LDAP operation/page.
+    pub operation_timeout_secs: u64,
+}
+
+impl DirectoryCredentials<'_> {
+    pub(super) fn connect_timeout(&self) -> Duration {
+        Duration::from_secs(self.connect_timeout_secs.clamp(1, 300))
+    }
+
+    pub(super) fn operation_timeout(&self) -> Duration {
+        Duration::from_secs(self.operation_timeout_secs.clamp(1, 300))
+    }
 }
 
 /// Сырые данные пользователя из LDAP (до нормализации в [`crate::services::db::UserRecord`]).

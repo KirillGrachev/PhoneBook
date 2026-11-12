@@ -27,6 +27,10 @@ interface SettingsSlice {
   setAnimationsEnabled: (value: boolean) => void;
   syncIntervalHours: number;
   setSyncIntervalHours: (hours: number) => void;
+  ldapConnectTimeoutSecs: number;
+  setLdapConnectTimeoutSecs: (seconds: number) => void;
+  ldapOperationTimeoutSecs: number;
+  setLdapOperationTimeoutSecs: (seconds: number) => void;
   hideEmptyContacts: boolean;
   setHideEmptyContacts: (value: boolean) => void;
   emailOverrides: Record<string, string>;
@@ -91,6 +95,10 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
   setAnimationsEnabled: (animationsEnabled) => set({ animationsEnabled }),
   syncIntervalHours: 24,
   setSyncIntervalHours: (syncIntervalHours) => set({ syncIntervalHours }),
+  ldapConnectTimeoutSecs: 15,
+  setLdapConnectTimeoutSecs: (ldapConnectTimeoutSecs) => set({ ldapConnectTimeoutSecs }),
+  ldapOperationTimeoutSecs: 30,
+  setLdapOperationTimeoutSecs: (ldapOperationTimeoutSecs) => set({ ldapOperationTimeoutSecs }),
   hideEmptyContacts: true,
   setHideEmptyContacts: (hideEmptyContacts) => set({ hideEmptyContacts }),
   emailOverrides: {},
@@ -159,6 +167,8 @@ export const useAppStore = create<AppStore>()(
       testMode: state.testMode,
       animationsEnabled: state.animationsEnabled,
       syncIntervalHours: state.syncIntervalHours,
+      ldapConnectTimeoutSecs: state.ldapConnectTimeoutSecs,
+      ldapOperationTimeoutSecs: state.ldapOperationTimeoutSecs,
       hideEmptyContacts: state.hideEmptyContacts,
       emailOverrides: state.emailOverrides,
       ldapConfigs: state.ldapConfigs,

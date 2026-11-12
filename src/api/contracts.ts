@@ -92,6 +92,8 @@ export interface AppConfigDto {
   testMode: boolean;
   animationsEnabled: boolean;
   syncIntervalHours: number;
+  ldapConnectTimeoutSecs: number;
+  ldapOperationTimeoutSecs: number;
   hideEmptyContacts: boolean;
   emailOverrides: Record<string, string>;
   orgGroups: OrgGroupDto[];
@@ -116,6 +118,8 @@ export interface SaveConfigRequest {
   testMode: boolean;
   animationsEnabled: boolean;
   syncIntervalHours: number;
+  ldapConnectTimeoutSecs: number;
+  ldapOperationTimeoutSecs: number;
   hideEmptyContacts: boolean;
   emailOverrides: Record<string, string>;
   orgGroups: OrgGroupDto[];

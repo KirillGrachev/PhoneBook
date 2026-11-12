@@ -17,6 +17,14 @@ fn default_sync_interval() -> u32 {
     24
 }
 
+fn default_ldap_connect_timeout() -> u32 {
+    15
+}
+
+fn default_ldap_operation_timeout() -> u32 {
+    30
+}
+
 const fn default_true() -> bool {
     true
 }
@@ -107,6 +115,12 @@ pub struct AppConfig {
     /// Период автоматической фоновой синхронизации, часов.
     #[serde(default = "default_sync_interval")]
     pub sync_interval_hours: u32,
+    /// LDAP TCP/TLS handshake timeout, seconds.
+    #[serde(default = "default_ldap_connect_timeout")]
+    pub ldap_connect_timeout_secs: u32,
+    /// LDAP operation/page timeout, seconds.
+    #[serde(default = "default_ldap_operation_timeout")]
+    pub ldap_operation_timeout_secs: u32,
     /// Скрывать «пустые» учётки (без почты, мобильного и рабочего телефона):
     /// системные/служебные записи не засоряют выдачу.
     #[serde(default = "default_true")]
@@ -148,6 +162,8 @@ impl Default for AppConfig {
             test_mode: false,
             animations_enabled: true,
             sync_interval_hours: default_sync_interval(),
+            ldap_connect_timeout_secs: default_ldap_connect_timeout(),
+            ldap_operation_timeout_secs: default_ldap_operation_timeout(),
             hide_empty_contacts: true,
             email_overrides: std::collections::HashMap::new(),
             org_groups: Vec::new(),
@@ -180,6 +196,10 @@ pub struct SaveConfigRequest {
     pub animations_enabled: bool,
     #[serde(default = "default_sync_interval")]
     pub sync_interval_hours: u32,
+    #[serde(default = "default_ldap_connect_timeout")]
+    pub ldap_connect_timeout_secs: u32,
+    #[serde(default = "default_ldap_operation_timeout")]
+    pub ldap_operation_timeout_secs: u32,
     #[serde(default = "default_true")]
     pub hide_empty_contacts: bool,
     #[serde(default)]
