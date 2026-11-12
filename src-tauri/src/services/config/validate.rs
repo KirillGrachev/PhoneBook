@@ -24,8 +24,15 @@ pub(super) fn validate_orgs(inputs: Vec<LdapOrgInput>) -> Result<Vec<LdapOrgConf
         }
 
         let ldap_url = input.ldap_url.trim().to_string();
-        let url_ok = ldap_url.starts_with("ldap://") || ldap_url.starts_with("ldaps://");
-        if !ldap_url.is_empty() && !url_ok {
+        let urls: Vec<&str> = ldap_url
+            .split([',', ';'])
+            .map(str::trim)
+            .filter(|url| !url.is_empty())
+            .collect();
+        if urls
+            .iter()
+            .any(|url| !(url.starts_with("ldap://") || url.starts_with("ldaps://")))
+        {
             return Err(AppError::Validation(format!(
                 "Адрес сервера «{ldap_url}» должен начинаться с ldap:// или ldaps://"
             )));

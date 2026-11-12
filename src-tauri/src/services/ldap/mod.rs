@@ -58,7 +58,7 @@ where
     }
 
     let mut session = connect(&credentials).await?;
-    bind(&mut session.ldap, &credentials).await?;
+    bind(&mut session.ldap, &credentials, &session.url).await?;
 
     let attributes: Vec<&str> = USER_ATTRIBUTES.to_vec();
 
@@ -74,7 +74,7 @@ where
         .with_timeout(credentials.operation_timeout())
         .streaming_search_with(adapters, base_dn, Scope::Subtree, filter, attributes)
         .await
-        .map_err(|e| classify_error(credentials.ldap_url, &e))?;
+        .map_err(|e| classify_error(&session.url, &e))?;
 
     let fetch_started = Instant::now();
     let mut pages = 0usize;
@@ -83,7 +83,7 @@ where
         let entry = stream
             .next()
             .await
-            .map_err(|e| classify_error(credentials.ldap_url, &e))?;
+            .map_err(|e| classify_error(&session.url, &e))?;
         let Some(entry) = entry else { break };
         users.push(map_entry(entry));
         if users.len() % PAGE_SIZE as usize == 0 {
@@ -102,7 +102,7 @@ where
     // rc == 4 (sizeLimitExceeded) при постраничном поиске не ожидается,
     // но и не смертелен: данные мы уже получили.
     if result.rc != 0 && result.rc != 4 {
-        return Err(classify_search_result(credentials.ldap_url, &result));
+        return Err(classify_search_result(&session.url, &result));
     }
 
     let _ = session.ldap.unbind().await;
@@ -121,7 +121,7 @@ pub async fn test_connection(
     credentials: DirectoryCredentials<'_>,
 ) -> Result<ConnectionTest, AppError> {
     let mut session = connect(&credentials).await?;
-    let bind_ms = bind(&mut session.ldap, &credentials).await?;
+    let bind_ms = bind(&mut session.ldap, &credentials, &session.url).await?;
 
     // rootDSE: имя сервера и корень домена (подсказка для Base DN).
     let SearchResult(root_entries, root_result) = session
@@ -134,7 +134,7 @@ pub async fn test_connection(
             vec!["dnsHostName", "defaultNamingContext"],
         )
         .await
-        .map_err(|e| classify_error(credentials.ldap_url, &e))?;
+        .map_err(|e| classify_error(&session.url, &e))?;
 
     let mut server_dns_name = None;
     let mut default_naming_context = None;
@@ -160,7 +160,7 @@ pub async fn test_connection(
             .with_timeout(credentials.operation_timeout())
             .search(base, Scope::Subtree, USER_FILTER, vec!["displayName"])
             .await
-            .map_err(|e| classify_error(credentials.ldap_url, &e))?;
+            .map_err(|e| classify_error(&session.url, &e))?;
 
         // rc 4 = sizeLimitExceeded: сервер отдал первую страницу — для теста достаточно.
         if result.rc == 0 || result.rc == 4 {
@@ -173,7 +173,7 @@ pub async fn test_connection(
             sample_is_truncated = sample_names.len() > 5;
             sample_names.truncate(5);
         } else {
-            return Err(classify_search_result(credentials.ldap_url, &result));
+            return Err(classify_search_result(&session.url, &result));
         }
     }
 

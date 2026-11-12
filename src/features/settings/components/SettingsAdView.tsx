@@ -97,7 +97,11 @@ export function SettingsAdView() {
       toast.error(t('settings.ad.orgRequired'), { id: 'ad-test-error' });
       return;
     }
-    if (!/^ldaps?:\/\/.+/i.test(config.ldapUrl.trim())) {
+    const urls = config.ldapUrl
+      .split(/[,;]/)
+      .map((url) => url.trim())
+      .filter(Boolean);
+    if (urls.length === 0 || urls.some((url) => !/^ldaps?:\/\/.+/i.test(url))) {
       toast.error(t('settings.ad.invalidUrl'), { id: 'ad-test-error' });
       return;
     }

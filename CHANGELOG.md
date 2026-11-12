@@ -18,6 +18,7 @@ follows [Semantic Versioning](https://semver.org/).
 - Transient LDAP resets/timeouts are retried twice with exponential backoff.
 - LDAP fetch logs include page count, elapsed time and retry context.
 - Property test: the Yealink XML parser never panics on arbitrary input.
+- LDAP controller failover: multiple comma/semicolon-separated URLs are tried in order.
 
 ## [0.2.5] - 2026-11-12
 
