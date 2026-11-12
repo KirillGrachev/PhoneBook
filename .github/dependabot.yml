@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      frontend-minor:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+
+  - package-ecosystem: cargo
+    directory: /src-tauri
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      rust-minor:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+    ignore:
+      # Linux-only GTK 0.18 stack: fixed glib requires a future Tauri/GTK
+      # upgrade and this Windows-first app does not compile it.
+      - dependency-name: glib
+        versions: ['>=0.19']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
