@@ -120,6 +120,22 @@ jobs:
           }
           $lines | Set-Content -Encoding ascii $checksums
 
+          # Artifact smoke check: both installers must exist, and signature
+          # status is recorded even while the project has no Authenticode cert.
+          $required = @(
+            (Join-Path $bundle "nsis/KMAruda PhoneBook_${version}_x64-setup.exe"),
+            (Join-Path $bundle "msi/KMAruda PhoneBook_${version}_x64_en-US.msi"),
+            (Join-Path (Get-Location) $portable)
+          )
+          foreach ($file in $required) {
+            if (-not (Test-Path $file)) { throw "missing release artifact: $file" }
+            $signature = Get-AuthenticodeSignature $file
+            Write-Output "artifact: $file; signature: $($signature.Status)"
+          }
+          if ((Get-Content $checksums).Count -lt 3) {
+            throw "checksum file is incomplete: $checksums"
+          }
+
           gh release upload $release $portable $checksums --clobber
           if ($symbols) {
             gh release upload $release $symbols --clobber
