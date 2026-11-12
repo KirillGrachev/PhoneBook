@@ -367,13 +367,13 @@ fn refresh_external(db: &Db, config: &AppConfig) {
     match external::refresh(
         db,
         config.external_phonebook_enabled,
-        config.external_phonebook_path.as_deref(),
+        &config.external_phonebook_paths,
     ) {
-        Ok(external::ExternalRefresh::Loaded {
-            organization,
-            count,
-        }) => {
-            info!(organization = %organization, count, "внешний телефонный файл загружен");
+        Ok(external::ExternalRefresh::Loaded { sources, count }) => {
+            info!(
+                files = sources.len(),
+                count, "внешние телефонные файлы загружены"
+            );
         }
         Ok(_) => {}
         Err(e) => warn!(error = %e, "внешний телефонный файл не загружен"),

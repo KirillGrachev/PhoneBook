@@ -6,6 +6,7 @@
 //!   ни во фронтенд.
 //! * При удалении организации её секрет гарантированно удаляется из keyring.
 
+use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -39,6 +40,13 @@ impl ConfigStore {
     pub fn load(dir: &Path) -> Result<AppConfig, AppError> {
         let path = Self::config_path(dir);
         let mut config = Self::load_from_disk(&path);
+        // Migrate the legacy single path into the list on first load.
+        if config.external_phonebook_paths.is_empty() {
+            if let Some(path) = config.external_phonebook_path.take() {
+                config.external_phonebook_paths = normalize_external_paths(vec![path], None);
+            }
+        }
+        config.external_phonebook_path = config.external_phonebook_paths.first().cloned();
         Self::attach_password_flags(&mut config);
         Ok(config)
     }
@@ -74,6 +82,10 @@ impl ConfigStore {
         let org_groups = validate_org_groups(request.org_groups)?;
         let enterprise_group_id =
             resolve_enterprise_group_id(&org_groups, request.enterprise_group_id);
+        let external_phonebook_paths = normalize_external_paths(
+            request.external_phonebook_paths,
+            request.external_phonebook_path,
+        );
 
         // Секреты удалённых организаций не должны оставаться в keyring.
         let kept: Vec<&str> = ldap_configs
@@ -101,12 +113,8 @@ impl ConfigStore {
             email_overrides: request.email_overrides,
             org_groups,
             enterprise_group_id,
-            external_phonebook_path: request
-                .external_phonebook_path
-                .as_deref()
-                .map(str::trim)
-                .filter(|path| !path.is_empty())
-                .map(str::to_string),
+            external_phonebook_path: external_phonebook_paths.first().cloned(),
+            external_phonebook_paths,
             external_phonebook_enabled: request.external_phonebook_enabled,
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
         };
@@ -180,4 +188,21 @@ impl ConfigStore {
             }
         }
     }
+}
+
+/// Trims, drops empty entries and de-duplicates external phone book paths.
+/// Windows paths are case-insensitive, so de-duplication folds case.
+fn normalize_external_paths(paths: Vec<String>, legacy: Option<String>) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let candidates = if paths.is_empty() {
+        legacy.into_iter().collect::<Vec<_>>()
+    } else {
+        paths
+    };
+    candidates
+        .into_iter()
+        .map(|path| path.trim().to_string())
+        .filter(|path| !path.is_empty())
+        .filter(|path| seen.insert(path.to_lowercase()))
+        .collect()
 }

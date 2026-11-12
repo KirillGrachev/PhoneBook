@@ -268,6 +268,10 @@ mod tests {
         let config = AppConfig {
             theme: "dark".to_string(),
             external_phonebook_path: Some("C:\\PhoneBook\\yealink.xml".to_string()),
+            external_phonebook_paths: vec![
+                "C:\\PhoneBook\\yealink.xml".to_string(),
+                "C:\\PhoneBook\\office.xml".to_string(),
+            ],
             external_phonebook_enabled: true,
             ldap_configs: vec![super::super::model::LdapOrgConfig {
                 organization: "КМАруда".to_string(),
@@ -290,6 +294,10 @@ mod tests {
         assert_eq!(
             parsed.external_phonebook_path,
             config.external_phonebook_path
+        );
+        assert_eq!(
+            parsed.external_phonebook_paths,
+            config.external_phonebook_paths
         );
         assert!(parsed.external_phonebook_enabled);
         // Секрет не переносится: флаг пароля сбрасывается.

@@ -43,6 +43,7 @@ export interface ConfigPatch {
   orgGroups: OrgGroupDto[];
   enterpriseGroupId: string | null;
   externalPhonebookPath: string | null;
+  externalPhonebookPaths: string[];
   externalPhonebookEnabled: boolean;
 }
 
@@ -62,7 +63,13 @@ export function buildConfigPatch(config: AppConfigDto): ConfigPatch {
     savedContactIds: config.savedContactIds,
     orgGroups: config.orgGroups,
     enterpriseGroupId: config.enterpriseGroupId,
-    externalPhonebookPath: config.externalPhonebookPath,
+    externalPhonebookPath: config.externalPhonebookPaths[0] ?? config.externalPhonebookPath,
+    externalPhonebookPaths:
+      config.externalPhonebookPaths.length > 0
+        ? config.externalPhonebookPaths
+        : config.externalPhonebookPath
+          ? [config.externalPhonebookPath]
+          : [],
     externalPhonebookEnabled: config.externalPhonebookEnabled,
   };
 }
@@ -150,6 +157,11 @@ function normalizeConfigDto(raw: Record<string, unknown>): AppConfigDto {
     orgGroups,
     enterpriseGroupId: typeof raw.enterpriseGroupId === 'string' ? raw.enterpriseGroupId : null,
     externalPhonebookPath: typeof raw.externalPhonebookPath === 'string' ? raw.externalPhonebookPath : null,
+    externalPhonebookPaths: Array.isArray(raw.externalPhonebookPaths)
+      ? raw.externalPhonebookPaths.filter((path): path is string => typeof path === 'string')
+      : typeof raw.externalPhonebookPath === 'string'
+        ? [raw.externalPhonebookPath]
+        : [],
     externalPhonebookEnabled: bool(raw.externalPhonebookEnabled, false),
     version: null,
   };

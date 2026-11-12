@@ -79,8 +79,8 @@ export const configApi = {
   refreshExternalPhonebook: (): Promise<ExternalRefreshDto> =>
     invokeCommand<ExternalRefreshDto>('refresh_external_phonebook'),
 
-  /** Нативный диалог выбора XML-файла; `null` — диалог закрыт. */
-  pickExternalPhonebookFile: (): Promise<string | null> => invokeCommand<string | null>('pick_external_phonebook_file'),
+  /** Native multi-file XML picker; an empty array means the dialog was closed. */
+  pickExternalPhonebookFiles: (): Promise<string[]> => invokeCommand<string[]>('pick_external_phonebook_files'),
 
   /** Экспорт конфигурации в файл обмена; возвращает путь записанного файла. */
   exportConfigFile: (): Promise<string> => invokeCommand<string>('export_config_file'),

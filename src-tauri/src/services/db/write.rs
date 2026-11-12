@@ -72,6 +72,7 @@ impl Db {
     /// ([`crate::services::external`]): те же шаги, что и у источника AD,
     /// плюс удаление записей прежнего внешнего источника (заголовок файла
     /// переименован, файл заменён на другой) — в одной транзакции.
+    #[cfg(test)]
     pub fn replace_external_users(
         &self,
         organization: &str,
@@ -98,6 +99,37 @@ impl Db {
         drop(conn);
         self.flush()?;
         Ok(users.len())
+    }
+
+    /// Replaces all external phone book sources atomically. Every selected file
+    /// is one source; sources that disappeared from the selection are removed.
+    pub fn replace_external_sources(
+        &self,
+        sources: &[(String, Vec<UserRecord>)],
+    ) -> Result<usize, AppError> {
+        self.invalidate_search_cache();
+        let mut conn = self.lock();
+        let now = unix_now();
+        let tx = conn.transaction()?;
+        let mut total = 0usize;
+        {
+            tx.execute(
+                "DELETE FROM sources WHERE kind = ?1",
+                rusqlite::params![source_kind::EXTERNAL],
+            )?;
+            for (organization, users) in sources {
+                let source_id = upsert_source(&tx, organization, source_kind::EXTERNAL)?;
+                insert_users(&tx, source_id, users, now)?;
+                upsert_sync_meta(&tx, source_id, users.len(), None, true)?;
+                total += users.len();
+            }
+            cleanup_orphans(&tx)?;
+            tx.execute_batch("PRAGMA optimize;")?;
+        }
+        tx.commit()?;
+        drop(conn);
+        self.flush()?;
+        Ok(total)
     }
 
     /// Убирает из кэша все записи внешних телефонных файлов (опция выключена

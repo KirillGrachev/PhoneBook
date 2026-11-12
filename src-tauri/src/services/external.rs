@@ -17,7 +17,9 @@
 //! доктрина, что и у синхронизации AD): правки файла подхватываются без
 //! ручной чистки, отключение опции полностью убирает записи из выдачи.
 
+use std::collections::HashSet;
 use std::fs;
+use std::path::Path;
 
 use quick_xml::escape::unescape as unescape_xml;
 use quick_xml::events::Event;
@@ -67,8 +69,19 @@ pub enum ExternalRefresh {
     /// Опция включена, но записей больше нет: кэш очищен, `cleared` — сколько
     /// строк убрано из выдачи.
     Cleared { cleared: usize },
-    /// Файл загружен: `organization` — имя источника, `count` — число записей.
-    Loaded { organization: String, count: usize },
+    /// Files loaded: `sources` — one entry per imported file, `count` — total records.
+    Loaded {
+        sources: Vec<ExternalSource>,
+        count: usize,
+    },
+}
+
+/// One imported external phone book source.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalSource {
+    pub organization: String,
+    pub count: usize,
 }
 
 /// Разобрать XML телефонной книги Yealink (`IPPhoneBook`).
@@ -210,7 +223,7 @@ pub fn build_records(parsed: &ParsedPhonebook, organization: &str) -> Vec<UserRe
             ]));
 
             UserRecord {
-                object_guid: unit_guid(unit),
+                object_guid: unit_guid(unit, organization),
                 sam_account_name: None,
                 first_name: None,
                 last_name: None,
@@ -236,9 +249,10 @@ pub fn build_records(parsed: &ParsedPhonebook, organization: &str) -> Vec<UserRe
 }
 
 /// Детерминированный идентификатор записи внешнего источника (FNV-1a 64).
-fn unit_guid(unit: &PhonebookUnit) -> String {
+fn unit_guid(unit: &PhonebookUnit, organization: &str) -> String {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for part in [
+        organization,
         unit.name.as_str(),
         unit.menu.as_deref().unwrap_or_default(),
         unit.phones[0].as_deref().unwrap_or_default(),
@@ -253,14 +267,19 @@ fn unit_guid(unit: &PhonebookUnit) -> String {
     format!("ext-{hash:016x}")
 }
 
-/// Загрузить внешний телефонный файл в кэш согласно настройкам.
+/// Загрузить внешние телефонные файлы в кэш согласно настройкам.
 ///
-/// Вызывается планировщиком синхронизации, прогоном синхронизации и командой
-/// из настроек. Ошибка чтения/разбора не роняет вызывающего: логируется
-/// и возвращается как `Err` — решение о показе принимает слой команд.
-pub fn refresh(db: &Db, enabled: bool, path: Option<&str>) -> Result<ExternalRefresh, AppError> {
-    let path = path.map(str::trim).filter(|path| !path.is_empty());
-    if !enabled || path.is_none() {
+/// Каждый файл становится отдельным источником справочника. Все файлы
+/// проверяются до записи в БД: битый файл не оставляет частично обновлённый
+/// кэш. Ошибка чтения/разбора возвращается как `Err`; решение о показе
+/// принимает слой команд.
+pub fn refresh(db: &Db, enabled: bool, paths: &[String]) -> Result<ExternalRefresh, AppError> {
+    let paths: Vec<&str> = paths
+        .iter()
+        .map(|path| path.trim())
+        .filter(|path| !path.is_empty())
+        .collect();
+    if !enabled || paths.is_empty() {
         let cleared = db.clear_external_users()?;
         return Ok(if cleared > 0 {
             ExternalRefresh::Cleared { cleared }
@@ -268,45 +287,64 @@ pub fn refresh(db: &Db, enabled: bool, path: Option<&str>) -> Result<ExternalRef
             ExternalRefresh::Disabled
         });
     }
-    let path = path.ok_or_else(|| {
-        AppError::ExternalFile("не указан путь к внешней телефонной книге".into())
-    })?;
 
-    let metadata = fs::metadata(path)
-        .map_err(|e| AppError::ExternalFile(format!("не удалось открыть файл: {e}")))?;
-    if metadata.len() > MAX_FILE_BYTES {
-        return Err(AppError::ExternalFile(format!(
-            "файл слишком большой для телефонной книги: {} байт",
-            metadata.len()
-        )));
+    let mut loaded: Vec<(String, Vec<UserRecord>)> = Vec::new();
+    let mut used_names = HashSet::new();
+
+    for path in paths {
+        let metadata = fs::metadata(path)
+            .map_err(|e| AppError::ExternalFile(format!("не удалось открыть файл {path}: {e}")))?;
+        if metadata.len() > MAX_FILE_BYTES {
+            return Err(AppError::ExternalFile(format!(
+                "файл {path} слишком большой для телефонной книги: {} байт",
+                metadata.len()
+            )));
+        }
+        let content = fs::read_to_string(path).map_err(|e| {
+            AppError::ExternalFile(format!(
+                "не удалось прочитать файл {path} как UTF-8: {e}. Сохраните выгрузку в кодировке UTF-8"
+            ))
+        })?;
+        let parsed = parse_phonebook_xml(&content)?;
+
+        let fallback = Path::new(path)
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .map(tokens::collapse_spaces)
+            .filter(|stem| !stem.is_empty())
+            .unwrap_or_else(|| FALLBACK_TITLE.to_string());
+        let mut organization = parsed.title.clone().unwrap_or(fallback);
+
+        // Collision with an AD source: the caches must not be mixed.
+        if db.source_kind(&organization)?.as_deref() == Some("ad") {
+            organization = format!("{organization} {COLLISION_SUFFIX}");
+        }
+        // Duplicate titles among the selected files: keep every source distinct.
+        let base = organization.clone();
+        let mut suffix = 2;
+        while used_names.contains(&organization.to_lowercase()) {
+            organization = format!("{base} ({suffix})");
+            suffix += 1;
+        }
+        used_names.insert(organization.to_lowercase());
+
+        let records = build_records(&parsed, &organization);
+        loaded.push((organization, records));
     }
-    let content = fs::read_to_string(path).map_err(|e| {
-        AppError::ExternalFile(format!(
-            "не удалось прочитать файл как UTF-8: {e}. Сохраните выгрузку в кодировке UTF-8"
-        ))
-    })?;
 
-    let parsed = parse_phonebook_xml(&content)?;
-    let mut organization = parsed
-        .title
-        .clone()
-        .unwrap_or_else(|| FALLBACK_TITLE.to_string());
-    // Коллизия имени источника с подключением AD: кэши не должны смешиваться.
-    if db.source_kind(&organization)?.as_deref() == Some("ad") {
-        organization = format!("{organization} {COLLISION_SUFFIX}");
-    }
-
-    let records = build_records(&parsed, &organization);
-    let count = db.replace_external_users(&organization, &records)?;
+    let count = db.replace_external_sources(&loaded)?;
+    let sources = loaded
+        .iter()
+        .map(|(organization, records)| ExternalSource {
+            organization: organization.clone(),
+            count: records.len(),
+        })
+        .collect::<Vec<_>>();
     info!(
-        organization = %organization,
-        count,
-        "внешний телефонный файл загружен в справочник"
+        files = sources.len(),
+        count, "внешние телефонные файлы загружены в справочник"
     );
-    Ok(ExternalRefresh::Loaded {
-        organization,
-        count,
-    })
+    Ok(ExternalRefresh::Loaded { sources, count })
 }
 
 #[cfg(test)]
@@ -427,5 +465,44 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("Тест & Ко")));
+    }
+
+    #[test]
+    fn refresh_imports_each_file_as_its_own_source() {
+        use crate::services::db::Db;
+
+        let db = Db::open_in_memory().expect("db");
+        let dir = std::env::temp_dir().join(format!(
+            "kmpb-external-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("time")
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let first = dir.join("first.xml");
+        let second = dir.join("second.xml");
+        std::fs::write(&first, SAMPLE.replace("Yealink", "Source A")).expect("first");
+        std::fs::write(&second, SAMPLE.replace("Yealink", "Source B")).expect("second");
+
+        let paths = vec![
+            first.to_string_lossy().into_owned(),
+            second.to_string_lossy().into_owned(),
+        ];
+        let result = refresh(&db, true, &paths).expect("refresh");
+        let ExternalRefresh::Loaded { sources, count } = result else {
+            panic!("expected loaded result");
+        };
+        assert_eq!(count, 8);
+        assert_eq!(sources.len(), 2);
+        assert_eq!(sources[0].organization, "Source A");
+        assert_eq!(sources[1].organization, "Source B");
+        assert_eq!(db.count().expect("count"), 8);
+        let orgs = db.list_organizations().expect("orgs");
+        assert!(orgs.contains(&"Source A".to_string()));
+        assert!(orgs.contains(&"Source B".to_string()));
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

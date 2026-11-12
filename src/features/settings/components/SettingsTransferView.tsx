@@ -60,7 +60,8 @@ export function SettingsTransferView() {
           emailOverrides: state.emailOverrides,
           orgGroups: state.orgGroups,
           enterpriseGroupId: state.enterpriseGroupId,
-          externalPhonebookPath: state.externalPhonebookPath,
+          externalPhonebookPath: state.externalPhonebookPaths[0] ?? null,
+          externalPhonebookPaths: state.externalPhonebookPaths,
           externalPhonebookEnabled: state.externalPhonebookEnabled,
         };
         const blob = new Blob([renderConfigFile(buildConfigPatch(dto))], { type: 'application/json' });

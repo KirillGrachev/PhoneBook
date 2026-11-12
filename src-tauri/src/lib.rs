@@ -116,7 +116,7 @@ pub fn run() {
             commands::config::export_org_groups_file,
             commands::config::parse_org_groups_file,
             commands::config::refresh_external_phonebook,
-            commands::config::pick_external_phonebook_file,
+            commands::config::pick_external_phonebook_files,
             commands::config::export_config_file,
             commands::config::parse_config_file,
             commands::config::test_ldap_connection,

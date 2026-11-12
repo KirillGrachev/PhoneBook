@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FolderOpen, RefreshCw } from '@/components/icons';
+import { FolderOpen, RefreshCw, X } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -15,49 +15,33 @@ import { useAppStore } from '@/store/useAppStore';
 import { ACTION_BUTTON_CLASS, SWITCH_ROW_CLASS } from './settingsStyles';
 
 /**
- * Страница «Внешний телефонный файл»: выгрузка Yealink IPPhoneBook (XML)
- * в справочник. Отдельный экран настроек вместо секции на главном.
+ * External phone book files (Yealink IPPhoneBook XML). Every selected file is
+ * imported as a separate directory source, so multiple exports can be used at
+ * the same time.
  *
- * Тумблер — единственный рубильник функции: пока он выключен, файл не
- * читается, его записи убраны из кэша, а кнопки выбора и загрузки неактивны
- * (backend на каждом обновлении вызывает очистку внешних записей). При
- * включении загрузка выполняется сразу и повторяется планировщиком
- * синхронизации; «Загрузить сейчас» перечитывает файл вручную.
- *
- * Если путь к файлу в конфигурации не задан, переключение тумблера только
- * сохраняет настройку и НЕ отправляет запрос обновления на бэкенд —
- * загружать нечего, а мигание заблокированных кнопок на каждом щелчке
- * было бы чистым шумом. При заданном пути перезагрузка выполняется
- * в фоне, результат приходит тостом.
+ * The toggle is the feature's master switch: while it is off, files are not
+ * read and their entries are removed from search. "Load now" re-reads all
+ * selected files; adding or removing a file refreshes the directory when the
+ * feature is enabled.
  */
 export function SettingsExternalView() {
   const { t } = useTranslation();
 
-  const externalPhonebookPath = useAppStore((state) => state.externalPhonebookPath);
-  const setExternalPhonebookPath = useAppStore((state) => state.setExternalPhonebookPath);
+  const externalPhonebookPaths = useAppStore((state) => state.externalPhonebookPaths);
+  const setExternalPhonebookPaths = useAppStore((state) => state.setExternalPhonebookPaths);
   const externalPhonebookEnabled = useAppStore((state) => state.externalPhonebookEnabled);
   const setExternalPhonebookEnabled = useAppStore((state) => state.setExternalPhonebookEnabled);
 
   const queryClient = useQueryClient();
-  /** Блокировка с индикатором — только для явных действий (кнопки), не для тумблера. */
   const [externalBusy, setExternalBusy] = useState(false);
-  /** Защита от параллельных перезагрузок: тумблер и кнопки не должны пересекаться. */
   const refreshInFlight = useRef(false);
 
-  /** Кэши справочника устаревают после загрузки внешнего телефонного файла. */
   const invalidateDirectory = () => {
     for (const key of DIRECTORY_QUERY_KEYS) {
       void queryClient.invalidateQueries({ queryKey: [...key] });
     }
   };
 
-  /**
-   * Перечитать внешний файл по сохранённой конфигурации и обновить выдачу.
-   *
-   * `busy` — показывать спиннер и блокировать кнопки: верно только для
-   * явных действий пользователя. Фоновые вызовы (тумблер) проходят без
-   * визуальной блокировки, поэтому переключение ничего не «мигает».
-   */
   const runRefresh = async (busy: boolean) => {
     if (refreshInFlight.current) {
       return;
@@ -70,7 +54,14 @@ export function SettingsExternalView() {
       const result = await configApi.refreshExternalPhonebook();
       invalidateDirectory();
       if (result.state === 'loaded') {
-        toast.success(t('settings.externalLoaded', { count: result.count ?? 0, org: result.organization ?? '' }));
+        const organizations = result.sources?.map((source) => source.organization).join(', ') ?? '';
+        toast.success(
+          t('settings.externalLoaded', {
+            count: result.count ?? 0,
+            files: result.sources?.length ?? 0,
+            org: organizations,
+          }),
+        );
       } else if (result.state === 'cleared') {
         toast.success(t('settings.externalCleared', { count: result.cleared ?? 0 }));
       }
@@ -84,26 +75,29 @@ export function SettingsExternalView() {
     }
   };
 
-  /** Тумблер: сохраняем настройку; загрузка — только если загружать есть чего. */
   const handleEnabledToggle = (checked: boolean) => {
     setExternalPhonebookEnabled(checked);
     flushConfigSave();
-    if (checked && !useAppStore.getState().externalPhonebookPath) {
-      return; // файла нет: запрос бессмыслен, подсказка уже в карточке
+    if (checked && externalPhonebookPaths.length === 0) {
+      return;
     }
     void runRefresh(false);
   };
 
-  const handlePickExternalFile = async () => {
+  const handlePickExternalFiles = async () => {
     try {
-      const path = await configApi.pickExternalPhonebookFile();
-      if (!path) {
-        return; // диалог закрыт — не ошибка
+      const selected = await configApi.pickExternalPhonebookFiles();
+      if (selected.length === 0) {
+        return;
       }
-      setExternalPhonebookPath(path);
+      const merged = [...externalPhonebookPaths];
+      for (const path of selected) {
+        if (!merged.some((existing) => existing.toLowerCase() === path.toLowerCase())) {
+          merged.push(path);
+        }
+      }
+      setExternalPhonebookPaths(merged);
       flushConfigSave();
-      // Защита избыточна по UI (кнопка при выключенном тумблере неактивна),
-      // но оставляет обработчик корректным при любом состоянии магазина.
       if (useAppStore.getState().externalPhonebookEnabled) {
         void runRefresh(true);
       }
@@ -112,16 +106,23 @@ export function SettingsExternalView() {
     }
   };
 
+  const handleRemove = (path: string) => {
+    const next = externalPhonebookPaths.filter((existing) => existing !== path);
+    setExternalPhonebookPaths(next);
+    flushConfigSave();
+    if (useAppStore.getState().externalPhonebookEnabled) {
+      // With no paths left this clears the external sources.
+      void runRefresh(true);
+    }
+  };
+
   const handleLoadNow = () => {
     flushConfigSave();
     void runRefresh(true);
   };
 
-  /** Без файла или при выключенном тумблере загрузка невозможна: кнопка гаснет
-   *  сразу, а не «мигает» запросом, который заведомо ничего не сделает. */
-  const loadNowDisabled = externalBusy || !externalPhonebookEnabled || externalPhonebookPath === null;
-  /** Выбор файла — часть функции: при выключенном тумблере он не нужен,
-   *  поэтому карточка файла целиком гаснет вместе с рубильником. */
+  const hasFiles = externalPhonebookPaths.length > 0;
+  const loadNowDisabled = externalBusy || !externalPhonebookEnabled || !hasFiles;
   const pickDisabled = externalBusy || !externalPhonebookEnabled;
 
   return (
@@ -141,18 +142,39 @@ export function SettingsExternalView() {
         </div>
 
         <div className="border border-border bg-surface p-3.5 rounded-[16px] shadow-sm flex flex-col gap-2.5">
-          <span
-            className={cn(
-              'text-[13px] break-all leading-snug',
-              externalPhonebookEnabled ? 'text-muted-foreground' : 'text-muted-foreground/60',
-            )}
-          >
-            {externalPhonebookPath ?? t('settings.externalNotSelected')}
-          </span>
+          {hasFiles ? (
+            <ul className="flex flex-col gap-1.5">
+              {externalPhonebookPaths.map((path) => (
+                <li key={path} className="flex items-start gap-2 min-w-0">
+                  <span
+                    className={cn(
+                      'text-[13px] break-all leading-snug flex-1',
+                      externalPhonebookEnabled ? 'text-muted-foreground' : 'text-muted-foreground/60',
+                    )}
+                  >
+                    {path}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(path)}
+                    className="shrink-0 mt-0.5 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors no-ring"
+                    aria-label={t('settings.externalRemove')}
+                  >
+                    <X className="w-4 h-4" aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="text-[13px] leading-snug text-muted-foreground/60">
+              {t('settings.externalNotSelected')}
+            </span>
+          )}
+
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => void handlePickExternalFile()}
+              onClick={() => void handlePickExternalFiles()}
               disabled={pickDisabled}
               className={ACTION_BUTTON_CLASS}
             >
@@ -164,15 +186,14 @@ export function SettingsExternalView() {
               {t('settings.externalLoadNow')}
             </button>
           </div>
-          {/* Подсказка под карточкой файла объясняет текущее состояние рубильника:
-              пользователь не должен гадать, почему кнопки неактивны. */}
-          {externalPhonebookEnabled && externalPhonebookPath === null && (
+
+          {externalPhonebookEnabled && !hasFiles && (
             <p className="text-[13px] text-amber-500 leading-snug">{t('settings.externalHintNeedFile')}</p>
           )}
-          {!externalPhonebookEnabled && externalPhonebookPath === null && (
+          {!externalPhonebookEnabled && !hasFiles && (
             <p className="text-[13px] text-muted-foreground leading-snug">{t('settings.externalHintOff')}</p>
           )}
-          {!externalPhonebookEnabled && externalPhonebookPath !== null && (
+          {!externalPhonebookEnabled && hasFiles && (
             <p className="text-[13px] text-muted-foreground leading-snug">{t('settings.externalHintDisabled')}</p>
           )}
         </div>
