@@ -1,7 +1,8 @@
-import { defineConfig } from '@playwright/test';
+﻿import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  snapshotPathTemplate: '{testDir}/{testFileName}-snapshots/{arg}{ext}',
   timeout: 30_000,
   use: {
     baseURL: 'http://127.0.0.1:1420',
@@ -14,3 +15,4 @@ export default defineConfig({
     timeout: 120_000,
   },
 });
+
