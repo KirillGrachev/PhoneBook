@@ -869,6 +869,43 @@ fn encrypted_container_full_lifecycle() {
 }
 
 #[test]
+fn corrupt_or_truncated_container_is_rejected() {
+    let dir = std::env::temp_dir().join(format!(
+        "kmpb-corrupt-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("time")
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("phonebook.db");
+    let key = encryption::generate_key().expect("key");
+    let image = b"not a sqlite image".to_vec();
+    encryption::save(&path, &key, &image).expect("save");
+
+    // Truncated container: header exists, ciphertext cannot be authenticated.
+    let mut bytes = std::fs::read(&path).expect("read");
+    bytes.truncate(12);
+    std::fs::write(&path, &bytes).expect("truncate");
+    assert!(matches!(
+        encryption::load(&path, &key).expect("load"),
+        encryption::LoadOutcome::Foreign
+    ));
+
+    // A container encrypted for another key must not restore either.
+    encryption::save(&path, &key, &image).expect("save");
+    let other_key = encryption::generate_key().expect("other key");
+    assert!(matches!(
+        encryption::load(&path, &other_key).expect("load"),
+        encryption::LoadOutcome::Foreign
+    ));
+
+    encryption::wipe_database_files(&path).expect("wipe");
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
 fn multi_org_filter_unions_companies() {
     // Группа фильтров: союз организаций учитывает учётки каждой из них,
     // а не только первой (вкладка «КМАруда» не глобальной версии).
