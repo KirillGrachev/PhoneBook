@@ -27,18 +27,21 @@ export function SettingsAdIdentityFields({ config, onChange }: SettingsAdIdentit
         label={t('settings.ad.ldapUrl')}
         value={config.ldapUrl}
         onChange={(event) => onChange({ ldapUrl: event.target.value })}
-        placeholder="ldap://dc1.kmaruda.ru или ldaps://dc1.kmaruda.ru:636"
+        placeholder="ldap://dc1.kmaruda.ru, ldaps://dc2.kmaruda.ru:636"
         className="font-mono"
         autoCapitalize="none"
         spellCheck={false}
         autoComplete="off"
-        hint={
+        hint={[
           urlScheme(config.ldapUrl) === 'ldaps'
             ? t('settings.ad.schemeLdaps')
             : urlScheme(config.ldapUrl) === 'ldap'
               ? t('settings.ad.schemeLdap')
-              : undefined
-        }
+              : null,
+          t('settings.ad.dcFailoverHint'),
+        ]
+          .filter(Boolean)
+          .join(' ')}
       />
       <TextField
         label={t('settings.ad.baseDn')}

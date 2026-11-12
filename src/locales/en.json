@@ -117,6 +117,7 @@
     "organization": "Organization name",
     "organizationPlaceholder": "e.g. KMAruda LLC",
     "ldapUrl": "Server address (LDAP URL)",
+    "dcFailoverHint": "Separate failover controllers with commas.",
     "baseDn": "Base DN",
     "baseDnHint": "Search root, e.g. DC=kmaruda,DC=ru",
     "bindDn": "Service account (bind DN / UPN)",

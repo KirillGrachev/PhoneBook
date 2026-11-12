@@ -117,6 +117,7 @@
     "organization": "Название организации",
     "organizationPlaceholder": "Например: ООО «КМАруда»",
     "ldapUrl": "Адрес сервера (LDAP URL)",
+    "dcFailoverHint": "Резервные контроллеры перечислите через запятую.",
     "baseDn": "Base DN",
     "baseDnHint": "Корень поиска, например DC=kmaruda,DC=ru",
     "bindDn": "Учётная запись (bind DN / UPN)",
