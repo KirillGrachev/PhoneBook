@@ -64,7 +64,7 @@
     "axe-core": "^4.14.0",
     "eslint": "^10.4.1",
     "globals": "^15.14.0",
-    "jsdom": "^29.1.1",
+    "jsdom": "^31.0.0",
     "prettier": "^3.9.10",
     "tailwindcss": "^4.1.14",
     "tailwindcss-animate": "^1.0.7",
