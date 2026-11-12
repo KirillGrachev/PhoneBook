@@ -1,8 +1,8 @@
 name: Release
 
-# Релиз собирается при публикации тега вида v0.2.0
-# (тег обязан совпадать с версией в package.json / tauri.conf.json / Cargo.toml —
-# это проверяет job `version`) либо вручную через "Run workflow".
+# Builds the release when a v* tag is pushed (the tag must match the version
+# in package.json / tauri.conf.json / Cargo.toml, checked by the version job)
+# or manually through "Run workflow".
 on:
   push:
     tags:
@@ -39,11 +39,16 @@ jobs:
 
   windows:
     name: Windows installers (MSI / NSIS)
-    needs: [version]
+    needs: [version, sbom]
     runs-on: windows-latest
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sbom
+          path: artifacts/sbom
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -78,6 +83,53 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: --bundles msi,nsis
+
+      - name: Package portable, symbols and checksums
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $release = "v$version"
+          $bundle = "src-tauri/target/release/bundle"
+          $portable = "KMAruda.PhoneBook_${version}_windows-x64_portable.zip"
+          $symbols = "KMAruda.PhoneBook_${version}_windows-x64_symbols.zip"
+          $checksums = "SHA256SUMS-windows-x64.txt"
+
+          Copy-Item "src-tauri/target/release/kmaruda-phonebook.exe" "KMAruda.PhoneBook.exe" -Force
+          Compress-Archive -Path "KMAruda.PhoneBook.exe" -DestinationPath $portable -Force
+
+          if (Test-Path "src-tauri/target/release/kmaruda_phonebook.pdb") {
+            Copy-Item "src-tauri/target/release/kmaruda_phonebook.pdb" "KMAruda.PhoneBook.pdb" -Force
+            Compress-Archive -Path "KMAruda.PhoneBook.pdb" -DestinationPath $symbols -Force
+          } else {
+            $symbols = $null
+          }
+
+          $files = @(
+            (Join-Path $bundle "nsis/KMAruda PhoneBook_${version}_x64-setup.exe"),
+            (Join-Path $bundle "msi/KMAruda PhoneBook_${version}_x64_en-US.msi"),
+            (Join-Path (Get-Location) $portable)
+          )
+          if ($symbols) {
+            $files += (Join-Path (Get-Location) $symbols)
+          }
+          $lines = foreach ($file in $files) {
+            if (Test-Path $file) {
+              $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+              "$hash  $(Split-Path $file -Leaf)"
+            }
+          }
+          $lines | Set-Content -Encoding ascii $checksums
+
+          gh release upload $release $portable $checksums --clobber
+          if ($symbols) {
+            gh release upload $release $symbols --clobber
+          }
+          if (Test-Path "artifacts/sbom/npm.cdx.json") {
+            gh release upload $release "artifacts/sbom/npm.cdx.json" --clobber
+          }
+          gh release edit $release --draft=false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   sbom:
     name: Software bill of materials
