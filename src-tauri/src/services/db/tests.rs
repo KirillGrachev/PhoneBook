@@ -869,6 +869,33 @@ fn encrypted_container_full_lifecycle() {
 }
 
 #[test]
+fn search_handles_five_thousand_records() {
+    let db = Db::open_in_memory().expect("db");
+    let users = (0..5_000)
+        .map(|i| {
+            record(
+                &format!("load-{i}"),
+                "Load Test",
+                &format!("Load User {i:05}"),
+                "Operations",
+                &format!("{:04}", i % 10_000),
+            )
+        })
+        .collect::<Vec<_>>();
+    db.replace_org_users("Load Test", &users).expect("load");
+
+    let started = std::time::Instant::now();
+    let page = db
+        .search(SearchParams {
+            query: Some("Load User 04999".into()),
+            ..Default::default()
+        })
+        .expect("search");
+    assert!(page.total > 0, "5k-record search returned no rows");
+    assert!(started.elapsed() < std::time::Duration::from_secs(5));
+}
+
+#[test]
 fn corrupt_or_truncated_container_is_rejected() {
     let dir = std::env::temp_dir().join(format!(
         "kmpb-corrupt-{}-{}",
