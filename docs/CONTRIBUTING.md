@@ -89,7 +89,7 @@ OSV scanner; see [.github/workflows](../.github/workflows).
 - Search stays in the backend: React only sends `SearchParams` over IPC and
   renders the page it receives. Do not reintroduce client-side filtering of
   the full directory.
-- The `Анимации` toggle must keep working: animation presets degrade to zero
+- The `Animations` toggle must keep working: animation presets degrade to zero
   duration through the root `MotionConfig`, and CSS animations are disabled
   by the `.disable-animations` class.
 - Version is kept in sync across `package.json`, `src-tauri/tauri.conf.json`

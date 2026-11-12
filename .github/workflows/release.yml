@@ -56,15 +56,25 @@ jobs:
         with:
           workspaces: src-tauri
 
-      # Собирает .msi и .nsis-установщик и прикрепляет их к GitHub Release (draft).
-      # beforeBuildCommand из tauri.conf.json (npm run build) tauri-action выполняет сам.
+      # Builds the MSI and NSIS installers and attaches them to a draft GitHub Release.
+      # tauri-action runs beforeBuildCommand from tauri.conf.json (npm run build).
       - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v__VERSION__
-          releaseName: 'KMAruda PhoneBook v__VERSION__'
-          releaseBody: 'Корпоративный телефонный справочник (Active Directory). Установщики для Windows: MSI и NSIS. WebView2 устанавливается автоматически (bootstrapper встроен в инсталлятор).'
+          releaseName: 'v__VERSION__'
+          releaseBody: |
+            ## Install
+
+            Normal users: use `KMAruda.PhoneBook___VERSION___x64-setup.exe`. The
+            `KMAruda.PhoneBook___VERSION___x64_en-US.msi` is the MSI payload for
+            enterprise deployment. The WebView2 bootstrapper is embedded in the
+            installer.
+
+            ## What changed
+
+            See the commit list and the generated changelog for this release.
           releaseDraft: true
           prerelease: false
           args: --bundles msi,nsis
