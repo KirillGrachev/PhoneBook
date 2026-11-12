@@ -72,6 +72,9 @@ keyring = { version = "3", default-features = false, features = ["apple-native"]
 [target.'cfg(target_os = "linux")'.dependencies]
 keyring = { version = "3", default-features = false, features = ["linux-native"] }
 
+[dev-dependencies]
+proptest = "1"
+
 [profile.release]
 panic = "abort"
 codegen-units = 1
