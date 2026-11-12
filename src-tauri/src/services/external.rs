@@ -377,7 +377,16 @@ pub fn refresh(db: &Db, enabled: bool, paths: &[String]) -> Result<ExternalRefre
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
     use super::*;
+
+    proptest! {
+        #[test]
+        fn parser_never_panics_on_arbitrary_xml(input in "\\PC{0,2048}") {
+            let _ = parse_phonebook_xml(&input);
+        }
+    }
 
     const SAMPLE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <IPPhoneBook>
