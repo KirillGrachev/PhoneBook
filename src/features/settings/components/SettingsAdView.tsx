@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Loader2, Monitor, Plus, Refresh, Trash } from '@/components/icons';
+import { Monitor, Plus } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,16 +8,16 @@ import { ApiError, isTauri } from '@/api/backend';
 import { configApi, contactsApi, syncApi } from '@/api/directory';
 import { devLog } from '@/lib/devlog';
 import type { DuplicatesPreviewDto, LdapOrgConfigDto } from '@/api/contracts';
-import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
-import { TextField } from '@/components/ui/TextField';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { translateBackendError } from '@/lib/errors';
 import { useAppStore } from '@/store/useAppStore';
 
-import { primaryButton, toInput } from './settingsAdUtils';
+import { toInput } from './settingsAdUtils';
+import { SettingsAdDuplicates } from './SettingsAdDuplicates';
 import { SettingsAdOrgCard } from './SettingsAdOrgCard';
 import { SettingsAdRemoveDialog } from './SettingsAdRemoveDialog';
+import { SettingsAdSyncCard } from './SettingsAdSyncCard';
 
 const EMPTY_ORG: LdapOrgConfigDto = {
   organization: '',
@@ -30,16 +30,14 @@ const EMPTY_ORG: LdapOrgConfigDto = {
   hasPassword: false,
 };
 
-const SYNC_INTERVAL_OPTIONS = [1, 6, 12, 24, 72, 168];
-
 /**
- * Настройки Active Directory.
+ * ÐÐ°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ¸ Active Directory.
  *
- * * несколько организаций, каждая со своим контроллером, Base DN и учёткой;
- * * пароль уходит отдельной командой straight в keyring, минуя стор и config.json;
- * * «Проверить подключение» — диагностика через бэкенд (bind + rootDSE + выборка);
- * * ручной запуск синхронизации и статус последней по каждой организации;
- * * в браузере (без Tauri) форма скрыта: AD недоступен вне десктоп-приложения.
+ * * Ð½ÐµÑÐºÐ¾Ð»ÑŒÐºÐ¾ Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¹, ÐºÐ°Ð¶Ð´Ð°Ñ ÑÐ¾ ÑÐ²Ð¾Ð¸Ð¼ ÐºÐ¾Ð½Ñ‚Ñ€Ð¾Ð»Ð»ÐµÑ€Ð¾Ð¼, Base DN Ð¸ ÑƒÑ‡Ñ‘Ñ‚ÐºÐ¾Ð¹;
+ * * Ð¿Ð°Ñ€Ð¾Ð»ÑŒ ÑƒÑ…Ð¾Ð´Ð¸Ñ‚ Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ð¾Ð¹ ÐºÐ¾Ð¼Ð°Ð½Ð´Ð¾Ð¹ straight Ð² keyring, Ð¼Ð¸Ð½ÑƒÑ ÑÑ‚Ð¾Ñ€ Ð¸ config.json;
+ * * Â«ÐŸÑ€Ð¾Ð²ÐµÑ€Ð¸Ñ‚ÑŒ Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸ÐµÂ» â€” Ð´Ð¸Ð°Ð³Ð½Ð¾ÑÑ‚Ð¸ÐºÐ° Ñ‡ÐµÑ€ÐµÐ· Ð±ÑÐºÐµÐ½Ð´ (bind + rootDSE + Ð²Ñ‹Ð±Ð¾Ñ€ÐºÐ°);
+ * * Ñ€ÑƒÑ‡Ð½Ð¾Ð¹ Ð·Ð°Ð¿ÑƒÑÐº ÑÐ¸Ð½Ñ…Ñ€Ð¾Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¸ Ð¸ ÑÑ‚Ð°Ñ‚ÑƒÑ Ð¿Ð¾ÑÐ»ÐµÐ´Ð½ÐµÐ¹ Ð¿Ð¾ ÐºÐ°Ð¶Ð´Ð¾Ð¹ Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¸;
+ * * Ð² Ð±Ñ€Ð°ÑƒÐ·ÐµÑ€Ðµ (Ð±ÐµÐ· Tauri) Ñ„Ð¾Ñ€Ð¼Ð° ÑÐºÑ€Ñ‹Ñ‚Ð°: AD Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½ Ð²Ð½Ðµ Ð´ÐµÑÐºÑ‚Ð¾Ð¿-Ð¿Ñ€Ð¸Ð»Ð¾Ð¶ÐµÐ½Ð¸Ñ.
  */
 export function SettingsAdView() {
   const { t, i18n } = useTranslation();
@@ -58,7 +56,7 @@ export function SettingsAdView() {
 
   const { running: syncRunning, organizations: syncStates } = useSyncStatus();
 
-  /** Введённые (ещё не сохранённые) пароли: организация → пароль. */
+  /** Ð’Ð²ÐµÐ´Ñ‘Ð½Ð½Ñ‹Ðµ (ÐµÑ‰Ñ‘ Ð½Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½Ñ‘Ð½Ð½Ñ‹Ðµ) Ð¿Ð°Ñ€Ð¾Ð»Ð¸: Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ñ â†’ Ð¿Ð°Ñ€Ð¾Ð»ÑŒ. */
   const [passwordDrafts, setPasswordDrafts] = useState<Record<string, string>>({});
   const [testingOrg, setTestingOrg] = useState<number | null>(null);
   const [removingOrg, setRemovingOrg] = useState<number | null>(null);
@@ -86,7 +84,7 @@ export function SettingsAdView() {
       try {
         await configApi.setPassword(removed.organization, null);
       } catch (error) {
-        console.warn('[ad-settings] не удалось удалить секрет', error);
+        console.warn('[ad-settings] Ð½Ðµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ ÑƒÐ´Ð°Ð»Ð¸Ñ‚ÑŒ ÑÐµÐºÑ€ÐµÑ‚', error);
       }
     }
   };
@@ -134,7 +132,7 @@ export function SettingsAdView() {
         duration: 10_000,
       });
 
-      // Подсказка rootDSE: если Base DN пуст — предлагаем доменный корень.
+      // ÐŸÐ¾Ð´ÑÐºÐ°Ð·ÐºÐ° rootDSE: ÐµÑÐ»Ð¸ Base DN Ð¿ÑƒÑÑ‚ â€” Ð¿Ñ€ÐµÐ´Ð»Ð°Ð³Ð°ÐµÐ¼ Ð´Ð¾Ð¼ÐµÐ½Ð½Ñ‹Ð¹ ÐºÐ¾Ñ€ÐµÐ½ÑŒ.
       if (!config.baseDn.trim() && result.defaultNamingContext) {
         updateOrg(index, { baseDn: result.defaultNamingContext });
         toast.info(t('settings.ad.baseDnAutofilled'), { id: 'ad-base-autofill' });
@@ -184,7 +182,7 @@ export function SettingsAdView() {
     }
   };
 
-  /** Превью дубликатов: пусто — тост, иначе подтверждающий диалог. */
+  /** ÐŸÑ€ÐµÐ²ÑŒÑŽ Ð´ÑƒÐ±Ð»Ð¸ÐºÐ°Ñ‚Ð¾Ð²: Ð¿ÑƒÑÑ‚Ð¾ â€” Ñ‚Ð¾ÑÑ‚, Ð¸Ð½Ð°Ñ‡Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ð°ÑŽÑ‰Ð¸Ð¹ Ð´Ð¸Ð°Ð»Ð¾Ð³. */
   const handleDuplicatesCheck = async () => {
     setDupBusy('preview');
     try {
@@ -202,7 +200,7 @@ export function SettingsAdView() {
     }
   };
 
-  /** Уборка дубликатов с инвалидацией выдач справочника. */
+  /** Ð£Ð±Ð¾Ñ€ÐºÐ° Ð´ÑƒÐ±Ð»Ð¸ÐºÐ°Ñ‚Ð¾Ð² Ñ Ð¸Ð½Ð²Ð°Ð»Ð¸Ð´Ð°Ñ†Ð¸ÐµÐ¹ Ð²Ñ‹Ð´Ð°Ñ‡ ÑÐ¿Ñ€Ð°Ð²Ð¾Ñ‡Ð½Ð¸ÐºÐ°. */
   const handleDuplicatesApply = async () => {
     setDupBusy('apply');
     try {
@@ -223,7 +221,7 @@ export function SettingsAdView() {
   return (
     <div className="flex flex-col gap-5 w-full h-full relative">
       <div className="flex flex-col gap-6 pb-6">
-        {/* Тестовый режим — доступен везде (в браузере включает демо-данные) */}
+        {/* Ð¢ÐµÑÑ‚Ð¾Ð²Ñ‹Ð¹ Ñ€ÐµÐ¶Ð¸Ð¼ â€” Ð´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½ Ð²ÐµÐ·Ð´Ðµ (Ð² Ð±Ñ€Ð°ÑƒÐ·ÐµÑ€Ðµ Ð²ÐºÐ»ÑŽÑ‡Ð°ÐµÑ‚ Ð´ÐµÐ¼Ð¾-Ð´Ð°Ð½Ð½Ñ‹Ðµ) */}
         <div className="flex items-center justify-between border border-border bg-surface p-4 rounded-[16px] shadow-sm shrink-0">
           <div className="flex flex-col gap-0.5 pr-4">
             <span className="text-[16px] font-bold text-foreground">{t('testMode')}</span>
@@ -249,7 +247,7 @@ export function SettingsAdView() {
 
         {desktop && (
           <>
-            {/* Организации */}
+            {/* ÐžÑ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¸ */}
             <section className="flex flex-col gap-4" aria-label={t('settings.adSettings')}>
               {configs.map((config, index) => (
                 <SettingsAdOrgCard
@@ -281,125 +279,26 @@ export function SettingsAdView() {
               </button>
             </section>
 
-            {/* Синхронизация */}
-            <section className="flex flex-col gap-3 p-4 border border-border bg-surface rounded-[16px] shadow-sm">
-              <h3 className="text-[14px] font-bold text-muted-foreground uppercase">
-                {t('settings.ad.lastSyncTitle')}
-              </h3>
+            <SettingsAdSyncCard
+              syncIntervalHours={syncIntervalHours}
+              onSyncIntervalChange={setSyncIntervalHours}
+              connectTimeoutSecs={ldapConnectTimeoutSecs}
+              onConnectTimeoutChange={setLdapConnectTimeoutSecs}
+              operationTimeoutSecs={ldapOperationTimeoutSecs}
+              onOperationTimeoutChange={setLdapOperationTimeoutSecs}
+              testMode={testMode}
+              syncRunning={syncRunning}
+              onSyncNow={() => void syncNow()}
+            />
 
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[15px] font-semibold text-foreground">{t('settings.ad.syncInterval')}</span>
-                <Select
-                  value={syncIntervalHours}
-                  onChange={(hours) => setSyncIntervalHours(hours)}
-                  ariaLabel={t('settings.ad.syncInterval')}
-                  options={SYNC_INTERVAL_OPTIONS.map((hours) => ({
-                    value: hours,
-                    label: t('settings.ad.syncIntervalHours', { count: hours }),
-                  }))}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <TextField
-                  type="number"
-                  min={1}
-                  max={300}
-                  label={t('settings.ad.connectTimeout')}
-                  hint={t('settings.ad.connectTimeoutHint')}
-                  value={ldapConnectTimeoutSecs}
-                  onChange={(event) =>
-                    setLdapConnectTimeoutSecs(Math.min(300, Math.max(1, Number(event.target.value) || 1)))
-                  }
-                />
-                <TextField
-                  type="number"
-                  min={1}
-                  max={300}
-                  label={t('settings.ad.operationTimeout')}
-                  hint={t('settings.ad.operationTimeoutHint')}
-                  value={ldapOperationTimeoutSecs}
-                  onChange={(event) =>
-                    setLdapOperationTimeoutSecs(Math.min(300, Math.max(1, Number(event.target.value) || 1)))
-                  }
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void syncNow()}
-                disabled={testMode || syncRunning}
-                className={primaryButton(testMode || syncRunning, 'w-full h-11 mt-1 text-[15px]')}
-              >
-                {syncRunning ? (
-                  <Loader2 className="w-[18px] h-[18px] animate-spin" aria-hidden />
-                ) : (
-                  <Refresh className="w-[18px] h-[18px]" aria-hidden />
-                )}
-                {syncRunning ? t('sync.running') : t('sync.now')}
-              </button>
-            </section>
-
-            {/* Уборка дубликатов учёток */}
-            <section className="flex flex-col gap-3 p-4 border border-border bg-surface rounded-[16px] shadow-sm">
-              <h3 className="text-[14px] font-bold text-muted-foreground uppercase">
-                {t('settings.ad.duplicatesTitle')}
-              </h3>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{t('settings.ad.duplicatesDesc')}</p>
-              <button
-                type="button"
-                onClick={() => void handleDuplicatesCheck()}
-                disabled={dupBusy !== null || testMode}
-                className={primaryButton(dupBusy !== null || testMode, 'w-full h-11 text-[15px]')}
-              >
-                {dupBusy === 'preview' ? (
-                  <Loader2 className="w-[18px] h-[18px] animate-spin" aria-hidden />
-                ) : (
-                  <Trash className="w-[18px] h-[18px]" aria-hidden />
-                )}
-                {t('settings.ad.duplicatesCheck')}
-              </button>
-            </section>
-
-            {dupPreview && (
-              <div
-                className="fixed inset-0 top-[32px] z-[100] flex items-center justify-center p-4"
-                role="alertdialog"
-                aria-modal="true"
-              >
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDupPreview(null)} />
-                <div className="relative bg-surface w-full max-w-[420px] rounded-[20px] shadow-2xl border border-border p-6 flex flex-col gap-4 z-10">
-                  <h3 className="text-[18px] font-bold text-foreground m-0">
-                    {t('settings.ad.duplicatesConfirmTitle')}
-                  </h3>
-                  <p className="text-[14px] text-muted-foreground leading-relaxed m-0">
-                    {t('settings.ad.duplicatesConfirmMsg', {
-                      groups: dupPreview.groups,
-                      records: dupPreview.removable,
-                      samples: dupPreview.samples.join(', '),
-                    })}
-                  </p>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setDupPreview(null)}
-                      className="px-4 py-2 rounded-[12px] text-[14px] font-bold text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors outline-none cursor-pointer"
-                    >
-                      {t('settings.orgGroupsCancel')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleDuplicatesApply()}
-                      disabled={dupBusy !== null}
-                      className="flex items-center gap-2 px-4 py-2 rounded-[12px] bg-primary text-white text-[14px] font-bold hover:bg-primary-hover transition-colors outline-none cursor-pointer disabled:opacity-60"
-                    >
-                      {dupBusy === 'apply' && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
-                      {t('settings.ad.duplicatesApply')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <SettingsAdDuplicates
+              testMode={testMode}
+              busy={dupBusy}
+              preview={dupPreview}
+              onCheck={() => void handleDuplicatesCheck()}
+              onApply={() => void handleDuplicatesApply()}
+              onClose={() => setDupPreview(null)}
+            />
           </>
         )}
 

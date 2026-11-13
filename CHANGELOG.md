@@ -47,6 +47,7 @@ follows [Semantic Versioning](https://semver.org/).
   the filter control.
 - SettingsGroupsView is split into OrgGroupCard and OrgGroupEditor components.
 - ContactDetails is split into ContactInfoCard and CompanyInfoCard components.
+- SettingsAdView is split into SettingsAdSyncCard and SettingsAdDuplicates.
 
 ## [0.2.5] - 2026-11-12
 
