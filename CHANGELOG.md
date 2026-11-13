@@ -45,6 +45,7 @@ follows [Semantic Versioning](https://semver.org/).
   floor and uploads the lcov artifact.
 - Header search/help icons are 24 px and the settings gear is 22 px, matching
   the filter control.
+- SettingsGroupsView is split into OrgGroupCard and OrgGroupEditor components.
 
 ## [0.2.5] - 2026-11-12
 

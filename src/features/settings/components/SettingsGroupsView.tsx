@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Check, Edit, Export, Groups, Import, Pin, Plus, Trash, X } from '@/components/icons';
+import { Export, Import, Plus } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -18,28 +18,16 @@ import {
   validateOrgGroupsFile,
 } from '@/lib/orgGroups';
 import { isTauri } from '@/api/backend';
-import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
 
-/** Черновик редактора группы: `id = null` — создание новой. */
-interface GroupEditorState {
-  id: string | null;
-  name: string;
-  orgs: string[];
-}
-
-const ACTION_BUTTON_CLASS =
-  'p-2 rounded-[10px] text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors outline-none cursor-pointer';
-
-const ORG_ROW_CLASS =
-  'w-full flex items-center justify-between gap-2 px-3 py-2 rounded-[12px] text-[13px] text-left outline-none transition-colors cursor-pointer border border-transparent hover:bg-surface-hover focus-visible:border-primary';
+import { OrgGroupCard } from './OrgGroupCard';
+import { OrgGroupEditor, type GroupEditorState } from './OrgGroupEditor';
 
 /**
- * Группы организаций: объединение фильтров под одним названием.
+ * Organization groups: combine filters under one name.
  *
- * * в глобальной версии группа заменяет в фильтре поглощённые организации;
- * * отмеченная значком группа задаёт состав вкладки «КМАруда»
- *   не глобальной версии (какие учётки учитываются в списке).
+ * In global mode the group replaces nested organizations in the filter; the
+ * pinned group defines which accounts belong to the enterprise tab.
  */
 export function SettingsGroupsView() {
   const { t } = useTranslation();
@@ -60,8 +48,8 @@ export function SettingsGroupsView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /**
-   * Экспорт групп в файл обмена: в десктопе файл пишет Rust в «Документы»
-   * (путь показываем с копированием), в демо-режиме браузера — скачивание.
+   * ÃƒÂÃ‚Â­ÃƒÂÃ‚ÂºÃƒâ€˜Ã‚ÂÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬Ãƒâ€˜Ã¢â‚¬Å¡ ÃƒÂÃ‚Â³Ãƒâ€˜Ã¢â€šÂ¬Ãƒâ€˜Ã†â€™ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¿ ÃƒÂÃ‚Â² Ãƒâ€˜Ã¢â‚¬Å¾ÃƒÂÃ‚Â°ÃƒÂÃ‚Â¹ÃƒÂÃ‚Â» ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â±ÃƒÂÃ‚Â¼ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½ÃƒÂÃ‚Â°: ÃƒÂÃ‚Â² ÃƒÂÃ‚Â´ÃƒÂÃ‚ÂµÃƒâ€˜Ã‚ÂÃƒÂÃ‚ÂºÃƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¿ÃƒÂÃ‚Âµ Ãƒâ€˜Ã¢â‚¬Å¾ÃƒÂÃ‚Â°ÃƒÂÃ‚Â¹ÃƒÂÃ‚Â» ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‹â€ ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â‚¬Å¡ Rust ÃƒÂÃ‚Â² Ãƒâ€šÃ‚Â«ÃƒÂÃ¢â‚¬ÂÃƒÂÃ‚Â¾ÃƒÂÃ‚ÂºÃƒâ€˜Ã†â€™ÃƒÂÃ‚Â¼ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½Ãƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã¢â‚¬Â¹Ãƒâ€šÃ‚Â»
+   * (ÃƒÂÃ‚Â¿Ãƒâ€˜Ã†â€™Ãƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã…â€™ ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¾ÃƒÂÃ‚ÂºÃƒÂÃ‚Â°ÃƒÂÃ‚Â·Ãƒâ€˜Ã¢â‚¬Â¹ÃƒÂÃ‚Â²ÃƒÂÃ‚Â°ÃƒÂÃ‚ÂµÃƒÂÃ‚Â¼ Ãƒâ€˜Ã‚Â ÃƒÂÃ‚ÂºÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¸Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â²ÃƒÂÃ‚Â°ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚ÂµÃƒÂÃ‚Â¼), ÃƒÂÃ‚Â² ÃƒÂÃ‚Â´ÃƒÂÃ‚ÂµÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¾-Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚ÂµÃƒÂÃ‚Â¶ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¼ÃƒÂÃ‚Âµ ÃƒÂÃ‚Â±Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â°Ãƒâ€˜Ã†â€™ÃƒÂÃ‚Â·ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â° ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Ãƒâ€˜Ã‚ÂÃƒÂÃ‚ÂºÃƒÂÃ‚Â°Ãƒâ€˜Ã¢â‚¬Â¡ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â²ÃƒÂÃ‚Â°ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Âµ.
    */
   const handleExport = async () => {
     if (orgGroups.length === 0) {
@@ -94,7 +82,7 @@ export function SettingsGroupsView() {
     }
   };
 
-  /** Применение проверенного файла: слияние чистыми функциями, персист — стором. */
+  /** ÃƒÂÃ…Â¸Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¼ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Âµ ÃƒÂÃ‚Â¿Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â²ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â³ÃƒÂÃ‚Â¾ Ãƒâ€˜Ã¢â‚¬Å¾ÃƒÂÃ‚Â°ÃƒÂÃ‚Â¹ÃƒÂÃ‚Â»ÃƒÂÃ‚Â°: Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â»ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Âµ Ãƒâ€˜Ã¢â‚¬Â¡ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã¢â‚¬Â¹ÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¸ Ãƒâ€˜Ã¢â‚¬Å¾Ãƒâ€˜Ã†â€™ÃƒÂÃ‚Â½ÃƒÂÃ‚ÂºÃƒâ€˜Ã¢â‚¬Â ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¸, ÃƒÂÃ‚Â¿ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â€šÂ¬Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â¸Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã¢â‚¬Å¡ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¼. */
   const applyImportedFile = (file: OrgGroupsFileDto) => {
     const merged = mergeOrgGroups(orgGroups, file, enterpriseGroupId);
     setOrgGroups(merged.groups);
@@ -103,7 +91,7 @@ export function SettingsGroupsView() {
     toast.success(t('settings.orgGroupsImported', { count: file.groups.length }));
   };
 
-  /** Импорт: выбор файла нативным picker'ом webview, валидация формата на Rust. */
+  /** ÃƒÂÃ‹Å“ÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬Ãƒâ€˜Ã¢â‚¬Å¡: ÃƒÂÃ‚Â²Ãƒâ€˜Ã¢â‚¬Â¹ÃƒÂÃ‚Â±ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬ Ãƒâ€˜Ã¢â‚¬Å¾ÃƒÂÃ‚Â°ÃƒÂÃ‚Â¹ÃƒÂÃ‚Â»ÃƒÂÃ‚Â° ÃƒÂÃ‚Â½ÃƒÂÃ‚Â°Ãƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â²ÃƒÂÃ‚Â½Ãƒâ€˜Ã¢â‚¬Â¹ÃƒÂÃ‚Â¼ picker'ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¼ webview, ÃƒÂÃ‚Â²ÃƒÂÃ‚Â°ÃƒÂÃ‚Â»ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â´ÃƒÂÃ‚Â°Ãƒâ€˜Ã¢â‚¬Â ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‚Â Ãƒâ€˜Ã¢â‚¬Å¾ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¼ÃƒÂÃ‚Â°Ãƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â° ÃƒÂÃ‚Â½ÃƒÂÃ‚Â° Rust. */
   const handleImportPicker = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -133,10 +121,10 @@ export function SettingsGroupsView() {
     }
   };
 
-  // Доступные организации: справочник кэша + организации AD-подключений +
-  // уже входящие в группы (могли исчезнуть из AD после синхронизации).
-  // Имена приводятся к единому виду: варианты с лишними пробелами не должны
-  // выглядеть «двойниками» одной организации.
+  // ÃƒÂÃ¢â‚¬ÂÃƒÂÃ‚Â¾Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã†â€™ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â½Ãƒâ€˜Ã¢â‚¬Â¹ÃƒÂÃ‚Âµ ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â³ÃƒÂÃ‚Â°ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â·ÃƒÂÃ‚Â°Ãƒâ€˜Ã¢â‚¬Â ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¸: Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â¿Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â°ÃƒÂÃ‚Â²ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â‚¬Â¡ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Âº ÃƒÂÃ‚ÂºÃƒâ€˜Ã‚ÂÃƒâ€˜Ã‹â€ ÃƒÂÃ‚Â° + ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â³ÃƒÂÃ‚Â°ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â·ÃƒÂÃ‚Â°Ãƒâ€˜Ã¢â‚¬Â ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¸ AD-ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â´ÃƒÂÃ‚ÂºÃƒÂÃ‚Â»Ãƒâ€˜Ã…Â½Ãƒâ€˜Ã¢â‚¬Â¡ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¹ +
+  // Ãƒâ€˜Ã†â€™ÃƒÂÃ‚Â¶ÃƒÂÃ‚Âµ ÃƒÂÃ‚Â²Ãƒâ€˜Ã¢â‚¬Â¦ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â´Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã¢â‚¬Â°ÃƒÂÃ‚Â¸ÃƒÂÃ‚Âµ ÃƒÂÃ‚Â² ÃƒÂÃ‚Â³Ãƒâ€˜Ã¢â€šÂ¬Ãƒâ€˜Ã†â€™ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¿Ãƒâ€˜Ã¢â‚¬Â¹ (ÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â³ÃƒÂÃ‚Â»ÃƒÂÃ‚Â¸ ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã¢â‚¬Â¡ÃƒÂÃ‚ÂµÃƒÂÃ‚Â·ÃƒÂÃ‚Â½Ãƒâ€˜Ã†â€™Ãƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã…â€™ ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â· AD ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¾Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â»ÃƒÂÃ‚Âµ Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â¸ÃƒÂÃ‚Â½Ãƒâ€˜Ã¢â‚¬Â¦Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â·ÃƒÂÃ‚Â°Ãƒâ€˜Ã¢â‚¬Â ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¸).
+  // ÃƒÂÃ‹Å“ÃƒÂÃ‚Â¼ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½ÃƒÂÃ‚Â° ÃƒÂÃ‚Â¿Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â²ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â´Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã‚Â ÃƒÂÃ‚Âº ÃƒÂÃ‚ÂµÃƒÂÃ‚Â´ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¼Ãƒâ€˜Ã†â€™ ÃƒÂÃ‚Â²ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â´Ãƒâ€˜Ã†â€™: ÃƒÂÃ‚Â²ÃƒÂÃ‚Â°Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â°ÃƒÂÃ‚Â½Ãƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã¢â‚¬Â¹ Ãƒâ€˜Ã‚Â ÃƒÂÃ‚Â»ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‹â€ ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¸ ÃƒÂÃ‚Â¿Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â±ÃƒÂÃ‚ÂµÃƒÂÃ‚Â»ÃƒÂÃ‚Â°ÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¸ ÃƒÂÃ‚Â½ÃƒÂÃ‚Âµ ÃƒÂÃ‚Â´ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â»ÃƒÂÃ‚Â¶ÃƒÂÃ‚Â½Ãƒâ€˜Ã¢â‚¬Â¹
+  // ÃƒÂÃ‚Â²Ãƒâ€˜Ã¢â‚¬Â¹ÃƒÂÃ‚Â³ÃƒÂÃ‚Â»Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â´ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã…â€™ Ãƒâ€šÃ‚Â«ÃƒÂÃ‚Â´ÃƒÂÃ‚Â²ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¹ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚ÂºÃƒÂÃ‚Â°ÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¸Ãƒâ€šÃ‚Â» ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â´ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¹ ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â³ÃƒÂÃ‚Â°ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â·ÃƒÂÃ‚Â°Ãƒâ€˜Ã¢â‚¬Â ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¸.
   const availableOrgs = useMemo(() => {
     const names = new Set<string>();
     for (const org of [...directoryOrgs, ...ldapConfigs.map((config) => config.organization)]) {
@@ -210,139 +198,31 @@ export function SettingsGroupsView() {
           </div>
         )}
 
-        {orgGroups.map((group) => {
-          const pinned = enterpriseGroupId === group.id;
-          return (
-            <section
-              key={group.id}
-              className="border border-border bg-surface rounded-[16px] p-3.5 shadow-sm flex flex-col gap-2.5"
-              aria-label={group.name}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2 font-bold text-[15px] text-foreground min-w-0">
-                  <Groups className="w-4 h-4 text-primary shrink-0" aria-hidden />
-                  <span className="truncate">{group.name}</span>
-                </span>
-                <span className="flex items-center gap-0.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setEnterpriseGroupId(pinned ? null : group.id)}
-                    className={cn(ACTION_BUTTON_CLASS, pinned && 'text-primary hover:text-primary')}
-                    aria-label={t('settings.orgGroupsEnterprise')}
-                    aria-pressed={pinned}
-                    title={t('settings.orgGroupsEnterprise')}
-                  >
-                    <Pin className={cn('w-4 h-4', pinned && 'fill-primary/20')} aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openEdit(group.id)}
-                    className={ACTION_BUTTON_CLASS}
-                    aria-label={t('settings.orgGroupsEdit')}
-                    title={t('settings.orgGroupsEdit')}
-                  >
-                    <Edit className="w-4 h-4" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeOrgGroup(group.id)}
-                    className={cn(ACTION_BUTTON_CLASS, 'hover:text-red-500')}
-                    aria-label={t('settings.orgGroupsDelete')}
-                    title={t('settings.orgGroupsDelete')}
-                  >
-                    <Trash className="w-4 h-4" aria-hidden />
-                  </button>
-                </span>
-              </div>
-
-              {group.orgs.length > 0 ? (
-                <ul className="flex flex-wrap gap-1.5">
-                  {group.orgs.map((org) => (
-                    <li key={org} className="px-2 py-0.5 rounded-[8px] bg-input text-[12px] text-foreground/80">
-                      {org}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="text-[13px] text-muted-foreground">{t('settings.orgGroupsNoOrgs')}</span>
-              )}
-
-              {pinned && (
-                <span className="text-[12px] text-primary font-medium">{t('settings.orgGroupsEnterpriseHint')}</span>
-              )}
-            </section>
-          );
-        })}
+        {orgGroups.map((group) => (
+          <OrgGroupCard
+            key={group.id}
+            group={group}
+            pinned={enterpriseGroupId === group.id}
+            onTogglePin={() => setEnterpriseGroupId(enterpriseGroupId === group.id ? null : group.id)}
+            onEdit={() => openEdit(group.id)}
+            onDelete={() => removeOrgGroup(group.id)}
+          />
+        ))}
       </div>
 
       {editor ? (
-        <div className="border border-border bg-surface rounded-[16px] p-3.5 shadow-sm flex flex-col gap-3">
-          <label className="flex flex-col gap-1.5 text-[13px] font-bold text-foreground" htmlFor="org-group-name">
-            {t('settings.orgGroupsName')}
-            <input
-              id="org-group-name"
-              value={editor.name}
-              onChange={(event) => setEditor({ ...editor, name: event.target.value })}
-              placeholder={t('settings.orgGroupsNamePlaceholder')}
-              className="px-3 py-2 rounded-[12px] bg-input text-[14px] font-normal text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-shadow"
-            />
-          </label>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[13px] font-bold text-foreground">{t('settings.orgGroupsPickOrgs')}</span>
-            {availableOrgs.length > 0 ? (
-              <div className="max-h-[220px] overflow-y-auto flex flex-col gap-1 pr-1">
-                {availableOrgs.map((org) => {
-                  const checked = editor.orgs.includes(org);
-                  return (
-                    <button
-                      key={org}
-                      type="button"
-                      onClick={() => toggleOrg(org)}
-                      // Выделение — цветом плашки и текста + галочкой: без смены
-                      // начертания, чтобы текст не «двигался» при отметке.
-                      className={cn(ORG_ROW_CLASS, checked && 'bg-primary/10 text-primary')}
-                      aria-pressed={checked}
-                    >
-                      <span className="truncate">{org}</span>
-                      {checked && <Check className="w-4 h-4 shrink-0" aria-hidden />}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <span className="text-[13px] text-muted-foreground px-1">{t('settings.orgGroupsNoOrgsAvailable')}</span>
-            )}
-          </div>
-
-          {error && (
-            <span className="text-[13px] text-red-500 font-medium px-1" role="alert">
-              {error}
-            </span>
-          )}
-
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setEditor(null);
-                setError(null);
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-[13px] font-bold text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors outline-none cursor-pointer"
-            >
-              <X className="w-4 h-4" aria-hidden />
-              {t('settings.orgGroupsCancel')}
-            </button>
-            <button
-              type="button"
-              onClick={submit}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] bg-primary text-white text-[13px] font-bold hover:bg-primary-hover transition-colors outline-none cursor-pointer"
-            >
-              <Check className="w-4 h-4" aria-hidden />
-              {t('settings.orgGroupsSave')}
-            </button>
-          </div>
-        </div>
+        <OrgGroupEditor
+          editor={editor}
+          availableOrgs={availableOrgs}
+          error={error}
+          onNameChange={(name) => setEditor({ ...editor, name })}
+          onToggleOrg={toggleOrg}
+          onCancel={() => {
+            setEditor(null);
+            setError(null);
+          }}
+          onSubmit={submit}
+        />
       ) : (
         <div className="flex flex-col gap-2">
           {exportedPath && (
