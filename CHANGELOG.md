@@ -26,6 +26,8 @@ follows [Semantic Versioning](https://semver.org/).
   the tab or organization filter resets the previous selection.
 - Job title, department and organization are shown on separate lines in the
   contact header instead of a dot-separated sentence.
+- English locale transliterates person names according to the company table;
+  QR/vCard uses the same English name.
 
 ### Changed
 

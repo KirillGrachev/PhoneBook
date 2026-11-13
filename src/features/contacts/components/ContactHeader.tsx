@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { devLog } from '@/lib/devlog';
+import { personNameForLanguage } from '@/lib/transliteration';
 import type { Contact } from '@/types';
 
 interface ContactHeaderProps {
@@ -17,21 +18,22 @@ interface ContactHeaderProps {
 
 /** Шапка карточки контакта: аватар, ФИО, действия, «в мои контакты». */
 export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActionClick }: ContactHeaderProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const displayName = personNameForLanguage(contact.fullName, i18n.language);
   const details = [contact.jobTitle, contact.department, contact.organization].filter((value): value is string =>
     Boolean(value && value.trim()),
   );
 
   const handleToggleSave = () => {
-    devLog('favorite', { id: contact.id, name: contact.fullName, saved: !isSaved });
+    devLog('favorite', { id: contact.id, name: displayName, saved: !isSaved });
     onToggleSave(contact.id);
     if (isSaved) {
-      toast.success(t('removedFromContacts', { name: contact.fullName }), {
+      toast.success(t('removedFromContacts', { name: displayName }), {
         id: 'favorite-toggle-toast',
         description: t('contactRemovedDesc'),
       });
     } else {
-      toast.success(t('addedToContacts', { name: contact.fullName }), {
+      toast.success(t('addedToContacts', { name: displayName }), {
         id: 'favorite-toggle-toast',
         description: t('contactSavedDesc'),
       });
@@ -41,10 +43,10 @@ export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActio
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8 mb-6 sm:mb-8 pb-6 border-b border-border mt-4 md:mt-0">
       <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-6">
-        <Avatar fullName={contact.fullName} size="md" className="shadow-sm ring-4 ring-surface" />
+        <Avatar fullName={displayName} size="md" className="shadow-sm ring-4 ring-surface" />
         <div className="min-w-0">
           <h2 className="text-[22px] sm:text-[28px] font-semibold text-foreground mb-1.5 leading-tight break-words select-text">
-            {contact.fullName}
+            {displayName}
           </h2>
           {details.length > 0 && (
             <div className="text-muted-foreground text-[15px] leading-snug select-text">

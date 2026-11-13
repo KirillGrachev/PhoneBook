@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
 import { vcardApi } from '@/api/directory';
 import { devLog } from '@/lib/devlog';
+import { personNameForLanguage } from '@/lib/transliteration';
 import { generateVcard } from '@/lib/vcard';
 import { getContactsService, isMockMode } from '@/services/ContactsService';
 import { useAppStore } from '@/store/useAppStore';
@@ -25,7 +27,9 @@ export function useContact(id: string | null) {
  * используется локальный fallback.
  */
 export function useVcard(contact: Contact | null | undefined): string {
+  const { i18n } = useTranslation();
   const [vcard, setVcard] = useState('');
+  const displayName = contact ? personNameForLanguage(contact.fullName, i18n.language) : '';
   // Вкладка предприятия не глобальной версии: в QR подставляется внешний
   // номер IP-телефонии (внутренний снаружи ненабираем). В глобальной
   // версии и на остальных вкладках — обычное поведение.
@@ -38,7 +42,8 @@ export function useVcard(contact: Contact | null | undefined): string {
       return;
     }
 
-    const fallback = generateVcard(contact, { preferExternalPhone });
+    const vcardContact = { ...contact, fullName: displayName };
+    const fallback = generateVcard(vcardContact, { preferExternalPhone });
     devLog('vcard', {
       mode: activeTab,
       preferExternalPhone,
@@ -55,7 +60,7 @@ export function useVcard(contact: Contact | null | undefined): string {
     vcardApi
       .generate({
         id: contact.id,
-        fullName: contact.fullName,
+        fullName: displayName,
         organization: contact.organization ?? null,
         department: contact.department ?? null,
         jobTitle: contact.jobTitle ?? null,
@@ -80,7 +85,7 @@ export function useVcard(contact: Contact | null | undefined): string {
     return () => {
       cancelled = true;
     };
-  }, [contact, preferExternalPhone]);
+  }, [contact, displayName, preferExternalPhone]);
 
   return vcard;
 }

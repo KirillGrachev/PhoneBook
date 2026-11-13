@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 import { systemApi } from '@/api/directory';
 import { devLog } from '@/lib/devlog';
+import { personNameForLanguage } from '@/lib/transliteration';
 import { DetailRow } from '@/components/DetailRow';
 import { IconButton } from '@/components/ui/IconButton';
 import { ActionConfirmModal } from '@/components/ActionConfirmModal';
@@ -80,10 +81,11 @@ export function ContactDetails({
   onOfficeClick,
   onManagerClick,
 }: ContactDetailsProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const animationsEnabled = useAppStore((state) => state.animationsEnabled);
 
   const { data: contact, isLoading, isError } = useContact(contactId);
+  const displayName = contact ? personNameForLanguage(contact.fullName, i18n.language) : '';
 
   const [isVsimOpen, setIsVsimOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
@@ -265,7 +267,7 @@ export function ContactDetails({
                         <DetailRow
                           icon={UserRound}
                           label={t('manager')}
-                          value={contact.manager}
+                          value={personNameForLanguage(contact.manager, i18n.language)}
                           onClick={
                             contact.manager && onManagerClick
                               ? () => onManagerClick?.(contact.manager as string, contact.managerId)
@@ -314,7 +316,7 @@ export function ContactDetails({
                     </button>
                     <div className="flex flex-col gap-3 text-center sm:text-left min-w-0">
                       <p className="text-[15px] font-medium text-foreground leading-snug lg:max-w-[400px] break-words">
-                        {t('vsimInstruction', { name: contact.fullName })}
+                        {t('vsimInstruction', { name: displayName })}
                       </p>
                     </div>
                   </div>
@@ -325,7 +327,7 @@ export function ContactDetails({
             <ActionConfirmModal
               isOpen={Boolean(pendingAction)}
               type={pendingAction?.type ?? null}
-              fullName={contact.fullName}
+              fullName={displayName}
               email={effectiveEmail}
               onConfirm={() => void confirmRunAction()}
               onCancel={() => setPendingAction(null)}
@@ -333,7 +335,7 @@ export function ContactDetails({
 
             <EmailPromptModal
               isOpen={emailPromptOpen}
-              fullName={contact.fullName}
+              fullName={displayName}
               initialEmail={emailOverrides[contact.id]}
               onCancel={() => setEmailPromptOpen(false)}
               onSubmit={handleEmailSubmit}

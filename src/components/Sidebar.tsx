@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { BookmarkMinus, Briefcase, Refresh, SearchX } from '@/components/icons';
 
 import { useMotionPresets } from '@/lib/motionPresets';
+import { personNameForLanguage } from '@/lib/transliteration';
 import { cn } from '@/lib/utils';
 import type { Contact, TabType } from '@/types';
 
@@ -58,7 +59,7 @@ export function Sidebar({
   hasMore = false,
   isFetchingMore = false,
 }: SidebarProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const presets = useMotionPresets();
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -275,7 +276,9 @@ export function Sidebar({
                           isSelected ? 'bg-primary text-white shadow-sm' : 'hover:bg-input text-foreground',
                         )}
                       >
-                        <div className="font-semibold text-[15px] truncate leading-tight pr-7">{contact.fullName}</div>
+                        <div className="font-semibold text-[15px] truncate leading-tight pr-7">
+                          {personNameForLanguage(contact.fullName, i18n.language)}
+                        </div>
                         <div
                           className={cn(
                             'text-[13px] truncate font-normal pr-7',
