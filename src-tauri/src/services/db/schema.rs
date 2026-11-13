@@ -149,10 +149,17 @@ CREATE TABLE IF NOT EXISTS sync_meta (
 /// Каждый зонд — пустой `SELECT`: при отсутствии колонки он падает на этапе
 /// подготовки запроса, а на здоровой схеме не стоит ничего.
 const STRUCTURE_PROBES: &[&str] = &[
-    "SELECT last_usn FROM sync_meta LIMIT 0",       // v5
-    "SELECT kind FROM sources LIMIT 0",             // v4
-    "SELECT manager_guid FROM users LIMIT 0",       // v3
-    "SELECT object_guid FROM users_substr LIMIT 0", // v2
+    "SELECT last_usn FROM sync_meta LIMIT 0", // v5 delta sync
+    "SELECT last_full_sync_at FROM sync_meta LIMIT 0",
+    "SELECT kind FROM sources LIMIT 0", // v4 external sources
+    "SELECT manager_guid FROM users LIMIT 0", // v3 manager link
+    "SELECT pager FROM users LIMIT 0",  // TrueConf ID
+    "SELECT usn_changed FROM users LIMIT 0", // delta bookkeeping
+    "SELECT updated_at FROM users LIMIT 0",
+    "SELECT sort_key FROM users LIMIT 0",
+    "SELECT object_guid FROM users_substr LIMIT 0", // v2 substring index
+    "SELECT hay FROM users_substr LIMIT 0",
+    "SELECT tokens FROM users_fts LIMIT 0", // full-text index
 ];
 
 /// Соответствует ли структура таблиц актуальной версии схемы.

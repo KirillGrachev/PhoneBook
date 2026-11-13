@@ -20,6 +20,8 @@ follows [Semantic Versioning](https://semver.org/).
 - Property test: the Yealink XML parser never panics on arbitrary input.
 - LDAP controller failover: multiple comma/semicolon-separated URLs are tried in order.
 - Playwright visual-regression baseline for the main light-theme window.
+- SQLite schema self-heal now also detects missing contact columns such as
+  `pager`, so an old cache no longer requires manual deletion.
 
 ### Changed
 
