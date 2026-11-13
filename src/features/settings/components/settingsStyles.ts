@@ -2,7 +2,7 @@
 
 /** Строка-переход в навигационных списках настроек. */
 export const NAV_ITEM_CLASS =
-  'group w-full flex items-center justify-between border border-border bg-surface hover:bg-surface-hover outline-none px-4 py-2.5 rounded-[16px] transition-all duration-300 shadow-sm cursor-pointer';
+  'group w-full flex items-center justify-between border border-border bg-surface hover:bg-surface-hover outline-none px-4 py-4 rounded-[16px] transition-all duration-300 shadow-sm cursor-pointer';
 
 /** Кнопка действия внутри карточки настроек (экспорт, загрузка файла и т.п.). */
 export const ACTION_BUTTON_CLASS =

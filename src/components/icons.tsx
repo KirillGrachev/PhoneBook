@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -7,9 +7,9 @@ import { AppIcon, type AppIconName } from './AppIcon';
 /**
  * Иконки приложения.
  *
- * Имена совпадают с `lucide-react`, чтобы замена не затрагивала разметку.
- * Для иконок, которых нет в новом наборе (крестики, шевроны, плюсы и т.п.),
- * сохраняются прежние lucide-компоненты.
+ * Имена совпадают с прежними экспортами, чтобы замена не затрагивала разметку.
+ * Готовые иконки из нового набора идут через `AppIcon`; для иконок, которых
+ * в наборе пока нет, временно используется эмодзи-заглушка.
  */
 export interface AppIconProps {
   className?: string;
@@ -28,65 +28,103 @@ function createIcon(name: AppIconName, baseClassName?: string): IconComponent {
   };
 }
 
-export const ArrowLeftRight = createIcon('arrows');
-export const Briefcase = createIcon('id-card');
+/**
+ * Размер эмодзи берём из тех же `w-*`/`h-*` классов, что передают вызывающие
+ * компоненты: эмодзи рисуется шрифтом, поэтому ему нужен `font-size`, а не
+ * только ширина/высота контейнера.
+ */
+function dimensionFromClassName(className?: string): string | undefined {
+  if (!className) {
+    return undefined;
+  }
+
+  const arbitrary = className.match(/(?:^|\s)[wh]-\[(\d+(?:\.\d+)?)px\]/);
+  if (arbitrary) {
+    return `${arbitrary[1]}px`;
+  }
+
+  const scale = className.match(/(?:^|\s)[wh]-(\d+(?:\.\d+)?)(?=\s|$)/);
+  if (scale) {
+    return `${Number(scale[1]) * 4}px`;
+  }
+
+  return undefined;
+}
+
+function createEmoji(glyph: string, baseClassName?: string): IconComponent {
+  return function Emoji({ className, size, 'aria-label': ariaLabel }: AppIconProps) {
+    const dimension =
+      typeof size === 'number' ? `${size}px` : typeof size === 'string' ? size : dimensionFromClassName(className);
+    const style: CSSProperties | undefined = dimension
+      ? { width: dimension, height: dimension, fontSize: dimension }
+      : undefined;
+
+    return (
+      <span
+        className={cn('app-emoji', baseClassName, className)}
+        style={style}
+        role={ariaLabel ? 'img' : undefined}
+        aria-label={ariaLabel}
+        aria-hidden={ariaLabel ? undefined : true}
+      >
+        {glyph}
+      </span>
+    );
+  };
+}
+
+// Новый набор иконок.
+export const ArrowLeft = createIcon('arrow-left');
+export const ArrowRight = createIcon('arrow-right');
+export const BookmarkCheck = createIcon('contact');
+export const BookmarkMinus = createIcon('contact-remove');
+export const Briefcase = createIcon('job-title');
 export const Building2 = createIcon('building');
+export const ClearInput = createIcon('clear-input');
 export const Copy = createIcon('copy');
-export const DatabaseZap = createIcon('address-book');
-export const Download = createIcon('frame-download');
-export const FileDown = createIcon('frame-download');
-export const FileStack = createIcon('layers');
-export const FileUp = createIcon('frame-upload');
+export const Edit = createIcon('edit');
+export const Export = createIcon('export');
 export const Filter = createIcon('filter');
-export const FlaskConical = createIcon('rocket');
-export const FolderOpen = createIcon('folder-upload');
+export const FolderUpload = createIcon('folder-upload');
+export const Groups = createIcon('groups');
 export const HelpCircle = createIcon('help');
-export const Info = createIcon('info');
-export const KeyRound = createIcon('shield-lock');
-export const Layers = createIcon('layers');
+export const Import = createIcon('import');
+export const Lock = createIcon('lock');
 export const Mail = createIcon('mail');
 export const MailWarning = createIcon('mail');
-export const MapPin = createIcon('map-pin');
+export const Main = createIcon('main');
+export const MapPin = createIcon('office');
+export const MessageCircle = createIcon('chat');
 export const Monitor = createIcon('monitor');
-export const MonitorSmartphone = createIcon('monitor');
 export const Moon = createIcon('moon');
-export const Network = createIcon('org');
-export const Pencil = createIcon('text-scan');
-export const Pin = createIcon('map-pin');
-export const PlugZap = createIcon('terminal');
-export const RefreshCw = createIcon('refresh');
+export const Network = createIcon('department');
+export const Phone = createIcon('phone');
+export const Plus = createIcon('plus');
+export const QrCode = createIcon('qr-code');
+export const Refresh = createIcon('refresh');
 export const Search = createIcon('search');
-export const SearchX = createIcon('search');
 export const Settings = createIcon('settings');
 export const Settings2 = createIcon('settings');
-export const ShieldAlert = createIcon('shield-off');
-export const Smartphone = createIcon('mobile');
+export const ShieldAlert = createIcon('shield-alert');
 export const Sun = createIcon('sun');
 export const Terminal = createIcon('terminal');
-export const TextScan = createIcon('text-scan');
-export const Trash2 = createIcon('trash');
-export const Upload = createIcon('frame-upload');
-export const UserRound = createIcon('user');
-export const UserPlus = createIcon('user-plus');
-export const UsersRound = createIcon('frame-users');
+export const Trash = createIcon('trash');
+export const UserRound = createIcon('manager');
+
+// Временные эмодзи-заглушки для иконок, которых ещё нет в наборе.
+export const AlertTriangle = createEmoji('⚠️');
+export const Layers = createEmoji('🗂️');
+export const Pin = createEmoji('📌');
+export const SearchX = createEmoji('🔎');
 
 export {
-  AlertTriangle,
-  ArrowLeft,
-  BookmarkCheck,
-  BookmarkMinus,
-  BookmarkPlus,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Copy as Restore,
   Loader2,
-  MessageCircle,
   Minus,
-  Palette,
-  Phone,
-  Plus,
   Square,
-  TriangleAlert,
   X,
 } from 'lucide-react';

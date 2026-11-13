@@ -51,13 +51,13 @@ export function SettingsInterfaceView() {
               aria-checked={theme === value}
               onClick={() => setTheme(value)}
               className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-[12px] text-[13px] transition-all outline-none mx-0.5 cursor-pointer',
+                'flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-[12px] text-[13px] font-medium transition-all outline-none mx-0.5 cursor-pointer',
                 theme === value
-                  ? 'bg-white text-black shadow-[0_2px_8px_rgba(0,0,0,0.12)] dark:bg-zinc-700 dark:text-white font-semibold'
+                  ? 'bg-primary text-primary-foreground shadow-[0_2px_8px_rgba(0,0,0,0.12)]'
                   : 'text-foreground/70 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10',
               )}
             >
-              <Icon className="w-4 h-4" aria-hidden />
+              <Icon className="w-6 h-6" aria-hidden />
               <span className="leading-none">{t(labelKey)}</span>
             </button>
           ))}
@@ -79,7 +79,7 @@ export function SettingsInterfaceView() {
               className={cn(
                 'flex-1 flex items-center justify-center gap-2 py-2 rounded-[12px] text-[14px] transition-all outline-none mx-0.5 font-medium cursor-pointer',
                 language === code
-                  ? 'bg-white text-black shadow-[0_2px_8px_rgba(0,0,0,0.12)] dark:bg-zinc-700 dark:text-white'
+                  ? 'bg-primary text-primary-foreground shadow-[0_2px_8px_rgba(0,0,0,0.12)]'
                   : 'text-foreground/80 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10',
               )}
             >

@@ -19,7 +19,7 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
-    host: devHost || false,
+    host: devHost || '127.0.0.1',
     hmr: devHost ? { protocol: 'ws', host: devHost, port: 1421 } : undefined,
     watch: {
       // Пересборка не должна реагировать на изменения Rust-половины.

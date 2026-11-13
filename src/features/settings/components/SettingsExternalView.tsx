@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FolderOpen, RefreshCw, X } from '@/components/icons';
+import { FolderUpload, Refresh, X } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -13,6 +13,8 @@ import { flushConfigSave } from '@/store/configStorage';
 import { useAppStore } from '@/store/useAppStore';
 
 import { ACTION_BUTTON_CLASS, SWITCH_ROW_CLASS } from './settingsStyles';
+
+const EXTERNAL_ACTION_CLASS = cn(ACTION_BUTTON_CLASS, 'h-11 flex-1 min-w-[180px] justify-center px-4 text-[15px]');
 
 /**
  * External phone book files (Yealink IPPhoneBook XML). Every selected file is
@@ -179,18 +181,18 @@ export function SettingsExternalView() {
             </span>
           )}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5">
             <button
               type="button"
               onClick={() => void handlePickExternalFiles()}
               disabled={pickDisabled}
-              className={ACTION_BUTTON_CLASS}
+              className={EXTERNAL_ACTION_CLASS}
             >
-              <FolderOpen className="w-4 h-4" aria-hidden />
+              <FolderUpload className="w-[18px] h-[18px]" aria-hidden />
               {t('settings.externalChoose')}
             </button>
-            <button type="button" onClick={handleLoadNow} disabled={loadNowDisabled} className={ACTION_BUTTON_CLASS}>
-              <RefreshCw className={cn('w-4 h-4', externalBusy && 'animate-spin')} aria-hidden />
+            <button type="button" onClick={handleLoadNow} disabled={loadNowDisabled} className={EXTERNAL_ACTION_CLASS}>
+              <Refresh className={cn('w-[18px] h-[18px]', externalBusy && 'animate-spin')} aria-hidden />
               {t('settings.externalLoadNow')}
             </button>
           </div>

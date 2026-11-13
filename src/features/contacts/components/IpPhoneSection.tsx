@@ -1,4 +1,3 @@
-import { Phone } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { CopyButton } from '@/components/CopyButton';
@@ -15,10 +14,6 @@ export function IpPhoneSection({ ipPhone, fullIpPhone }: IpPhoneSectionProps) {
 
   return (
     <div className="w-full min-w-0 bg-primary text-white rounded-[20px] p-5 sm:p-6 shadow-sm mb-6 sm:mb-8 overflow-hidden relative">
-      <div className="absolute -right-4 -top-4 opacity-10 pointer-events-none" aria-hidden>
-        <Phone className="w-32 h-32" />
-      </div>
-
       <div className="flex flex-col sm:flex-row relative z-10 w-full justify-stretch items-stretch text-center">
         {ipPhone && (
           <div className="flex-1 flex flex-col gap-1.5 min-w-0 items-center justify-center pb-6 sm:pb-0 sm:px-4 md:px-6 lg:px-8">

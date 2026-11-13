@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FlaskConical, Loader2, MonitorSmartphone, Plus, RefreshCw, UsersRound } from '@/components/icons';
+import { Loader2, Monitor, Plus, Refresh, Trash } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -225,14 +225,9 @@ export function SettingsAdView() {
       <div className="flex flex-col gap-6 pb-6">
         {/* Тестовый режим — доступен везде (в браузере включает демо-данные) */}
         <div className="flex items-center justify-between border border-border bg-surface p-4 rounded-[16px] shadow-sm shrink-0">
-          <div className="flex items-center gap-3 pr-4">
-            <div className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-[10px] bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
-              <FlaskConical className="w-[18px] h-[18px]" aria-hidden />
-            </div>
-            <div className="flex flex-col gap-0.5 ml-1">
-              <span className="text-[16px] font-bold text-foreground">{t('testMode')}</span>
-              <span className="text-[13px] text-muted-foreground leading-snug">{t('testModeDesc')}</span>
-            </div>
+          <div className="flex flex-col gap-0.5 pr-4">
+            <span className="text-[16px] font-bold text-foreground">{t('testMode')}</span>
+            <span className="text-[14px] text-muted-foreground leading-snug">{t('testModeDesc')}</span>
           </div>
           <Switch
             checked={testMode}
@@ -245,12 +240,10 @@ export function SettingsAdView() {
         {!desktop && (
           <div className="flex flex-col gap-3 p-4 border border-border bg-surface rounded-[16px] shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-[10px] bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                <MonitorSmartphone className="w-[18px] h-[18px]" aria-hidden />
-              </div>
+              <Monitor className="w-6 h-6 text-primary shrink-0" aria-hidden />
               <span className="text-[15px] font-bold text-foreground">{t('browserMode.adTitle')}</span>
             </div>
-            <p className="text-[13px] text-muted-foreground leading-relaxed">{t('browserMode.adDesc')}</p>
+            <p className="text-[14px] text-muted-foreground leading-relaxed">{t('browserMode.adDesc')}</p>
           </div>
         )}
 
@@ -281,21 +274,21 @@ export function SettingsAdView() {
               <button
                 type="button"
                 onClick={addOrg}
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-[16px] border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-surface transition-all cursor-pointer text-[14px] font-semibold"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-[16px] border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-surface transition-all cursor-pointer text-[15px] font-semibold"
               >
-                <Plus className="w-4 h-4" aria-hidden />
+                <Plus className="w-[18px] h-[18px]" aria-hidden />
                 {t('settings.ad.addOrg')}
               </button>
             </section>
 
             {/* Синхронизация */}
             <section className="flex flex-col gap-3 p-4 border border-border bg-surface rounded-[16px] shadow-sm">
-              <h3 className="text-[13px] font-bold text-muted-foreground uppercase">
+              <h3 className="text-[14px] font-bold text-muted-foreground uppercase">
                 {t('settings.ad.lastSyncTitle')}
               </h3>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[14px] font-semibold text-foreground">{t('settings.ad.syncInterval')}</span>
+                <span className="text-[15px] font-semibold text-foreground">{t('settings.ad.syncInterval')}</span>
                 <Select
                   value={syncIntervalHours}
                   onChange={(hours) => setSyncIntervalHours(hours)}
@@ -336,12 +329,12 @@ export function SettingsAdView() {
                 type="button"
                 onClick={() => void syncNow()}
                 disabled={testMode || syncRunning}
-                className={primaryButton(testMode || syncRunning, 'w-full py-2.5 mt-1 text-[14px]')}
+                className={primaryButton(testMode || syncRunning, 'w-full h-11 mt-1 text-[15px]')}
               >
                 {syncRunning ? (
-                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  <Loader2 className="w-[18px] h-[18px] animate-spin" aria-hidden />
                 ) : (
-                  <RefreshCw className="w-4 h-4" aria-hidden />
+                  <Refresh className="w-[18px] h-[18px]" aria-hidden />
                 )}
                 {syncRunning ? t('sync.running') : t('sync.now')}
               </button>
@@ -349,20 +342,20 @@ export function SettingsAdView() {
 
             {/* Уборка дубликатов учёток */}
             <section className="flex flex-col gap-3 p-4 border border-border bg-surface rounded-[16px] shadow-sm">
-              <h3 className="text-[13px] font-bold text-muted-foreground uppercase">
+              <h3 className="text-[14px] font-bold text-muted-foreground uppercase">
                 {t('settings.ad.duplicatesTitle')}
               </h3>
-              <p className="text-[13px] text-muted-foreground leading-relaxed">{t('settings.ad.duplicatesDesc')}</p>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{t('settings.ad.duplicatesDesc')}</p>
               <button
                 type="button"
                 onClick={() => void handleDuplicatesCheck()}
                 disabled={dupBusy !== null || testMode}
-                className={primaryButton(dupBusy !== null || testMode, 'w-full py-2.5 text-[14px]')}
+                className={primaryButton(dupBusy !== null || testMode, 'w-full h-11 text-[15px]')}
               >
                 {dupBusy === 'preview' ? (
-                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  <Loader2 className="w-[18px] h-[18px] animate-spin" aria-hidden />
                 ) : (
-                  <UsersRound className="w-4 h-4" aria-hidden />
+                  <Trash className="w-[18px] h-[18px]" aria-hidden />
                 )}
                 {t('settings.ad.duplicatesCheck')}
               </button>
@@ -411,7 +404,7 @@ export function SettingsAdView() {
         )}
 
         <div className="mt-2 p-4 border border-blue-500/20 bg-blue-500/5 rounded-[12px] shrink-0">
-          <p className="text-[13px] text-blue-500 leading-relaxed font-medium">{t('adSettingsInfo')}</p>
+          <p className="text-[15px] text-blue-500 leading-relaxed font-medium">{t('adSettingsInfo')}</p>
         </div>
       </div>
 

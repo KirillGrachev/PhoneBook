@@ -21,6 +21,13 @@ follows [Semantic Versioning](https://semver.org/).
 - LDAP controller failover: multiple comma/semicolon-separated URLs are tried in order.
 - Playwright visual-regression baseline for the main light-theme window.
 
+### Changed
+
+- New 34-icon set with currentColor masks; contact card, settings, external
+  files, groups and modals now use the new visual language.
+- Tauri 2.12.5, webview2-com 0.39.1 and windows 0.62.2.
+- The visual-regression baseline now reflects the new icon set.
+
 ## [0.2.5] - 2026-11-12
 
 ### Added

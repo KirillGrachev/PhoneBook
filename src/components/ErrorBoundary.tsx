@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from '@/components/icons';
+import { AlertTriangle, Refresh } from '@/components/icons';
 
 import i18n from '@/lib/i18n';
 import { logFrontend } from '@/lib/devlog';
@@ -80,7 +80,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={this.handleReload}
               className="flex items-center justify-center gap-2 px-4 py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors flex-1 cursor-pointer"
             >
-              <RefreshCw className="w-4 h-4" aria-hidden />
+              <Refresh className="w-4 h-4" aria-hidden />
               {i18n.language === 'en' ? 'Restart' : 'Перезапустить'}
             </button>
           </div>

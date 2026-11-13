@@ -21,8 +21,8 @@ export function SettingsAdTlsFields({ config, onChange }: SettingsAdTlsFieldsPro
     <div className="flex flex-col gap-2 pt-1">
       <label className={cn('flex items-center justify-between gap-3', ldaps ? 'opacity-60' : 'cursor-pointer')}>
         <span className="flex flex-col">
-          <span className="text-[14px] font-semibold text-foreground">{t('settings.ad.useStartTls')}</span>
-          <span className="text-[12px] text-muted-foreground">
+          <span className="text-[15px] font-semibold text-foreground">{t('settings.ad.useStartTls')}</span>
+          <span className="text-[13px] text-muted-foreground">
             {ldaps ? t('settings.ad.startTlsNotNeeded') : t('settings.ad.useStartTlsDesc')}
           </span>
         </span>
@@ -35,11 +35,11 @@ export function SettingsAdTlsFields({ config, onChange }: SettingsAdTlsFieldsPro
       </label>
       <label className="flex items-center justify-between gap-3 cursor-pointer">
         <span className="flex flex-col">
-          <span className="text-[14px] font-semibold text-foreground flex items-center gap-1.5">
+          <span className="text-[15px] font-semibold text-foreground flex items-center gap-1.5">
             <ShieldAlert className="w-4 h-4 text-amber-500" aria-hidden />
             {t('settings.ad.allowInvalidTls')}
           </span>
-          <span className="text-[12px] text-muted-foreground">{t('settings.ad.allowInvalidTlsDesc')}</span>
+          <span className="text-[13px] text-muted-foreground">{t('settings.ad.allowInvalidTlsDesc')}</span>
         </span>
         <Switch
           checked={config.allowInvalidTls}
