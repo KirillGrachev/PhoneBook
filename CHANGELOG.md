@@ -40,6 +40,9 @@ follows [Semantic Versioning](https://semver.org/).
 - The visual-regression baseline now reflects the new icon set and font.
 - Removed the lucide-react dependency; control icons (check, chevrons, close,
   spinner, window controls) are inline SVG now.
+- Removed the unused `base64` Rust dependency.
+- Nightly coverage creates its report directory before `cargo llvm-cov`, so
+  the lcov artifact is uploaded instead of warning about a missing path.
 
 ## [0.2.5] - 2026-11-12
 
