@@ -46,6 +46,7 @@ follows [Semantic Versioning](https://semver.org/).
 - Header search/help icons are 24 px and the settings gear is 22 px, matching
   the filter control.
 - SettingsGroupsView is split into OrgGroupCard and OrgGroupEditor components.
+- ContactDetails is split into ContactInfoCard and CompanyInfoCard components.
 
 ## [0.2.5] - 2026-11-12
 
