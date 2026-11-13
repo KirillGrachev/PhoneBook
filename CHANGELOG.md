@@ -22,6 +22,8 @@ follows [Semantic Versioning](https://semver.org/).
 - Playwright visual-regression baseline for the main light-theme window.
 - SQLite schema self-heal now also detects missing contact columns such as
   `pager`, so an old cache no longer requires manual deletion.
+- The contact card closes when a search/filter returns no matches, and changing
+  the tab or organization filter resets the previous selection.
 
 ### Changed
 
