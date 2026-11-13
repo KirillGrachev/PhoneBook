@@ -6,10 +6,11 @@ import { cn } from '@/lib/utils';
 interface IconButtonProps extends ComponentProps<'button'> {
   icon: IconComponent;
   className?: string;
+  iconClassName?: string;
 }
 
 /** Круглая иконочная кнопка с единым стилем нажатия/ховера. */
-export function IconButton({ icon: Icon, className, type = 'button', ...props }: IconButtonProps) {
+export function IconButton({ icon: Icon, className, iconClassName, type = 'button', ...props }: IconButtonProps) {
   return (
     <button
       type={type}
@@ -24,7 +25,7 @@ export function IconButton({ icon: Icon, className, type = 'button', ...props }:
       )}
       {...props}
     >
-      <Icon className="w-6 h-6 pointer-events-none" aria-hidden />
+      <Icon className={cn('pointer-events-none', iconClassName ?? 'w-6 h-6')} aria-hidden />
     </button>
   );
 }

@@ -1,5 +1,5 @@
 import type { IconComponent } from '@/components/icons';
-import { ChevronRight } from '@/components/icons';
+import { ArrowRight } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { CopyButton } from '@/components/CopyButton';
@@ -54,8 +54,8 @@ export function DetailRow({
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
-      <div className="w-[36px] h-[36px] rounded-[10px] flex items-center justify-center shrink-0 transition-colors bg-primary/10 text-primary">
-        <Icon className="w-[18px] h-[18px]" aria-hidden />
+      <div className="w-[36px] h-[36px] flex items-center justify-center shrink-0 text-primary">
+        <Icon className="w-[36px] h-[36px]" aria-hidden />
       </div>
       <div className="flex-1 overflow-hidden">
         <div className="text-[12px] font-semibold text-muted-foreground mb-0.5 transition-colors">{label}</div>
@@ -80,7 +80,7 @@ export function DetailRow({
         />
       )}
       {showArrow && value && (
-        <ChevronRight
+        <ArrowRight
           className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0"
           aria-hidden
         />

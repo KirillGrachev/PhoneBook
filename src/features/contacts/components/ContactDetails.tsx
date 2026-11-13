@@ -8,8 +8,8 @@ import {
   Mail,
   MapPin,
   Network,
-  Smartphone,
-  TextScan,
+  Phone,
+  QrCode,
   UserRound,
 } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
@@ -196,7 +196,7 @@ export function ContactDetails({
                     {t('contactInfo')}
                   </h3>
                   <div className="bg-surface rounded-[16px] shadow-sm ring-1 ring-border/50 overflow-hidden transition-colors">
-                    <DetailRow icon={Smartphone} label={t('mobilePhone')} value={contact.mobilePhone} copyable />
+                    <DetailRow icon={Phone} label={t('mobilePhone')} value={contact.mobilePhone} copyable />
                     <div className="h-px bg-border ml-[56px]" />
                     <DetailRow
                       icon={Mail}
@@ -308,7 +308,7 @@ export function ContactDetails({
                         тёмный круг с белой иконкой — виден на любом фоне */}
                       <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                         <span className="bg-slate-900/90 p-4 rounded-full text-white shadow-xl ring-1 ring-white/30 scale-90 group-hover:scale-100 transition-transform duration-300">
-                          <TextScan className="w-7 h-7" aria-hidden />
+                          <QrCode className="w-7 h-7" aria-hidden />
                         </span>
                       </span>
                     </button>

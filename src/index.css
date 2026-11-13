@@ -50,6 +50,20 @@
     -webkit-mask-size: contain;
     mask-size: contain;
   }
+
+  .app-emoji {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+    flex: none;
+    vertical-align: middle;
+    line-height: 1;
+    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    font-style: normal;
+    font-weight: 400;
+  }
 }
 
 @utility no-ring {

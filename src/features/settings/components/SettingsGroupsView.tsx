@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Check, Download, Layers, Pencil, Pin, Plus, Trash2, Upload, X } from '@/components/icons';
+import { Check, Edit, Export, Groups, Import, Pin, Plus, Trash, X } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -220,7 +220,7 @@ export function SettingsGroupsView() {
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2 font-bold text-[15px] text-foreground min-w-0">
-                  <Layers className="w-4 h-4 text-primary shrink-0" aria-hidden />
+                  <Groups className="w-4 h-4 text-primary shrink-0" aria-hidden />
                   <span className="truncate">{group.name}</span>
                 </span>
                 <span className="flex items-center gap-0.5 shrink-0">
@@ -241,7 +241,7 @@ export function SettingsGroupsView() {
                     aria-label={t('settings.orgGroupsEdit')}
                     title={t('settings.orgGroupsEdit')}
                   >
-                    <Pencil className="w-4 h-4" aria-hidden />
+                    <Edit className="w-4 h-4" aria-hidden />
                   </button>
                   <button
                     type="button"
@@ -250,7 +250,7 @@ export function SettingsGroupsView() {
                     aria-label={t('settings.orgGroupsDelete')}
                     title={t('settings.orgGroupsDelete')}
                   >
-                    <Trash2 className="w-4 h-4" aria-hidden />
+                    <Trash className="w-4 h-4" aria-hidden />
                   </button>
                 </span>
               </div>
@@ -359,7 +359,7 @@ export function SettingsGroupsView() {
               onClick={openCreate}
               className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-[16px] border border-border bg-surface hover:bg-surface-hover text-[14px] font-bold text-foreground shadow-sm transition-all outline-none cursor-pointer"
             >
-              <Plus className="w-4 h-4 text-primary" aria-hidden />
+              <Plus className="w-4 h-4" aria-hidden />
               {t('settings.orgGroupsCreate')}
             </button>
             <button
@@ -369,7 +369,7 @@ export function SettingsGroupsView() {
               title={t('settings.orgGroupsExport')}
               className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[16px] border border-border bg-surface hover:bg-surface-hover text-[13px] font-bold text-muted-foreground hover:text-foreground shadow-sm transition-all outline-none cursor-pointer disabled:opacity-60"
             >
-              <Download className="w-4 h-4" aria-hidden />
+              <Export className="w-4 h-4" aria-hidden />
               {t('settings.orgGroupsExport')}
             </button>
             <button
@@ -379,7 +379,7 @@ export function SettingsGroupsView() {
               title={t('settings.orgGroupsImport')}
               className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[16px] border border-border bg-surface hover:bg-surface-hover text-[13px] font-bold text-muted-foreground hover:text-foreground shadow-sm transition-all outline-none cursor-pointer disabled:opacity-60"
             >
-              <Upload className="w-4 h-4" aria-hidden />
+              <Import className="w-4 h-4" aria-hidden />
               {t('settings.orgGroupsImport')}
             </button>
           </div>

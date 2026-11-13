@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
-import { Briefcase, Building2, ChevronLeft, ChevronRight, Network, Search, X } from '@/components/icons';
+import { Briefcase, Building2, ChevronLeft, ChevronRight, ClearInput, Network, Search } from '@/components/icons';
 import FocusLock, { AutoFocusInside } from 'react-focus-lock';
 import { useTranslation } from 'react-i18next';
 
@@ -140,14 +140,15 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
                     <h2 className="text-[20px] font-bold text-foreground leading-tight line-clamp-2">{value}</h2>
                     {organization && (
                       <p className="text-[14px] text-muted-foreground font-medium mt-1 flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                        <Building2 className="w-4 h-4 shrink-0" aria-hidden />
                         <span className="truncate">{organization}</span>
                       </p>
                     )}
                   </div>
                   <IconButton
                     onClick={onClose}
-                    icon={X}
+                    icon={ClearInput}
+                    iconClassName="w-5 h-5"
                     aria-label={t('close')}
                     className="bg-transparent hover:bg-black/5 dark:hover:bg-white/10 shrink-0"
                   />
@@ -155,7 +156,7 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
 
                 <div className="relative">
                   <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground pointer-events-none"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none"
                     aria-hidden
                   />
                   <AutoFocusInside>
@@ -216,9 +217,9 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
                               {/* В списке должностей должность одинакова у всех строк —
                                   второй строкой показываем отдел вместо неё. */}
                               {mode === 'title' ? (
-                                <Network className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                                <Network className="w-4 h-4 shrink-0" aria-hidden />
                               ) : (
-                                <Briefcase className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                                <Briefcase className="w-4 h-4 shrink-0" aria-hidden />
                               )}
                               <span className="truncate">
                                 {(mode === 'title' ? contact.department : contact.jobTitle) || t('employee')}

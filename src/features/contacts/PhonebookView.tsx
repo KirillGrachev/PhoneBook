@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FlaskConical, Settings2 } from '@/components/icons';
+import { Settings2 } from '@/components/icons';
 
 import { isTauri as isTauriEnv } from '@/api/backend';
 import { findOrgGroup, resolveEnterpriseName } from '@/lib/orgGroups';
@@ -241,7 +241,6 @@ export function PhonebookView() {
                     onClick={() => setTestMode(true)}
                     className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-primary text-white text-[13px] font-bold hover:bg-primary-hover transition-colors cursor-pointer"
                   >
-                    <FlaskConical className="w-4 h-4" aria-hidden />
                     {t('browserMode.enableTest')}
                   </button>
                 ) : directoryNotConfigured ? (

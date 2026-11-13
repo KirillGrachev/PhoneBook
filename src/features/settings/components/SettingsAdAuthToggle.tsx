@@ -16,8 +16,8 @@ export function SettingsAdAuthToggle({ config, onChange }: SettingsAdAuthToggleP
     <div className="flex flex-col gap-2 pt-1">
       <label className="flex items-center justify-between gap-3 cursor-pointer">
         <span className="flex flex-col">
-          <span className="text-[14px] font-semibold text-foreground">{t('settings.ad.integratedAuth')}</span>
-          <span className="text-[12px] text-muted-foreground">{t('settings.ad.integratedAuthDesc')}</span>
+          <span className="text-[15px] font-semibold text-foreground">{t('settings.ad.integratedAuth')}</span>
+          <span className="text-[13px] text-muted-foreground">{t('settings.ad.integratedAuthDesc')}</span>
         </span>
         <Switch
           checked={config.useIntegratedAuth}
@@ -26,7 +26,7 @@ export function SettingsAdAuthToggle({ config, onChange }: SettingsAdAuthToggleP
         />
       </label>
       {config.useIntegratedAuth && (
-        <span className="text-[12px] text-muted-foreground leading-snug">{t('settings.ad.integratedAuthHint')}</span>
+        <span className="text-[13px] text-muted-foreground leading-snug">{t('settings.ad.integratedAuthHint')}</span>
       )}
     </div>
   );

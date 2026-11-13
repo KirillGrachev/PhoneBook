@@ -2,109 +2,112 @@ import type { CSSProperties } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import addressBook from '@/assets/icons/address-book.svg';
-import arrows from '@/assets/icons/arrows.svg';
+import arrowLeft from '@/assets/icons/arrow-left.svg';
+import arrowRight from '@/assets/icons/arrow-right.svg';
 import building from '@/assets/icons/building.svg';
-import certificate from '@/assets/icons/certificate.svg';
+import chat from '@/assets/icons/chat.svg';
+import clearInput from '@/assets/icons/clear-input.svg';
+import contact from '@/assets/icons/contact.svg';
+import contactRemove from '@/assets/icons/contact-remove.svg';
 import copy from '@/assets/icons/copy.svg';
-import filePhone from '@/assets/icons/file-phone.svg';
+import department from '@/assets/icons/department.svg';
+import edit from '@/assets/icons/edit.svg';
+import exportIcon from '@/assets/icons/export.svg';
 import filter from '@/assets/icons/filter.svg';
 import folderUpload from '@/assets/icons/folder-upload.svg';
-import frameDownload from '@/assets/icons/frame-download.svg';
-import frameUpload from '@/assets/icons/frame-upload.svg';
-import frameUsers from '@/assets/icons/frame-users.svg';
+import groups from '@/assets/icons/groups.svg';
 import help from '@/assets/icons/help.svg';
-import idCard from '@/assets/icons/id-card.svg';
-import info from '@/assets/icons/info.svg';
-import layers from '@/assets/icons/layers.svg';
+import importIcon from '@/assets/icons/import.svg';
+import jobTitle from '@/assets/icons/job-title.svg';
+import lock from '@/assets/icons/lock.svg';
 import mail from '@/assets/icons/mail.svg';
-import mapPin from '@/assets/icons/map-pin.svg';
-import mobile from '@/assets/icons/mobile.svg';
+import main from '@/assets/icons/main.svg';
+import manager from '@/assets/icons/manager.svg';
 import monitor from '@/assets/icons/monitor.svg';
 import moon from '@/assets/icons/moon.svg';
-import org from '@/assets/icons/org.svg';
+import office from '@/assets/icons/office.svg';
+import phone from '@/assets/icons/phone.svg';
+import plus from '@/assets/icons/plus.svg';
+import qrCode from '@/assets/icons/qr-code.svg';
 import refresh from '@/assets/icons/refresh.svg';
-import rocket from '@/assets/icons/rocket.svg';
 import search from '@/assets/icons/search.svg';
 import settings from '@/assets/icons/settings.svg';
-import shieldLock from '@/assets/icons/shield-lock.svg';
-import shieldOff from '@/assets/icons/shield-off.svg';
+import shieldAlert from '@/assets/icons/shield-alert.svg';
 import sun from '@/assets/icons/sun.svg';
 import terminal from '@/assets/icons/terminal.svg';
-import textScan from '@/assets/icons/text-scan.svg';
 import trash from '@/assets/icons/trash.svg';
-import user from '@/assets/icons/user.svg';
-import userPlus from '@/assets/icons/user-plus.svg';
 
 export type AppIconName =
-  | 'address-book'
-  | 'arrows'
+  | 'arrow-left'
+  | 'arrow-right'
   | 'building'
-  | 'certificate'
+  | 'chat'
+  | 'clear-input'
+  | 'contact'
+  | 'contact-remove'
   | 'copy'
-  | 'file-phone'
+  | 'department'
+  | 'edit'
+  | 'export'
   | 'filter'
   | 'folder-upload'
-  | 'frame-download'
-  | 'frame-upload'
-  | 'frame-users'
+  | 'groups'
   | 'help'
-  | 'id-card'
-  | 'info'
-  | 'layers'
+  | 'import'
+  | 'job-title'
+  | 'lock'
   | 'mail'
-  | 'map-pin'
-  | 'mobile'
+  | 'main'
+  | 'manager'
   | 'monitor'
   | 'moon'
-  | 'org'
+  | 'office'
+  | 'phone'
+  | 'plus'
+  | 'qr-code'
   | 'refresh'
-  | 'rocket'
   | 'search'
   | 'settings'
-  | 'shield-lock'
-  | 'shield-off'
+  | 'shield-alert'
   | 'sun'
   | 'terminal'
-  | 'text-scan'
-  | 'trash'
-  | 'user'
-  | 'user-plus';
+  | 'trash';
 
 const ICONS: Record<AppIconName, string> = {
-  'address-book': addressBook,
-  arrows,
+  'arrow-left': arrowLeft,
+  'arrow-right': arrowRight,
   building,
-  certificate,
+  chat,
+  'clear-input': clearInput,
+  contact,
+  'contact-remove': contactRemove,
   copy,
-  'file-phone': filePhone,
+  department,
+  edit,
+  export: exportIcon,
   filter,
   'folder-upload': folderUpload,
-  'frame-download': frameDownload,
-  'frame-upload': frameUpload,
-  'frame-users': frameUsers,
+  groups,
   help,
-  'id-card': idCard,
-  info,
-  layers,
+  import: importIcon,
+  'job-title': jobTitle,
+  lock,
   mail,
-  'map-pin': mapPin,
-  mobile,
+  main,
+  manager,
   monitor,
   moon,
-  org,
+  office,
+  phone,
+  plus,
+  'qr-code': qrCode,
   refresh,
-  rocket,
   search,
   settings,
-  'shield-lock': shieldLock,
-  'shield-off': shieldOff,
+  'shield-alert': shieldAlert,
   sun,
   terminal,
-  'text-scan': textScan,
   trash,
-  user,
-  'user-plus': userPlus,
 };
 
 interface AppIconProps {

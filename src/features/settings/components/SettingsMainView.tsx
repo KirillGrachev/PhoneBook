@@ -1,18 +1,8 @@
-import {
-  ArrowLeftRight,
-  ChevronRight,
-  FileStack,
-  Info,
-  Layers,
-  Palette,
-  Settings as SettingsIcon,
-  Terminal,
-} from '@/components/icons';
+import { ArrowRight, Terminal } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { isTauri } from '@/api/backend';
 import { systemApi } from '@/api/directory';
-import { cn } from '@/lib/utils';
 
 import { NAV_ITEM_CLASS } from './settingsStyles';
 
@@ -24,8 +14,6 @@ interface SettingsMainViewProps {
 
 interface NavRow {
   view: SettingsView;
-  icon: typeof Info;
-  tint: string;
   labelKey: string;
 }
 
@@ -44,36 +32,26 @@ export function SettingsMainView({ onNavigate }: SettingsMainViewProps) {
   const rows: NavRow[] = [
     {
       view: 'interface',
-      icon: Palette,
-      tint: 'bg-violet-500/10 text-violet-500',
       labelKey: 'settings.interfaceTitle',
     },
     ...(isTauri()
       ? [
           {
             view: 'external',
-            icon: FileStack,
-            tint: 'bg-emerald-500/10 text-emerald-500',
             labelKey: 'settings.externalTitle',
           } satisfies NavRow,
         ]
       : []),
     {
       view: 'transfer',
-      icon: ArrowLeftRight,
-      tint: 'bg-teal-500/10 text-teal-500',
       labelKey: 'settings.transferTitle',
     },
     {
       view: 'ad',
-      icon: SettingsIcon,
-      tint: 'bg-amber-500/10 text-amber-500',
       labelKey: 'settings.adSettings',
     },
     {
       view: 'groups',
-      icon: Layers,
-      tint: 'bg-sky-500/10 text-sky-500',
       labelKey: 'settings.orgGroups',
     },
   ];
@@ -87,7 +65,7 @@ export function SettingsMainView({ onNavigate }: SettingsMainViewProps) {
   };
 
   const chevron = (
-    <ChevronRight
+    <ArrowRight
       className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors duration-300"
       aria-hidden
     />
@@ -95,44 +73,30 @@ export function SettingsMainView({ onNavigate }: SettingsMainViewProps) {
 
   return (
     <nav className="flex flex-col gap-3 pb-4" aria-label={t('settings')}>
-      {rows.map(({ view, icon: Icon, tint, labelKey }) => (
+      {rows.map(({ view, labelKey }) => (
         <button key={view} type="button" onClick={() => onNavigate(view)} className={NAV_ITEM_CLASS}>
-          <span className="flex items-center gap-3 text-foreground">
-            <span
-              className={cn(
-                'w-9 h-9 min-w-[36px] min-h-[36px] rounded-full flex items-center justify-center shrink-0',
-                tint,
-              )}
-            >
-              <Icon className="w-[18px] h-[18px]" aria-hidden />
-            </span>
-            <span className="font-bold text-[16px]">{t(labelKey)}</span>
-          </span>
+          <span className="font-bold text-[16px] text-foreground">{t(labelKey)}</span>
           {chevron}
         </button>
       ))}
 
+      <button type="button" onClick={() => onNavigate('about')} className={NAV_ITEM_CLASS}>
+        <span className="font-bold text-[16px] text-foreground">{t('aboutApp')}</span>
+        {chevron}
+      </button>
+
       {showDevtools && (
         <button type="button" onClick={() => void handleOpenDevtools()} className={NAV_ITEM_CLASS}>
-          <span className="flex items-center gap-3 text-foreground">
-            <span className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0">
-              <Terminal className="w-[18px] h-[18px]" aria-hidden />
-            </span>
+          <span className="flex items-center gap-2.5 text-foreground">
+            <Terminal
+              className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors"
+              aria-hidden
+            />
             <span className="font-bold text-[16px]">{t('devConsole')}</span>
           </span>
           {chevron}
         </button>
       )}
-
-      <button type="button" onClick={() => onNavigate('about')} className={NAV_ITEM_CLASS}>
-        <span className="flex items-center gap-3 text-foreground">
-          <span className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-            <Info className="w-[18px] h-[18px]" aria-hidden />
-          </span>
-          <span className="font-bold text-[16px]">{t('aboutApp')}</span>
-        </span>
-        {chevron}
-      </button>
     </nav>
   );
 }

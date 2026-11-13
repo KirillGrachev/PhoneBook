@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, type KeyboardEvent, type ReactNode } fr
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { BookmarkMinus, DatabaseZap, RefreshCw, SearchX } from '@/components/icons';
+import { BookmarkMinus, Briefcase, Refresh, SearchX } from '@/components/icons';
 
 import { useMotionPresets } from '@/lib/motionPresets';
 import { cn } from '@/lib/utils';
@@ -197,7 +197,7 @@ export function Sidebar({
                 onClick={onRetry}
                 className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-primary text-white text-[13px] font-bold hover:bg-primary-hover transition-colors cursor-pointer"
               >
-                <RefreshCw className="w-4 h-4" aria-hidden />
+                <Refresh className="w-4 h-4" aria-hidden />
                 {t('retry')}
               </button>
             </motion.div>
@@ -223,7 +223,7 @@ export function Sidebar({
               className="flex flex-col items-center justify-center gap-3 p-8 text-center mt-6"
             >
               <div className="w-14 h-14 rounded-full bg-surface-hover text-muted-foreground flex items-center justify-center border border-border">
-                <DatabaseZap className="w-6 h-6" aria-hidden />
+                <Briefcase className="w-6 h-6" aria-hidden />
               </div>
               <p className="text-sm font-semibold text-foreground">{emptyTitle ?? t('emptyState.title')}</p>
               <p className="text-[13px] text-muted-foreground max-w-[260px] leading-relaxed">

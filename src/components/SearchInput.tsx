@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Search, HelpCircle, X } from '@/components/icons';
+import { Search, HelpCircle, ClearInput } from '@/components/icons';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useTranslation } from 'react-i18next';
 
@@ -86,10 +86,10 @@ export function SearchInput({ value, onChange, placeholder, className }: SearchI
           <button
             type="button"
             onClick={clear}
-            className="text-muted-foreground hover:text-foreground transition-colors outline-none hover:bg-black/5 dark:hover:bg-white/10 rounded-full p-1 no-ring"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors outline-none hover:bg-black/5 dark:hover:bg-white/10 no-ring"
             aria-label={t('searchClear')}
           >
-            <X className="w-5 h-5" aria-hidden />
+            <ClearInput className="w-5 h-5" aria-hidden />
           </button>
         )}
         <Tooltip.Provider delayDuration={200}>

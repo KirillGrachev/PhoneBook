@@ -1,4 +1,4 @@
-import { KeyRound } from '@/components/icons';
+import { Lock } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import type { LdapOrgConfigDto } from '@/api/contracts';
@@ -35,15 +35,20 @@ export function SettingsAdPasswordEditor({
         autoComplete="new-password"
       />
       <div className="flex items-center gap-2">
-        <button type="button" onClick={onSave} disabled={disabled} className={primaryButton(disabled, 'px-3 py-1.5')}>
-          <KeyRound className="w-3.5 h-3.5" aria-hidden />
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={disabled}
+          className={primaryButton(disabled, 'px-3 py-1.5 text-[14px]')}
+        >
+          <Lock className="w-4 h-4" aria-hidden />
           {t('settings.ad.savePassword')}
         </button>
         {config.hasPassword && (
           <button
             type="button"
             onClick={onSave}
-            className="px-3 py-1.5 rounded-[10px] border border-border text-foreground/70 text-[13px] font-semibold hover:bg-surface-hover transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-[10px] border border-border text-foreground/70 text-[14px] font-semibold hover:bg-surface-hover transition-colors cursor-pointer"
           >
             {t('settings.ad.clearPassword')}
           </button>

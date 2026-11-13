@@ -1,4 +1,4 @@
-import { BookmarkCheck, Mail, MessageCircle, UserPlus } from '@/components/icons';
+import { BookmarkCheck, BookmarkMinus, Main, MessageCircle } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -56,7 +56,7 @@ export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActio
             onClick={onWrite}
             className="flex flex-1 items-center justify-center gap-2 h-[40px] rounded-[10px] bg-primary hover:bg-primary-hover text-white transition-all duration-300 cursor-pointer shadow-sm min-w-0 px-2 no-ring"
           >
-            <Mail className="w-[16px] h-[16px] shrink-0" aria-hidden />
+            <Main className="w-[16px] h-[16px] shrink-0" aria-hidden />
             <span className="text-[14px] font-medium leading-none select-none truncate">{t('write')}</span>
           </button>
           {contact.trueconfId && (
@@ -91,12 +91,12 @@ export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActio
         >
           {isSaved ? (
             <>
-              <BookmarkCheck className="w-[16px] h-[16px] shrink-0" aria-hidden />
+              <BookmarkMinus className="w-[16px] h-[16px] shrink-0" aria-hidden />
               <span className="text-[14px] font-medium leading-none select-none">{t('inContacts')}</span>
             </>
           ) : (
             <>
-              <UserPlus className="w-[18px] h-[18px] shrink-0" aria-hidden />
+              <BookmarkCheck className="w-[16px] h-[16px] shrink-0" aria-hidden />
               <span className="text-[14px] font-medium leading-none select-none">{t('addToContacts')}</span>
             </>
           )}

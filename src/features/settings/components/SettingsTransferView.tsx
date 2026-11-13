@@ -1,6 +1,6 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FileDown, FileUp } from '@/components/icons';
+import { Export, Import } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -10,10 +10,13 @@ import type { AppConfigDto } from '@/api/contracts';
 import { DIRECTORY_QUERY_KEYS } from '@/hooks/useSyncStatus';
 import { buildConfigPatch, parseConfigFileContent, renderConfigFile } from '@/lib/configExchange';
 import { translateBackendError } from '@/lib/errors';
+import { cn } from '@/lib/utils';
 import { flushConfigSave } from '@/store/configStorage';
 import { useAppStore } from '@/store/useAppStore';
 
 import { ACTION_BUTTON_CLASS } from './settingsStyles';
+
+const TRANSFER_ACTION_CLASS = cn(ACTION_BUTTON_CLASS, 'h-11 flex-1 min-w-[180px] justify-center px-4 text-[15px]');
 
 /**
  * Страница «Перенос конфигурации»: файл обмена настройками между ПК.
@@ -112,23 +115,23 @@ export function SettingsTransferView() {
     <div className="flex flex-col gap-5 w-full pb-4">
       <section className="space-y-2.5">
         <p className="text-[13px] text-muted-foreground leading-snug px-1">{t('settings.transferDesc')}</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5">
           <button
             type="button"
             onClick={() => void handleExportConfig()}
             disabled={transferBusy !== null}
-            className={ACTION_BUTTON_CLASS}
+            className={TRANSFER_ACTION_CLASS}
           >
-            <FileDown className="w-4 h-4" aria-hidden />
+            <Export className="w-[18px] h-[18px]" aria-hidden />
             {t('settings.transferExport')}
           </button>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={transferBusy !== null}
-            className={ACTION_BUTTON_CLASS}
+            className={TRANSFER_ACTION_CLASS}
           >
-            <FileUp className="w-4 h-4" aria-hidden />
+            <Import className="w-[18px] h-[18px]" aria-hidden />
             {t('settings.transferImport')}
           </button>
           <input

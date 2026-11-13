@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Loader2, X } from '@/components/icons';
+import { ClearInput, Loader2 } from '@/components/icons';
 import FocusLock, { AutoFocusInside } from 'react-focus-lock';
 import { useTranslation } from 'react-i18next';
 
@@ -60,7 +60,8 @@ export function VsimModal({ isOpen, onClose, contact }: VsimModalProps) {
                 <AutoFocusInside>
                   <IconButton
                     onClick={onClose}
-                    icon={X}
+                    icon={ClearInput}
+                    iconClassName="w-5 h-5"
                     className="bg-transparent hover:bg-input"
                     aria-label={t('close')}
                   />
