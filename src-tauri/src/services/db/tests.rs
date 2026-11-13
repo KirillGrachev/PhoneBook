@@ -1129,6 +1129,30 @@ fn mixed_schema_structure_self_heals() {
 }
 
 #[test]
+fn missing_pager_column_self_heals() {
+    use super::schema::ensure_schema;
+
+    // Реальный случай со старой базой: `user_version` уже 5, но колонки
+    // `pager` (TrueConf ID) нет. Раньше это обнаруживалось только после
+    // удаления БД вручную; структурный зонд должен пересоздать кэш сам.
+    let conn = Connection::open_in_memory().expect("conn");
+    Db::apply_pragmas(&conn).expect("pragmas");
+    ensure_schema(&conn).expect("ensure");
+    conn.execute("INSERT INTO sources (name) VALUES ('КМАруда')", [])
+        .expect("row");
+    conn.execute_batch("ALTER TABLE users DROP COLUMN pager")
+        .expect("drop pager");
+
+    ensure_schema(&conn).expect("self-heal");
+    conn.prepare("SELECT pager FROM users LIMIT 0")
+        .expect("колонка pager вернулась");
+    let sources: i64 = conn
+        .query_row("SELECT COUNT(*) FROM sources", [], |row| row.get(0))
+        .expect("count");
+    assert_eq!(sources, 0, "кэш пересоздан с нуля: зеркало восстановимо");
+}
+
+#[test]
 fn punctuation_in_query_does_not_break_search() {
     let db = sample_db();
     // Запятая и пунктуация санитизируются: «Смирнов, Иван» ищет то же,
