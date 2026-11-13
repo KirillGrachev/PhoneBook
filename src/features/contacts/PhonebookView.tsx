@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Settings2 } from '@/components/icons';
@@ -67,6 +67,7 @@ export function PhonebookView() {
     contacts: filtered,
     total,
     isLoading,
+    isFetching,
     isError,
     refetch,
     limitReached,
@@ -125,13 +126,36 @@ export function PhonebookView() {
   // результат списка — пользователю не нужно целиться в список вручную.
   // Ручной выбор внутри выдачи не перебрасывается, пока не изменится выдача.
   useEffect(() => {
-    if (search.trim() !== '' && filtered.length > 0) {
-      const topId = filtered[0].id;
-      if (useAppStore.getState().selectedId !== topId) {
-        setSelectedId(topId);
-      }
+    // Пока идёт первичная загрузка/добор, не трогаем выбор: список может быть
+    // ещё пустым, а карточка уже открыта пользователем.
+    if (isLoading || isFetching) {
+      return;
     }
-  }, [filtered, search, setSelectedId]);
+    const currentId = useAppStore.getState().selectedId;
+    if (filtered.length === 0) {
+      // Поиск/фильтр не дал совпадений — карточка старого результата не
+      // должна висеть справа.
+      if (currentId !== null) {
+        setSelectedId(null);
+      }
+      return;
+    }
+    if (search.trim() !== '' && currentId !== filtered[0].id) {
+      setSelectedId(filtered[0].id);
+    }
+  }, [filtered, isFetching, isLoading, search, setSelectedId]);
+
+  // Смена вкладки/фильтра начинает новую выборку; карточка из предыдущего
+  // фильтра не должна оставаться открытой.
+  const filterKey = `${activeTab}|${selectedOrg ?? ''}|${selectedGroupId ?? ''}`;
+  const previousFilterKey = useRef(filterKey);
+  useEffect(() => {
+    if (previousFilterKey.current === filterKey) {
+      return;
+    }
+    previousFilterKey.current = filterKey;
+    setSelectedId(null);
+  }, [filterKey, setSelectedId]);
 
   const handleSettingsClick = useCallback(() => navigate('/settings'), [navigate]);
   const handleConfigureAdClick = useCallback(() => navigate('/settings?view=ad'), [navigate]);
