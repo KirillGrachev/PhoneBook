@@ -24,7 +24,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\" \"scripts/**/*.mjs\" index.html vite.config.ts vitest.config.ts tsconfig.json tsconfig.node.json .prettierrc.json eslint.config.js package.json",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\" \"scripts/**/*.mjs\" index.html vite.config.ts vitest.config.ts tsconfig.json tsconfig.node.json .prettierrc.json eslint.config.js package.json",
     "check:bundle": "node scripts/check-bundle-size.mjs",
-    "check:tauri": "node scripts/check-tauri-versions.mjs"
+    "check:tauri": "node scripts/check-tauri-versions.mjs",
+    "check:contracts": "node scripts/check-contract-parity.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.2.1",

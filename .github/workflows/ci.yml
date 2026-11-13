@@ -41,6 +41,8 @@ jobs:
         run: npm run check:version
       - name: Tauri version alignment
         run: npm run check:tauri
+      - name: API contract parity
+        run: npm run check:contracts
       - name: Dependency audit
         run: npm audit --audit-level=high
       - name: Build

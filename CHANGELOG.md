@@ -48,6 +48,7 @@ follows [Semantic Versioning](https://semver.org/).
 - SettingsGroupsView is split into OrgGroupCard and OrgGroupEditor components.
 - ContactDetails is split into ContactInfoCard and CompanyInfoCard components.
 - SettingsAdView is split into SettingsAdSyncCard and SettingsAdDuplicates.
+- CI checks parity between the Rust DTOs and their TypeScript mirrors.
 
 ## [0.2.5] - 2026-11-12
 
