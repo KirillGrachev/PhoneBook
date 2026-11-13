@@ -40,6 +40,17 @@ jobs:
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
 
+      - name: Native launch smoke
+        shell: pwsh
+        run: |
+          npm run tauri build -- --debug --no-bundle
+          $exe = "src-tauri/target/debug/kmaruda-phonebook.exe"
+          if (-not (Test-Path $exe)) { throw "native executable not built: $exe" }
+          $process = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 8
+          if ($process.HasExited) { throw "native app exited during startup: $($process.ExitCode)" }
+          Stop-Process -Id $process.Id -Force
+
       - run: npx playwright install chromium
       - run: npm run test:e2e
 
