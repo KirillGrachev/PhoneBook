@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { IconButton } from '@/components/ui/IconButton';
 import QRCode from '@/components/QRCodeComponent';
 import { useVcard } from '@/features/contacts/hooks/useContactData';
+import { personNameForLanguage } from '@/lib/transliteration';
 import { useAppStore } from '@/store/useAppStore';
 import type { Contact } from '@/types';
 
@@ -18,8 +19,9 @@ interface VsimModalProps {
 
 /** Модальное окно QR-кода визитки (vCard) контакта. */
 export function VsimModal({ isOpen, onClose, contact }: VsimModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const vcardValue = useVcard(contact);
+  const displayName = contact ? personNameForLanguage(contact.fullName, i18n.language) : '';
   const animationsEnabled = useAppStore((state) => state.animationsEnabled);
 
   if (typeof document === 'undefined') {
@@ -88,7 +90,7 @@ export function VsimModal({ isOpen, onClose, contact }: VsimModalProps) {
                 </div>
 
                 <p className="text-center text-[16px] font-medium text-muted-foreground leading-relaxed px-4">
-                  {t('vsimInstruction', { name: contact?.fullName ?? '' })}
+                  {t('vsimInstruction', { name: displayName })}
                 </p>
               </div>
             </motion.div>

@@ -7,7 +7,7 @@ import { ColleaguesModal } from '@/components/ColleaguesModal';
 import type { ContactsPage } from '@/services/ContactsService';
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'ru' } }),
 }));
 
 const searchMock = vi.fn();

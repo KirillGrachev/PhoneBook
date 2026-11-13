@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { IconButton } from '@/components/ui/IconButton';
+import { personNameForLanguage } from '@/lib/transliteration';
 import { useMotionPresets } from '@/lib/motionPresets';
 import { cn } from '@/lib/utils';
 import { getContactsService } from '@/services/ContactsService';
@@ -46,7 +47,7 @@ const MODE_LABEL_KEY: Record<ColleaguesMode, string> = {
  * что ломалось при серверном поиске с ограничением выдачи).
  */
 export function ColleaguesModal({ isOpen, onClose, mode, value, organization, onSelectContact }: ColleaguesModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const presets = useMotionPresets();
   const testMode = useAppStore((state) => state.testMode);
   const [search, setSearch] = useState('');
@@ -91,10 +92,15 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
     if (!query) {
       return colleagues;
     }
-    return colleagues.filter(
-      (contact) => contact.fullName.toLowerCase().includes(query) || contact.jobTitle?.toLowerCase().includes(query),
-    );
-  }, [colleagues, search]);
+    return colleagues.filter((contact) => {
+      const displayName = personNameForLanguage(contact.fullName, i18n.language).toLowerCase();
+      return (
+        contact.fullName.toLowerCase().includes(query) ||
+        displayName.includes(query) ||
+        contact.jobTitle?.toLowerCase().includes(query)
+      );
+    });
+  }, [colleagues, i18n.language, search]);
 
   const totalPages = Math.max(1, Math.ceil(filteredContacts.length / PAGE_SIZE));
   const startIndex = (currentPage - 1) * PAGE_SIZE;
@@ -208,10 +214,14 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
                           }}
                           className="flex items-center gap-3 p-4 border-b border-border last:border-b-0 cursor-pointer transition-colors outline-none hover:bg-surface-hover active:bg-surface-active group text-left w-full"
                         >
-                          <Avatar fullName={contact.fullName} size="sm" className="w-[42px] h-[42px] shadow-sm" />
+                          <Avatar
+                            fullName={personNameForLanguage(contact.fullName, i18n.language)}
+                            size="sm"
+                            className="w-[42px] h-[42px] shadow-sm"
+                          />
                           <span className="flex-1 min-w-0 flex flex-col justify-center">
                             <span className="text-[16px] font-bold text-foreground truncate mb-0.5 group-hover:text-primary transition-colors">
-                              {contact.fullName}
+                              {personNameForLanguage(contact.fullName, i18n.language)}
                             </span>
                             <span className="text-[14px] text-muted-foreground truncate flex items-center gap-1.5">
                               {/* В списке должностей должность одинакова у всех строк —
