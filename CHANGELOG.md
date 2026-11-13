@@ -49,6 +49,7 @@ follows [Semantic Versioning](https://semver.org/).
 - ContactDetails is split into ContactInfoCard and CompanyInfoCard components.
 - SettingsAdView is split into SettingsAdSyncCard and SettingsAdDuplicates.
 - CI checks parity between the Rust DTOs and their TypeScript mirrors.
+- libFuzzer target for the Yealink XML parser (`src-tauri/fuzz`).
 
 ## [0.2.5] - 2026-11-12
 

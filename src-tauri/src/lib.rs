@@ -360,6 +360,12 @@ fn spawn_window_failsafe(app: AppHandle) {
     });
 }
 
+/// Stable entry point for the libFuzzer XML target (`cargo fuzz`).
+#[doc(hidden)]
+pub fn fuzz_parse_phonebook_xml(xml: &str) {
+    let _ = services::external::parse_phonebook_xml(xml);
+}
+
 fn show_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
         let _ = window.show();
