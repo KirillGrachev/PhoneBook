@@ -44,7 +44,9 @@ jobs:
         with:
           tool: cargo-llvm-cov
       - name: Rust coverage
-        run: cargo llvm-cov --manifest-path src-tauri/Cargo.toml --all-targets --lcov --output-path coverage/lcov.info
+        run: |
+          New-Item -ItemType Directory -Force coverage | Out-Null
+          cargo llvm-cov --manifest-path src-tauri/Cargo.toml --all-targets --lcov --output-path coverage/lcov.info
         continue-on-error: true
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
