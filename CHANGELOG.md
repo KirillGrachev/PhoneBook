@@ -41,8 +41,8 @@ follows [Semantic Versioning](https://semver.org/).
 - Removed the lucide-react dependency; control icons (check, chevrons, close,
   spinner, window controls) are inline SVG now.
 - Removed the unused `base64` Rust dependency.
-- Nightly coverage creates its report directory before `cargo llvm-cov`, so
-  the lcov artifact is uploaded instead of warning about a missing path.
+- Rust coverage runs on Ubuntu in Nightly with a 65% line / 58% function
+  floor and uploads the lcov artifact.
 - Header search/help icons are 24 px and the settings gear is 22 px, matching
   the filter control.
 
