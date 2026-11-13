@@ -24,6 +24,8 @@ follows [Semantic Versioning](https://semver.org/).
   `pager`, so an old cache no longer requires manual deletion.
 - The contact card closes when a search/filter returns no matches, and changing
   the tab or organization filter resets the previous selection.
+- Job title, department and organization are shown on separate lines in the
+  contact header instead of a dot-separated sentence.
 
 ### Changed
 

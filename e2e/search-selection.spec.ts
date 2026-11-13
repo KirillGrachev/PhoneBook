@@ -22,6 +22,9 @@ test('empty search result closes the previously selected contact', async ({ page
   await expect(page.getByText('Волкова Екатерина Дмитриевна')).toBeVisible();
   await page.getByText('Волкова Екатерина Дмитриевна').click();
   await expect(page.getByRole('heading', { name: /Волкова Екатерина Дмитриевна/ })).toBeVisible();
+  await expect(page.getByText('Менеджер по работе с клиентами', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Отдел продаж', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('ООО «Рога и Копыта»', { exact: true }).first()).toBeVisible();
 
   await page.getByRole('searchbox', { name: 'Global search' }).fill('zzzz_no_such_contact');
   await expect(page.getByText('No matches found')).toBeVisible();
