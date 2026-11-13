@@ -55,7 +55,7 @@ export function SearchInput({ value, onChange, placeholder, className }: SearchI
   return (
     <div className={cn('relative flex-1 group', className)}>
       <Search
-        className="w-[22px] h-[22px] absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+        className="w-[24px] h-[24px] absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
         aria-hidden
       />
       <input
@@ -101,7 +101,7 @@ export function SearchInput({ value, onChange, placeholder, className }: SearchI
                 aria-label={t('searchTooltip')}
                 tabIndex={-1}
               >
-                <HelpCircle className="w-[22px] h-[22px] transition-transform duration-300" aria-hidden />
+                <HelpCircle className="w-[24px] h-[24px] transition-transform duration-300" aria-hidden />
               </button>
             </Tooltip.Trigger>
             <Tooltip.Portal>

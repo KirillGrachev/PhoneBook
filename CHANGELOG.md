@@ -43,6 +43,8 @@ follows [Semantic Versioning](https://semver.org/).
 - Removed the unused `base64` Rust dependency.
 - Nightly coverage creates its report directory before `cargo llvm-cov`, so
   the lcov artifact is uploaded instead of warning about a missing path.
+- Header search/help icons are 24 px and the settings gear is 22 px, matching
+  the filter control.
 
 ## [0.2.5] - 2026-11-12
 

@@ -77,7 +77,7 @@ export const MainHeader = memo(function MainHeader({
               className="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-all duration-300 hover:bg-surface-hover outline-none"
               aria-label={t('settings')}
             >
-              <Settings className="w-[20px] h-[20px]" aria-hidden />
+              <Settings className="w-[22px] h-[22px]" aria-hidden />
             </button>
           </div>
         </div>
@@ -108,7 +108,7 @@ export const MainHeader = memo(function MainHeader({
                 className="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-all duration-300 hover:bg-surface-hover outline-none cursor-pointer"
                 aria-label={t('settings')}
               >
-                <Settings className="w-[18px] h-[18px]" aria-hidden />
+                <Settings className="w-[22px] h-[22px]" aria-hidden />
               </button>
             </div>
           </div>
