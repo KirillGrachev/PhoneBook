@@ -1,26 +1,16 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import {
-  Briefcase,
-  Building2,
-  ChevronLeft,
-  Loader2,
-  Mail,
-  MapPin,
-  Network,
-  Phone,
-  QrCode,
-  UserRound,
-} from '@/components/icons';
+import { ChevronLeft, Loader2, QrCode } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 
 import { systemApi } from '@/api/directory';
 import { devLog } from '@/lib/devlog';
 import { personNameForLanguage } from '@/lib/transliteration';
-import { DetailRow } from '@/components/DetailRow';
 import { IconButton } from '@/components/ui/IconButton';
 import { ActionConfirmModal } from '@/components/ActionConfirmModal';
+import { CompanyInfoCard } from '@/features/contacts/components/CompanyInfoCard';
 import { ContactHeader } from '@/features/contacts/components/ContactHeader';
+import { ContactInfoCard } from '@/features/contacts/components/ContactInfoCard';
 import { EmailPromptModal } from '@/features/contacts/components/EmailPromptModal';
 import { IpPhoneSection } from '@/features/contacts/components/IpPhoneSection';
 import { useContact, useVcard } from '@/features/contacts/hooks/useContactData';
@@ -36,19 +26,19 @@ interface ContactDetailsProps {
   onToggleSave: (id: string) => void;
   onBack: () => void;
   onDepartmentClick?: (department: string, org?: string) => void;
-  /** Клик по должности: список людей с той же должностью в той же организации. */
+  /** ÐšÐ»Ð¸Ðº Ð¿Ð¾ Ð´Ð¾Ð»Ð¶Ð½Ð¾ÑÑ‚Ð¸: ÑÐ¿Ð¸ÑÐ¾Ðº Ð»ÑŽÐ´ÐµÐ¹ Ñ Ñ‚Ð¾Ð¹ Ð¶Ðµ Ð´Ð¾Ð»Ð¶Ð½Ð¾ÑÑ‚ÑŒÑŽ Ð² Ñ‚Ð¾Ð¹ Ð¶Ðµ Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¸. */
   onTitleClick?: (title: string, org?: string) => void;
-  /** Клик по кабинету: список людей в том же кабинете. */
+  /** ÐšÐ»Ð¸Ðº Ð¿Ð¾ ÐºÐ°Ð±Ð¸Ð½ÐµÑ‚Ñƒ: ÑÐ¿Ð¸ÑÐ¾Ðº Ð»ÑŽÐ´ÐµÐ¹ Ð² Ñ‚Ð¾Ð¼ Ð¶Ðµ ÐºÐ°Ð±Ð¸Ð½ÐµÑ‚Ðµ. */
   onOfficeClick?: (office: string, org?: string) => void;
-  /** Клик по руководителю: открывает карточку руководителя (guid или поиск по имени). */
+  /** ÐšÐ»Ð¸Ðº Ð¿Ð¾ Ñ€ÑƒÐºÐ¾Ð²Ð¾Ð´Ð¸Ñ‚ÐµÐ»ÑŽ: Ð¾Ñ‚ÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÑƒ Ñ€ÑƒÐºÐ¾Ð²Ð¾Ð´Ð¸Ñ‚ÐµÐ»Ñ (guid Ð¸Ð»Ð¸ Ð¿Ð¾Ð¸ÑÐº Ð¿Ð¾ Ð¸Ð¼ÐµÐ½Ð¸). */
   onManagerClick?: (manager: string, managerId?: string) => void;
 }
 
 type PendingAction = { type: 'mailto' | 'trueconf'; url: string };
 
 /**
- * Плавный скелетон на время генерации vCard: светлый фон (карточка QR белая),
- * мягкая пульсация и спиннер — вместо тёмного квадрата.
+ * ÐŸÐ»Ð°Ð²Ð½Ñ‹Ð¹ ÑÐºÐµÐ»ÐµÑ‚Ð¾Ð½ Ð½Ð° Ð²Ñ€ÐµÐ¼Ñ Ð³ÐµÐ½ÐµÑ€Ð°Ñ†Ð¸Ð¸ vCard: ÑÐ²ÐµÑ‚Ð»Ñ‹Ð¹ Ñ„Ð¾Ð½ (ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ° QR Ð±ÐµÐ»Ð°Ñ),
+ * Ð¼ÑÐ³ÐºÐ°Ñ Ð¿ÑƒÐ»ÑŒÑÐ°Ñ†Ð¸Ñ Ð¸ ÑÐ¿Ð¸Ð½Ð½ÐµÑ€ â€” Ð²Ð¼ÐµÑÑ‚Ð¾ Ñ‚Ñ‘Ð¼Ð½Ð¾Ð³Ð¾ ÐºÐ²Ð°Ð´Ñ€Ð°Ñ‚Ð°.
  */
 function QrPlaceholder({ size }: { size: number }) {
   return (
@@ -63,13 +53,13 @@ function QrPlaceholder({ size }: { size: number }) {
 }
 
 /**
- * Карточка контакта.
+ * ÐšÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ° ÐºÐ¾Ð½Ñ‚Ð°ÐºÑ‚Ð°.
  *
- * Данные берутся точечным запросом `get_contact` (а не поиском по всему
- * списку, как в исходной версии). Аватар — буквенный: фотографии из AD
- * сознательно не тянем (см. `Avatar`).
- * Внешние действия (mailto/trueconf) идут через Rust-команду `open_external`
- * с allow-list схем вместо прямого shell-плагина.
+ * Ð”Ð°Ð½Ð½Ñ‹Ðµ Ð±ÐµÑ€ÑƒÑ‚ÑÑ Ñ‚Ð¾Ñ‡ÐµÑ‡Ð½Ñ‹Ð¼ Ð·Ð°Ð¿Ñ€Ð¾ÑÐ¾Ð¼ `get_contact` (Ð° Ð½Ðµ Ð¿Ð¾Ð¸ÑÐºÐ¾Ð¼ Ð¿Ð¾ Ð²ÑÐµÐ¼Ñƒ
+ * ÑÐ¿Ð¸ÑÐºÑƒ, ÐºÐ°Ðº Ð² Ð¸ÑÑ…Ð¾Ð´Ð½Ð¾Ð¹ Ð²ÐµÑ€ÑÐ¸Ð¸). ÐÐ²Ð°Ñ‚Ð°Ñ€ â€” Ð±ÑƒÐºÐ²ÐµÐ½Ð½Ñ‹Ð¹: Ñ„Ð¾Ñ‚Ð¾Ð³Ñ€Ð°Ñ„Ð¸Ð¸ Ð¸Ð· AD
+ * ÑÐ¾Ð·Ð½Ð°Ñ‚ÐµÐ»ÑŒÐ½Ð¾ Ð½Ðµ Ñ‚ÑÐ½ÐµÐ¼ (ÑÐ¼. `Avatar`).
+ * Ð’Ð½ÐµÑˆÐ½Ð¸Ðµ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ (mailto/trueconf) Ð¸Ð´ÑƒÑ‚ Ñ‡ÐµÑ€ÐµÐ· Rust-ÐºÐ¾Ð¼Ð°Ð½Ð´Ñƒ `open_external`
+ * Ñ allow-list ÑÑ…ÐµÐ¼ Ð²Ð¼ÐµÑÑ‚Ð¾ Ð¿Ñ€ÑÐ¼Ð¾Ð³Ð¾ shell-Ð¿Ð»Ð°Ð³Ð¸Ð½Ð°.
  */
 export function ContactDetails({
   contactId,
@@ -94,7 +84,7 @@ export function ContactDetails({
   const emailOverrides = useAppStore((state) => state.emailOverrides);
   const setEmailOverride = useAppStore((state) => state.setEmailOverride);
 
-  // Локальная подмена почты приоритетнее атрибута mail (которого может не быть).
+  // Ð›Ð¾ÐºÐ°Ð»ÑŒÐ½Ð°Ñ Ð¿Ð¾Ð´Ð¼ÐµÐ½Ð° Ð¿Ð¾Ñ‡Ñ‚Ñ‹ Ð¿Ñ€Ð¸Ð¾Ñ€Ð¸Ñ‚ÐµÑ‚Ð½ÐµÐµ Ð°Ñ‚Ñ€Ð¸Ð±ÑƒÑ‚Ð° mail (ÐºÐ¾Ñ‚Ð¾Ñ€Ð¾Ð³Ð¾ Ð¼Ð¾Ð¶ÐµÑ‚ Ð½Ðµ Ð±Ñ‹Ñ‚ÑŒ).
   const effectiveEmail = contact ? (emailOverrides[contact.id] ?? contact.email) : undefined;
   const contactWithEmail = useMemo<Contact | null>(
     () => (contact ? { ...contact, email: effectiveEmail } : null),
@@ -106,7 +96,7 @@ export function ContactDetails({
       devLog('write', { contactId: contact?.id, email: effectiveEmail });
       setPendingAction({ type: 'mailto', url: `mailto:${effectiveEmail}` });
     } else {
-      // Почты нет в AD — предлагаем указать вручную, софт остаётся рабочим.
+      // ÐŸÐ¾Ñ‡Ñ‚Ñ‹ Ð½ÐµÑ‚ Ð² AD â€” Ð¿Ñ€ÐµÐ´Ð»Ð°Ð³Ð°ÐµÐ¼ ÑƒÐºÐ°Ð·Ð°Ñ‚ÑŒ Ð²Ñ€ÑƒÑ‡Ð½ÑƒÑŽ, ÑÐ¾Ñ„Ñ‚ Ð¾ÑÑ‚Ð°Ñ‘Ñ‚ÑÑ Ñ€Ð°Ð±Ð¾Ñ‡Ð¸Ð¼.
       devLog('write', { contactId: contact?.id, email: null, prompt: true });
       setEmailPromptOpen(true);
     }
@@ -150,8 +140,8 @@ export function ContactDetails({
         devLog('open-external', { url: pendingAction.url, result: 'ok' });
       } catch (error) {
         devLog('open-external', { url: pendingAction.url, result: 'error', error });
-        console.error('[contact] не удалось открыть внешнее приложение', error);
-        // Для mailto браузерный fallback безопасен; прочие схемы — нет.
+        console.error('[contact] Ð½Ðµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð¾Ñ‚ÐºÑ€Ñ‹Ñ‚ÑŒ Ð²Ð½ÐµÑˆÐ½ÐµÐµ Ð¿Ñ€Ð¸Ð»Ð¾Ð¶ÐµÐ½Ð¸Ðµ', error);
+        // Ð”Ð»Ñ mailto Ð±Ñ€Ð°ÑƒÐ·ÐµÑ€Ð½Ñ‹Ð¹ fallback Ð±ÐµÐ·Ð¾Ð¿Ð°ÑÐµÐ½; Ð¿Ñ€Ð¾Ñ‡Ð¸Ðµ ÑÑ…ÐµÐ¼Ñ‹ â€” Ð½ÐµÑ‚.
         if (pendingAction.type === 'mailto') {
           window.location.href = pendingAction.url;
         }
@@ -171,8 +161,8 @@ export function ContactDetails({
           transition={animationsEnabled ? { duration: 0.15, ease: 'easeInOut' } : { duration: 0 }}
           className="flex-1 w-full relative h-full overflow-y-auto overflow-x-hidden"
         >
-          {/* m-auto: на высоких экранах карточка центрируется по вертикали,
-              а не прилипает к верху; при нехватке места — обычный скролл. */}
+          {/* m-auto: Ð½Ð° Ð²Ñ‹ÑÐ¾ÐºÐ¸Ñ… ÑÐºÑ€Ð°Ð½Ð°Ñ… ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ° Ñ†ÐµÐ½Ñ‚Ñ€Ð¸Ñ€ÑƒÐµÑ‚ÑÑ Ð¿Ð¾ Ð²ÐµÑ€Ñ‚Ð¸ÐºÐ°Ð»Ð¸,
+              Ð° Ð½Ðµ Ð¿Ñ€Ð¸Ð»Ð¸Ð¿Ð°ÐµÑ‚ Ðº Ð²ÐµÑ€Ñ…Ñƒ; Ð¿Ñ€Ð¸ Ð½ÐµÑ…Ð²Ð°Ñ‚ÐºÐµ Ð¼ÐµÑÑ‚Ð° â€” Ð¾Ð±Ñ‹Ñ‡Ð½Ñ‹Ð¹ ÑÐºÑ€Ð¾Ð»Ð». */}
           <div className="min-h-full flex flex-col pt-20 sm:pt-24 md:pt-10 px-6 xl:px-8 pb-8">
             <div className="m-auto w-full max-w-[1100px]">
               <div className="md:hidden absolute top-4 left-4 z-10 bg-surface rounded-full shadow-sm ring-1 ring-border/50">
@@ -193,93 +183,14 @@ export function ContactDetails({
               <IpPhoneSection ipPhone={contact.ipPhone} fullIpPhone={contact.fullIpPhone} />
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-5 xl:gap-6 w-full items-start">
-                <div className="w-full min-w-0">
-                  <h3 className="text-[12px] font-bold text-muted-foreground mb-3 px-2 uppercase">
-                    {t('contactInfo')}
-                  </h3>
-                  <div className="bg-surface rounded-[16px] shadow-sm ring-1 ring-border/50 overflow-hidden transition-colors">
-                    <DetailRow icon={Phone} label={t('mobilePhone')} value={contact.mobilePhone} copyable />
-                    <div className="h-px bg-border" />
-                    <DetailRow
-                      icon={Mail}
-                      label={t('email')}
-                      value={effectiveEmail}
-                      isLink
-                      onClick={handleWrite}
-                      showArrow={Boolean(effectiveEmail)}
-                      copyable
-                    />
-                  </div>
-                </div>
-
-                <div className="w-full min-w-0">
-                  <h3 className="text-[12px] font-bold text-muted-foreground mb-3 px-2 uppercase">
-                    {t('positionInCompany')}
-                  </h3>
-                  <div className="bg-surface rounded-[16px] shadow-sm ring-1 ring-border/50 overflow-hidden transition-colors">
-                    <DetailRow icon={Building2} label={t('organization')} value={contact.organization} copyable />
-                    <div className="h-px bg-border" />
-                    <DetailRow
-                      icon={Network}
-                      label={t('department')}
-                      value={contact.department}
-                      onClick={
-                        contact.department && onDepartmentClick
-                          ? () => onDepartmentClick?.(contact.department as string, contact.organization)
-                          : undefined
-                      }
-                      showArrow={Boolean(contact.department) && Boolean(onDepartmentClick)}
-                      copyable
-                    />
-                    <div className="h-px bg-border" />
-                    <DetailRow
-                      icon={Briefcase}
-                      label={t('jobTitle')}
-                      value={contact.jobTitle}
-                      onClick={
-                        contact.jobTitle && onTitleClick
-                          ? () => onTitleClick?.(contact.jobTitle as string, contact.organization)
-                          : undefined
-                      }
-                      showArrow={Boolean(contact.jobTitle) && Boolean(onTitleClick)}
-                      copyable
-                    />
-                    {contact.office && (
-                      <>
-                        <div className="h-px bg-border" />
-                        <DetailRow
-                          icon={MapPin}
-                          label={t('office')}
-                          value={contact.office}
-                          onClick={
-                            contact.office && onOfficeClick
-                              ? () => onOfficeClick?.(contact.office as string, contact.organization)
-                              : undefined
-                          }
-                          showArrow={Boolean(contact.office) && Boolean(onOfficeClick)}
-                          copyable
-                        />
-                      </>
-                    )}
-                    {contact.manager && (
-                      <>
-                        <div className="h-px bg-border" />
-                        <DetailRow
-                          icon={UserRound}
-                          label={t('manager')}
-                          value={personNameForLanguage(contact.manager, i18n.language)}
-                          onClick={
-                            contact.manager && onManagerClick
-                              ? () => onManagerClick?.(contact.manager as string, contact.managerId)
-                              : undefined
-                          }
-                          showArrow={Boolean(contact.manager) && Boolean(onManagerClick)}
-                          copyable
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
+                <ContactInfoCard contact={contact} effectiveEmail={effectiveEmail} onWrite={handleWrite} />
+                <CompanyInfoCard
+                  contact={contact}
+                  onDepartmentClick={onDepartmentClick}
+                  onTitleClick={onTitleClick}
+                  onOfficeClick={onOfficeClick}
+                  onManagerClick={onManagerClick}
+                />
 
                 <div className="w-full min-w-0 lg:col-span-2">
                   <h3 className="text-[12px] font-bold text-muted-foreground mb-3 px-2 uppercase">{t('scanQrCode')}</h3>
@@ -306,8 +217,8 @@ export function ContactDetails({
                         </Suspense>
                       </div>
 
-                      {/* Значок зума по центру: появляется при наведении,
-                        тёмный круг с белой иконкой — виден на любом фоне */}
+                      {/* Ð—Ð½Ð°Ñ‡Ð¾Ðº Ð·ÑƒÐ¼Ð° Ð¿Ð¾ Ñ†ÐµÐ½Ñ‚Ñ€Ñƒ: Ð¿Ð¾ÑÐ²Ð»ÑÐµÑ‚ÑÑ Ð¿Ñ€Ð¸ Ð½Ð°Ð²ÐµÐ´ÐµÐ½Ð¸Ð¸,
+                        Ñ‚Ñ‘Ð¼Ð½Ñ‹Ð¹ ÐºÑ€ÑƒÐ³ Ñ Ð±ÐµÐ»Ð¾Ð¹ Ð¸ÐºÐ¾Ð½ÐºÐ¾Ð¹ â€” Ð²Ð¸Ð´ÐµÐ½ Ð½Ð° Ð»ÑŽÐ±Ð¾Ð¼ Ñ„Ð¾Ð½Ðµ */}
                       <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                         <span className="bg-slate-900/90 p-4 rounded-full text-white shadow-xl ring-1 ring-white/30 scale-90 group-hover:scale-100 transition-transform duration-300">
                           <QrCode className="w-7 h-7" aria-hidden />
