@@ -6,6 +6,9 @@ dist/
 coverage/
 src-tauri/target/
 src-tauri/gen/schemas/
+src-tauri/fuzz/target/
+src-tauri/fuzz/artifacts/
+src-tauri/fuzz/corpus/
 
 # Env & logs
 .env

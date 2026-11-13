@@ -1,0 +1,22 @@
+[package]
+name = "phonebook-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.app_lib]
+package = "kmaruda-phonebook"
+path = ".."
+
+[[bin]]
+name = "phonebook_xml"
+path = "fuzz_targets/phonebook_xml.rs"
+test = false
+doc = false
+bench = false
