@@ -32,7 +32,9 @@ follows [Semantic Versioning](https://semver.org/).
 - New 34-icon set with currentColor masks; contact card, settings, external
   files, groups and modals now use the new visual language.
 - Tauri 2.12.5, webview2-com 0.39.1 and windows 0.62.2.
-- The visual-regression baseline now reflects the new icon set.
+- Montserrat is now used by both the sans and mono theme tokens, so the
+  root `font-sans` class no longer falls back to the system font.
+- The visual-regression baseline now reflects the new icon set and font.
 
 ## [0.2.5] - 2026-11-12
 
