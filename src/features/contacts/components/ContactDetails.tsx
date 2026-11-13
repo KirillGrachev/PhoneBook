@@ -199,7 +199,7 @@ export function ContactDetails({
                   </h3>
                   <div className="bg-surface rounded-[16px] shadow-sm ring-1 ring-border/50 overflow-hidden transition-colors">
                     <DetailRow icon={Phone} label={t('mobilePhone')} value={contact.mobilePhone} copyable />
-                    <div className="h-px bg-border ml-[56px]" />
+                    <div className="h-px bg-border" />
                     <DetailRow
                       icon={Mail}
                       label={t('email')}
@@ -218,7 +218,7 @@ export function ContactDetails({
                   </h3>
                   <div className="bg-surface rounded-[16px] shadow-sm ring-1 ring-border/50 overflow-hidden transition-colors">
                     <DetailRow icon={Building2} label={t('organization')} value={contact.organization} copyable />
-                    <div className="h-px bg-border ml-[56px]" />
+                    <div className="h-px bg-border" />
                     <DetailRow
                       icon={Network}
                       label={t('department')}
@@ -231,7 +231,7 @@ export function ContactDetails({
                       showArrow={Boolean(contact.department) && Boolean(onDepartmentClick)}
                       copyable
                     />
-                    <div className="h-px bg-border ml-[56px]" />
+                    <div className="h-px bg-border" />
                     <DetailRow
                       icon={Briefcase}
                       label={t('jobTitle')}
@@ -246,7 +246,7 @@ export function ContactDetails({
                     />
                     {contact.office && (
                       <>
-                        <div className="h-px bg-border ml-[56px]" />
+                        <div className="h-px bg-border" />
                         <DetailRow
                           icon={MapPin}
                           label={t('office')}
@@ -263,7 +263,7 @@ export function ContactDetails({
                     )}
                     {contact.manager && (
                       <>
-                        <div className="h-px bg-border ml-[56px]" />
+                        <div className="h-px bg-border" />
                         <DetailRow
                           icon={UserRound}
                           label={t('manager')}

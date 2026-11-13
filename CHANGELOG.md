@@ -28,6 +28,7 @@ follows [Semantic Versioning](https://semver.org/).
   contact header instead of a dot-separated sentence.
 - English locale transliterates person names according to the company table;
   QR/vCard uses the same English name.
+- Contact-info separators now run across the full card width.
 
 ### Changed
 
