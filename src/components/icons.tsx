@@ -1,4 +1,4 @@
-import type { ComponentType, CSSProperties } from 'react';
+import type { ComponentType, CSSProperties, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -25,6 +25,31 @@ export type IconComponent = ComponentType<AppIconProps>;
 function createIcon(name: AppIconName, baseClassName?: string): IconComponent {
   return function Icon({ className, size, 'aria-label': ariaLabel }: AppIconProps) {
     return <AppIcon name={name} size={size} label={ariaLabel} className={cn(baseClassName, className)} />;
+  };
+}
+
+/** Управляющие иконки (крестик, галочка, шевроны, спиннер) — без Lucide. */
+function createStrokeIcon(children: ReactNode): IconComponent {
+  return function StrokeIcon({ className, size, 'aria-label': ariaLabel, strokeWidth = 2 }: AppIconProps) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        width={size}
+        height={size}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={cn('shrink-0', className)}
+        role={ariaLabel ? 'img' : undefined}
+        aria-label={ariaLabel}
+        aria-hidden={ariaLabel ? undefined : true}
+      >
+        {children}
+      </svg>
+    );
   };
 }
 
@@ -117,14 +142,17 @@ export const Layers = createEmoji('🗂️');
 export const Pin = createEmoji('📌');
 export const SearchX = createEmoji('🔎');
 
-export {
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Copy as Restore,
-  Loader2,
-  Minus,
-  Square,
-  X,
-} from 'lucide-react';
+export const Check = createStrokeIcon(<polyline points="20 6 9 17 4 12" />);
+export const ChevronDown = createStrokeIcon(<polyline points="6 9 12 15 18 9" />);
+export const ChevronLeft = createStrokeIcon(<polyline points="15 18 9 12 15 6" />);
+export const ChevronRight = createStrokeIcon(<polyline points="9 18 15 12 9 6" />);
+export const Loader2 = createStrokeIcon(<path d="M21 12a9 9 0 1 1-6.219-8.56" />);
+export const Minus = createStrokeIcon(<line x1="5" y1="12" x2="19" y2="12" />);
+export const Restore = createIcon('copy');
+export const Square = createStrokeIcon(<rect x="3" y="3" width="18" height="18" rx="2" />);
+export const X = createStrokeIcon(
+  <>
+    <path d="M18 6 6 18" />
+    <path d="m6 6 12 12" />
+  </>,
+);

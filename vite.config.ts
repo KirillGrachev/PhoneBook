@@ -51,9 +51,6 @@ export default defineConfig({
           if (/[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/.test(id)) {
             return 'vendor-i18n';
           }
-          if (/[\\/]node_modules[\\/]lucide-react[\\/]/.test(id)) {
-            return 'vendor-icons';
-          }
           if (/[\\/]node_modules[\\/](sonner)[\\/]/.test(id)) {
             return 'vendor-toast';
           }

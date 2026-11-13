@@ -38,6 +38,8 @@ follows [Semantic Versioning](https://semver.org/).
 - Montserrat is now used by both the sans and mono theme tokens, so the
   root `font-sans` class no longer falls back to the system font.
 - The visual-regression baseline now reflects the new icon set and font.
+- Removed the lucide-react dependency; control icons (check, chevrons, close,
+  spinner, window controls) are inline SVG now.
 
 ## [0.2.5] - 2026-11-12
 
