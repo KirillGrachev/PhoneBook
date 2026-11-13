@@ -18,6 +18,9 @@ interface ContactHeaderProps {
 /** Шапка карточки контакта: аватар, ФИО, действия, «в мои контакты». */
 export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActionClick }: ContactHeaderProps) {
   const { t } = useTranslation();
+  const details = [contact.jobTitle, contact.department, contact.organization].filter((value): value is string =>
+    Boolean(value && value.trim()),
+  );
 
   const handleToggleSave = () => {
     devLog('favorite', { id: contact.id, name: contact.fullName, saved: !isSaved });
@@ -43,9 +46,15 @@ export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActio
           <h2 className="text-[22px] sm:text-[28px] font-semibold text-foreground mb-1.5 leading-tight break-words select-text">
             {contact.fullName}
           </h2>
-          <p className="text-muted-foreground text-[15px] leading-snug text-wrap select-text">
-            {[contact.jobTitle, contact.department, contact.organization].filter(Boolean).join(' • ')}
-          </p>
+          {details.length > 0 && (
+            <div className="text-muted-foreground text-[15px] leading-snug select-text">
+              {details.map((line, index) => (
+                <p key={`${index}-${line}`} className="m-0">
+                  {line}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
