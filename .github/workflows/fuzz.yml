@@ -1,0 +1,73 @@
+name: Fuzz
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  xml:
+    name: Yealink XML fuzzer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      - name: Install Tauri system dependencies
+        timeout-minutes: 30
+        run: |
+          sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' -o -name 'apt-mirrors.txt' \) \
+            -exec sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' {} + || true
+          updated=0
+          for attempt in 1 2 3; do
+            if sudo timeout 120 apt-get update \
+              -o Acquire::Retries=3 \
+              -o Acquire::ForceIPv4=true \
+              -o Acquire::http::Timeout=20 \
+              -o Acquire::https::Timeout=20; then
+              updated=1
+              break
+            fi
+            echo "apt-get update attempt ${attempt} failed"
+            sleep 5
+          done
+          [ "$updated" = 1 ] || exit 1
+          installed=0
+          for attempt in 1 2; do
+            if sudo timeout 600 apt-get install -y --no-install-recommends \
+              -o Dpkg::Options::=--force-confdef \
+              -o Dpkg::Options::=--force-confold \
+              libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev \
+              libayatana-appindicator3-dev librsvg2-dev libssl-dev \
+              libkeyutils-dev pkg-config build-essential; then
+              installed=1
+              break
+            fi
+            echo "apt-get install attempt ${attempt} failed"
+            sudo dpkg --configure -a || true
+            sleep 5
+          done
+          [ "$installed" = 1 ] || exit 1
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: nightly
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: src-tauri
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
+        with:
+          tool: cargo-fuzz
+
+      - name: Run XML fuzzer
+        working-directory: src-tauri
+        run: cargo +nightly fuzz run phonebook_xml -- -max_total_time=60 -rss_limit_mb=2048
