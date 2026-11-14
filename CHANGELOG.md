@@ -55,6 +55,8 @@ follows [Semantic Versioning](https://semver.org/).
 - English backend-error catalog covers every exposed code; a test rejects
   Cyrillic fallbacks in the English UI.
 - Fuzz seed corpus for valid, truncated and edge-case Yealink XML.
+- Native UI E2E via WebView2 CDP: opens the real app, checks the title and
+  directory heading, and opens Settings.
 
 ## [0.2.5] - 2026-11-12
 

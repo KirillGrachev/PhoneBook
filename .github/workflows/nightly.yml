@@ -56,6 +56,9 @@ jobs:
           }
           Stop-Process -Id $process.Id -Force
 
+      - name: Native UI E2E (WebView2 CDP)
+        run: npm run test:native
+
       - run: npx playwright install chromium
       - run: npm run test:e2e
 
