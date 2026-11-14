@@ -9,5 +9,7 @@ cargo +nightly fuzz run phonebook_xml
 ```
 
 The target feeds arbitrary UTF-8 into the Yealink IPPhoneBook XML parser and
-treats any panic as a failure. It is intentionally outside the normal Cargo
-test run; the parser is also covered by the `proptest` regression test.
+treats any panic as a failure. Seed inputs live in
+`corpus/phonebook_xml/` (valid, truncated and edge-case XML). The target is
+intentionally outside the normal Cargo test run; the parser is also covered by
+the `proptest` regression test.

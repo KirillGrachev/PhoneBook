@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<IPPhoneBook>
+  <Title>Corporate</Title>
+  <Menu Name="Support">
+    <Unit Name="Ivanov Ivan" Phone1="1234" Phone2="+7 495 000-00-00" />
+    <Unit Name="Petrov Petr" Phone1="5678" />
+  </Menu>
+</IPPhoneBook>
