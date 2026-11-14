@@ -61,7 +61,7 @@ follows [Semantic Versioning](https://semver.org/).
 - Manual Release dry run workflow builds MSI/NSIS, verifies them, creates the
   portable ZIP and SHA256SUMS without publishing a release.
 - Manual Linux Fuzz workflow runs the Yealink XML target for 60 seconds with
-  the seed corpus.
+  the seed corpus on the GNU target (no static-libc ASan conflict).
 
 ## [0.2.5] - 2026-11-12
 
