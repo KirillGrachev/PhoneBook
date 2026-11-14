@@ -50,8 +50,8 @@ follows [Semantic Versioning](https://semver.org/).
 - SettingsAdView is split into SettingsAdSyncCard and SettingsAdDuplicates.
 - CI checks parity between the Rust DTOs and their TypeScript mirrors.
 - libFuzzer target for the Yealink XML parser (`src-tauri/fuzz`).
-- Nightly Windows builds the native executable and checks that it stays alive
-  for 8 seconds after launch.
+- Nightly Windows builds the native executable, checks that it stays alive for
+  8 seconds, has a visible window, and exposes the expected title.
 - English backend-error catalog covers every exposed code; a test rejects
   Cyrillic fallbacks in the English UI.
 
