@@ -147,15 +147,8 @@ export interface ExternalRefreshDto {
   sources?: ExternalSourceDto[];
 }
 
-/** Результат диагностики подключения к каталогу. */
-export interface ConnectionTestDto {
-  bindMs: number;
-  serverDnsName: string | null;
-  /** defaultNamingContext из rootDSE — подсказка для Base DN. */
-  defaultNamingContext: string | null;
-  sampleNames: string[];
-  sampleIsTruncated: boolean;
-}
+/** Результат диагностики подключения к каталогу (генерируется из Rust). */
+export type { ConnectionTestDto } from './contracts.generated';
 
 /** Фазы live-события синхронизации. */
 export type SyncEventState = 'started' | 'progress' | 'finished' | 'error' | 'runFinished';
