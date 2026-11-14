@@ -54,7 +54,8 @@ jobs:
           if ($process.MainWindowTitle -notmatch 'PhoneBook') {
             throw "unexpected native window title: $($process.MainWindowTitle)"
           }
-          Stop-Process -Id $process.Id -Force
+          taskkill /PID $process.Id /T /F | Out-Null
+          Start-Sleep -Seconds 3
 
       - name: Native UI E2E (WebView2 CDP)
         run: npm run test:native
