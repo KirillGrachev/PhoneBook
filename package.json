@@ -27,8 +27,8 @@
     "check:tauri": "node scripts/check-tauri-versions.mjs",
     "check:contracts": "node scripts/check-contract-parity.mjs",
     "test:native": "node scripts/native-e2e.mjs",
-    "generate:contracts": "node scripts/generate-connection-contract.mjs",
-    "check:contracts:generated": "node scripts/generate-connection-contract.mjs --check"
+    "generate:contracts": "node scripts/generate-contracts.mjs",
+    "check:contracts:generated": "node scripts/generate-contracts.mjs --check"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.2.1",
