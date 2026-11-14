@@ -9,10 +9,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-
-[dependencies.app_lib]
-package = "kmaruda-phonebook"
-path = ".."
+phonebook-xml = { path = "../xml" }
 
 [[bin]]
 name = "phonebook_xml"

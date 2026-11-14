@@ -2291,8 +2291,8 @@ dependencies = [
  "image",
  "keyring",
  "ldap3",
+ "phonebook-xml",
  "proptest",
- "quick-xml",
  "rusqlite",
  "serde",
  "serde_json",
@@ -3164,6 +3164,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6fd9027e2d9319be6349febd1db4e8d02aa544921200c9b777720ac34a3aa89"
 dependencies = [
  "siphasher",
+]
+
+[[package]]
+name = "phonebook-xml"
+version = "0.1.0"
+dependencies = [
+ "quick-xml",
 ]
 
 [[package]]
