@@ -1,4 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 import { chromium } from 'playwright';
@@ -6,10 +9,12 @@ import { chromium } from 'playwright';
 const exe = process.env.PHONEBOOK_NATIVE_EXE ?? 'src-tauri/target/debug/kmaruda-phonebook.exe';
 const port = process.env.PHONEBOOK_NATIVE_CDP_PORT ?? '9333';
 const endpoint = `http://127.0.0.1:${port}`;
+const userData = join(tmpdir(), `phonebook-native-e2e-${process.pid}`);
 
 const app = spawn(exe, {
   env: {
     ...process.env,
+    WEBVIEW2_USER_DATA_FOLDER: userData,
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
   },
   stdio: 'ignore',
@@ -61,5 +66,10 @@ try {
   await browser?.close().catch(() => {});
   if (app.pid) {
     spawnSync('taskkill', ['/PID', String(app.pid), '/T', '/F'], { stdio: 'ignore' });
+  }
+  try {
+    rmSync(userData, { recursive: true, force: true });
+  } catch {
+    // WebView2 may still hold a file briefly; the temp folder is disposable.
   }
 }
