@@ -62,8 +62,8 @@ follows [Semantic Versioning](https://semver.org/).
   portable ZIP and SHA256SUMS without publishing a release.
 - Manual Linux Fuzz workflow runs the Yealink XML target for 60 seconds with
   the seed corpus on the GNU target (no static-libc ASan conflict).
-- `ConnectionTestDto` is generated from the Rust DTO; CI rejects a stale
-  generated TypeScript contract.
+- Ten core DTO interfaces are generated from the Rust serde structs; CI rejects
+  a stale generated TypeScript contract.
 
 ## [0.2.5] - 2026-11-12
 
