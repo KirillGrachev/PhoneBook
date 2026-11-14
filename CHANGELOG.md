@@ -54,6 +54,7 @@ follows [Semantic Versioning](https://semver.org/).
   8 seconds, has a visible window, and exposes the expected title.
 - English backend-error catalog covers every exposed code; a test rejects
   Cyrillic fallbacks in the English UI.
+- Fuzz seed corpus for valid, truncated and edge-case Yealink XML.
 
 ## [0.2.5] - 2026-11-12
 
