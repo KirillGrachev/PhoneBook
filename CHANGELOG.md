@@ -62,6 +62,9 @@ follows [Semantic Versioning](https://semver.org/).
   portable ZIP and SHA256SUMS without publishing a release.
 - Manual Linux Fuzz workflow runs the Yealink XML target for 60 seconds with
   the seed corpus on the GNU target (no static-libc ASan conflict).
+- XML parser extracted into the `phonebook-xml` crate; the fuzzer no longer
+  links Tauri/SQLite, runs on Windows too, and the fuzz lock no longer pulls the
+  vulnerable `glib` version (Dependabot alert 19).
 - Ten core DTO interfaces are generated from the Rust serde structs; CI rejects
   a stale generated TypeScript contract.
 

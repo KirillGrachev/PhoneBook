@@ -21,9 +21,6 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
-use quick_xml::escape::unescape as unescape_xml;
-use quick_xml::events::Event;
-use quick_xml::Reader;
 use serde::Serialize;
 use tracing::{debug, info, warn};
 
@@ -40,25 +37,7 @@ pub const COLLISION_SUFFIX: &str = "(файл)";
 /// килобайтами, мегабайтный XML почти наверняка выбран по ошибке.
 const MAX_FILE_BYTES: u64 = 8 * 1024 * 1024;
 
-/// Запись `Unit` внешнего телефонного файла.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PhonebookUnit {
-    /// Отображаемое имя (`Unit/@Name`).
-    pub name: String,
-    /// Номера `Phone1..Phone3` (пустые атрибуты — `None`).
-    pub phones: [Option<String>; 3],
-    /// Имя ближайшего объемлющего `Menu` (подразделение).
-    pub menu: Option<String>,
-}
-
-/// Результат разбора XML телефонной книги.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ParsedPhonebook {
-    /// Заголовок `IPPhoneBook/Title` (имя источника в справочнике).
-    pub title: Option<String>,
-    /// Записи `Unit` в порядке следования в файле.
-    pub units: Vec<PhonebookUnit>,
-}
+pub use phonebook_xml::{ParsedPhonebook, PhonebookUnit};
 
 /// Итог загрузки внешнего файла в кэш (DTO события для фронтенда).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -89,122 +68,15 @@ pub struct ExternalSource {
 
 /// Разобрать XML телефонной книги Yealink (`IPPhoneBook`).
 ///
-/// Разбор потоковый: держим стек имён `Menu` и собираем атрибуты `Unit`.
-/// Имена элементов и атрибутов сравниваются без учёта регистра — прошивки
-/// телефонов не гарантируют точное написание тегов.
-///
-/// # Ошибки
-/// [`AppError::ExternalFile`] — файл не является корректным XML или не
-/// содержит ни одной записи `Unit` (вероятно, выбран не тот файл).
+/// Сам разбор живёт в `phonebook-xml`, чтобы фуззер не тянул Tauri/SQLite.
 pub fn parse_phonebook_xml(xml: &str) -> Result<ParsedPhonebook, AppError> {
-    // BOM копировального экспорта не несёт данных — убираем до разбора.
-    let xml = xml.strip_prefix('\u{feff}').unwrap_or(xml);
-
-    let mut reader = Reader::from_str(xml);
-
-    let mut title: Option<String> = None;
-    let mut units: Vec<PhonebookUnit> = Vec::new();
-    let mut menu_stack: Vec<String> = Vec::new();
-    let mut in_title = false;
-
-    loop {
-        // В quick-xml 0.42 событие приходит в `Result`: ошибка разбора
-        // прерывает весь файл — частичный телефонный список хуже отказа.
-        let event = match reader.read_event() {
-            Ok(event) => event,
-            Err(e) => {
-                return Err(AppError::ExternalFile(format!(
-                    "некорректный XML: {e} (позиция {})",
-                    reader.error_position()
-                )))
-            }
-        };
-        match event {
-            Event::Start(element) => match tag_name(&element).as_str() {
-                "menu" => menu_stack.push(attribute_text(&element, "name").unwrap_or_default()),
-                "unit" => push_unit(&element, &menu_stack, &mut units),
-                "title" if menu_stack.is_empty() => in_title = true,
-                _ => {}
-            },
-            // Самозакрывающиеся элементы: меню без потомков не добавляет
-            // уровня вложенности, `Unit` встречается и в такой форме.
-            Event::Empty(element) if tag_name(&element).as_str() == "unit" => {
-                push_unit(&element, &menu_stack, &mut units);
-            }
-            Event::Empty(_) => {}
-            Event::End(element) => {
-                match element.local_name().as_ref().to_ascii_lowercase().as_str() {
-                    "menu" => {
-                        menu_stack.pop();
-                    }
-                    "title" => in_title = false,
-                    _ => {}
-                }
-            }
-            Event::Text(text) if in_title => {
-                let raw = text.into_inner();
-                let value = unescape_xml(raw.as_ref())
-                    .map_err(|e| AppError::ExternalFile(format!("некорректный XML: {e}")))?;
-                let value = value.trim();
-                if !value.is_empty() && title.is_none() {
-                    title = Some(value.to_string());
-                }
-            }
-            Event::Eof => break,
-            _ => {}
-        }
-    }
-
-    if units.is_empty() {
-        return Err(AppError::ExternalFile(
-            "в файле нет ни одной записи Unit — проверьте, что выбран файл телефонной книги".into(),
-        ));
-    }
-    debug!(units = units.len(), "внешний телефонный файл разобран");
-    Ok(ParsedPhonebook { title, units })
-}
-
-/// Имя элемента в нижнем регистре: прошивки телефонов не гарантируют точное
-/// написание тегов, а формат файла сравниваем без учёта регистра.
-fn tag_name(element: &quick_xml::events::BytesStart<'_>) -> String {
-    element.local_name().as_ref().to_ascii_lowercase()
-}
-
-/// Добавить запись `Unit` в разбор: имя обязательно, ближайшие `Menu` дают
-/// подразделение, пустые атрибуты номеров не считаются значениями.
-fn push_unit(
-    element: &quick_xml::events::BytesStart<'_>,
-    menu_stack: &[String],
-    units: &mut Vec<PhonebookUnit>,
-) {
-    let Some(name) = attribute_text(element, "name") else {
-        return;
-    };
-    units.push(PhonebookUnit {
-        name,
-        phones: [
-            attribute_text(element, "phone1"),
-            attribute_text(element, "phone2"),
-            attribute_text(element, "phone3"),
-        ],
-        menu: menu_stack.last().filter(|menu| !menu.is_empty()).cloned(),
-    });
-}
-
-/// Значение атрибута элемента: обрезанное, с раскрытыми XML-энтити;
-/// пустые строки не считаются значением (`Phone2=""` — обычный случай).
-fn attribute_text(element: &quick_xml::events::BytesStart<'_>, attribute: &str) -> Option<String> {
-    element
-        .attributes()
-        .flatten()
-        .find(|attr| attr.key.as_ref().eq_ignore_ascii_case(attribute))
-        .and_then(|attr| {
-            unescape_xml(attr.value.as_ref())
-                .ok()
-                .map(|v| v.into_owned())
-        })
-        .map(|value| tokens::collapse_spaces(value.trim()))
-        .filter(|value| !value.is_empty())
+    let parsed = phonebook_xml::parse_phonebook_xml(xml)
+        .map_err(|error| AppError::ExternalFile(error.to_string()))?;
+    debug!(
+        units = parsed.units.len(),
+        "внешний телефонный файл разобран"
+    );
+    Ok(parsed)
 }
 
 /// Построить записи кэша из разобранного файла.

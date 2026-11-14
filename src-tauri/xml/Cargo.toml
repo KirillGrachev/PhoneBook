@@ -1,0 +1,10 @@
+[package]
+name = "phonebook-xml"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+description = "Streaming parser for Yealink IPPhoneBook XML"
+license = "MIT"
+
+[dependencies]
+quick-xml = "0.42"
