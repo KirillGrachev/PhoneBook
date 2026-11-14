@@ -1,0 +1,64 @@
+name: Release dry run
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Build and verify release artifacts
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: src-tauri
+
+      - name: Build installers
+        run: npm run tauri build -- --bundles msi,nsis
+
+      - name: Verify and checksum artifacts
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $bundle = "src-tauri/target/release/bundle"
+          $nsis = Join-Path $bundle "nsis/KMAruda PhoneBook_${version}_x64-setup.exe"
+          $msi = Join-Path $bundle "msi/KMAruda PhoneBook_${version}_x64_en-US.msi"
+          $portable = "KMAruda.PhoneBook_${version}_windows-x64_portable.zip"
+
+          Copy-Item "src-tauri/target/release/kmaruda-phonebook.exe" "KMAruda.PhoneBook.exe" -Force
+          Compress-Archive -Path "KMAruda.PhoneBook.exe" -DestinationPath $portable -Force
+
+          $required = @($nsis, $msi, $portable)
+          foreach ($file in $required) {
+            if (-not (Test-Path $file)) { throw "missing release artifact: $file" }
+            $signature = Get-AuthenticodeSignature $file
+            Write-Output "artifact: $file; signature: $($signature.Status)"
+          }
+
+          $lines = foreach ($file in $required) {
+            $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+            "$hash  $(Split-Path $file -Leaf)"
+          }
+          $lines | Set-Content -Encoding ascii SHA256SUMS-windows-x64.txt
+          Get-Content SHA256SUMS-windows-x64.txt
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-dry-run
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+            KMAruda.PhoneBook_*_windows-x64_portable.zip
+            SHA256SUMS-windows-x64.txt
+          if-no-files-found: error
