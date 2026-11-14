@@ -49,6 +49,11 @@ jobs:
           $process = Start-Process $exe -PassThru
           Start-Sleep -Seconds 8
           if ($process.HasExited) { throw "native app exited during startup: $($process.ExitCode)" }
+          $process.Refresh()
+          if ($process.MainWindowHandle -eq 0) { throw "native app has no visible window" }
+          if ($process.MainWindowTitle -notmatch 'PhoneBook') {
+            throw "unexpected native window title: $($process.MainWindowTitle)"
+          }
           Stop-Process -Id $process.Id -Force
 
       - run: npx playwright install chromium
