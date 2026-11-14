@@ -11,6 +11,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/KirillGrachev/PhoneBook/releases/latest">Download the latest release</a>
+</p>
+
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="screenshots/home-dark.png">
     <img src="screenshots/home-light.png" alt="KMAruda PhoneBook: employee profile, contact details, QR vCard and contact list" width="100%">
@@ -28,15 +32,18 @@ A browser demo mode with mock data is available for UI work.
 - prefix and substring search (FTS5 + trigrams), including keyboard-layout
   and phone-format normalization;
 - e-mail and phone-tail search;
-- synchronization across multiple AD connections and an external Yealink XML
-  phone book;
+- synchronization across multiple AD connections and multiple external Yealink
+  XML phone books, with a cached fallback when a file is unavailable;
+- LDAP connection/operation timeouts, retries with backoff and domain-controller
+  failover;
 - employee profile with manager and colleagues by department, job title or
   office;
 - favorites, holding-wide global mode and organization groups;
 - AES-256-GCM encryption for the local cache; AD passwords stay in the OS
   keyring;
-- English and Russian interface, light/dark/system themes and animation
-  settings.
+- English and Russian interface, including English name transliteration in QR
+  vCards, light/dark/system themes and animation settings;
+- Montserrat typography and a 34-icon currentColor icon set.
 
 ## Stack
 
@@ -44,8 +51,10 @@ A browser demo mode with mock data is available for UI work.
   Zustand, Tailwind CSS 4, Motion.
 - **Backend:** Rust, Tauri 2, rusqlite (FTS5, trigram), ldap3, AES-GCM,
   keyring.
-- **Tests/CI:** Vitest, Rust unit tests, GitHub Actions (clippy, fmt, cargo
-  audit, CodeQL, dependency review, OSV).
+- **Tests/CI:** Vitest, Rust unit/integration tests, Playwright browser and
+  native smoke tests, cargo-fuzz, Rust coverage floors, DTO parity/codegen
+  checks, GitHub Actions (clippy, fmt, cargo audit, CodeQL, dependency review,
+  OSV, release dry run).
 
 ## Getting started
 
@@ -94,6 +103,9 @@ cargo test --release --manifest-path src-tauri/Cargo.toml search_load_benchmark 
 | `src-tauri/src/commands` | Typed IPC boundary |
 | `src-tauri/src/services/ldap` | LDAP/AD client and record parsing |
 | `src-tauri/src/services/db` | SQLite cache, FTS/trigrams and encryption |
+| `src-tauri/xml` | Standalone Yealink XML parser shared with the fuzzer |
+| `src-tauri/fuzz` | cargo-fuzz target and seed corpus |
+| `docs/screenshots` | Current light/dark screenshots used by this README |
 | `docs` | Contributing, security policy, code of conduct and signing notes |
 
 ## Documentation

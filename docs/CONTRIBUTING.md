@@ -97,7 +97,11 @@ OSV scanner; see [.github/workflows](../.github/workflows).
 
 ## Releases
 
-1. Bump the version in the three files above.
+1. Bump the version in the three files above and move the `CHANGELOG.md` entries
+   into a `## [x.y.z] - YYYY-MM-DD` section.
 2. Merge to `main`, then push a tag: `git tag v0.2.0 && git push origin v0.2.0`.
-3. The Release workflow builds the MSI/NSIS installers and attaches them to a
-   draft GitHub Release.
+3. The Release workflow builds MSI/NSIS, creates the portable ZIP, symbols,
+   `SHA256SUMS-windows-x64.txt` and the SBOM, and publishes the GitHub Release.
+4. Write the release notes in the same `Features` / `Fixes` / `Internal` format
+   as the previous releases, with links to the relevant commits. Releases are
+   unsigned until an Authenticode certificate is configured.

@@ -120,7 +120,9 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.7...HEAD
+[0.2.7]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.6...v0.2.7
+[0.2.6]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.2...v0.2.3
