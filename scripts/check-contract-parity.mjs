@@ -11,7 +11,6 @@ const PAIRS = [
   { ts: 'SearchParamsDto', rust: 'SearchParams', file: 'src-tauri/src/services/db/model.rs' },
   { ts: 'OrgSyncStateDto', rust: 'OrgSyncState', file: 'src-tauri/src/services/sync.rs' },
   { ts: 'SyncStatusDto', rust: 'SyncStatus', file: 'src-tauri/src/services/sync.rs' },
-  { ts: 'ConnectionTestDto', rust: 'ConnectionTest', file: 'src-tauri/src/services/ldap/model.rs' },
   { ts: 'VCardInputDto', rust: 'VCardInput', file: 'src-tauri/src/services/vcard.rs' },
 ];
 
