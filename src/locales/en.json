@@ -183,7 +183,11 @@
     "DB_ERROR_en": "Local database error",
     "NOT_FOUND_en": "Not found",
     "INTERNAL_en": "Internal error",
-    "NOT_RUNNING_IN_DESKTOP": "Available in the desktop app only"
+    "LDAP_TIMEOUT_en": "Directory server did not respond in time. Check the address and network (VPN) availability.",
+    "EXTERNAL_FILE": "External phonebook file error",
+    "EXTERNAL_FILE_en": "External phonebook file error",
+    "NOT_RUNNING_IN_DESKTOP": "Available in the desktop app only",
+    "NOT_RUNNING_IN_DESKTOP_en": "Available in the desktop app only"
   },
   "pagination": {
     "showingOf": "Showing {{start}}–{{end}} of {{total}}"
@@ -268,6 +272,5 @@
   "settings.transferExportedBrowser": "Configuration file downloaded",
   "settings.transferImported": "Configuration imported",
   "settings.transferImportedNote": "Re-enter LDAP passwords on this PC",
-  "settings.transferImportFailed": "Not a KMAruda PhoneBook configuration file, or the file is corrupted",
-  "errors.EXTERNAL_FILE": "External phonebook file error"
+  "settings.transferImportFailed": "Not a KMAruda PhoneBook configuration file, or the file is corrupted"
 }

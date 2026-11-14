@@ -52,6 +52,8 @@ follows [Semantic Versioning](https://semver.org/).
 - libFuzzer target for the Yealink XML parser (`src-tauri/fuzz`).
 - Nightly Windows builds the native executable and checks that it stays alive
   for 8 seconds after launch.
+- English backend-error catalog covers every exposed code; a test rejects
+  Cyrillic fallbacks in the English UI.
 
 ## [0.2.5] - 2026-11-12
 
