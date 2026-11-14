@@ -3,6 +3,13 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.7] - 2026-11-14
+
+### Changed
+
+- MSI installer now uses the same KMARUDA banner and dialog artwork as the
+  NSIS EXE installer.
+
 ## [0.2.6] - 2026-11-14
 
 ### Added
