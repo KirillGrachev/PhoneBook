@@ -58,6 +58,8 @@ follows [Semantic Versioning](https://semver.org/).
 - Local native UI E2E via WebView2 CDP (`npm run test:native`); CI keeps the
   native build/launch/window/title smoke because WebView2 remote debugging is
   not available on the hosted Windows runner.
+- Manual Release dry run workflow builds MSI/NSIS, verifies them, creates the
+  portable ZIP and SHA256SUMS without publishing a release.
 
 ## [0.2.5] - 2026-11-12
 
