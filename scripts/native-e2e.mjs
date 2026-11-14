@@ -15,10 +15,15 @@ const app = spawn(exe, {
   stdio: 'ignore',
 });
 
+let appExit = null;
+app.once('exit', (code) => {
+  appExit = code;
+});
+
 let browser;
 try {
   let targets;
-  for (let attempt = 0; attempt < 40; attempt += 1) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
       const response = await fetch(`${endpoint}/json`);
       if (response.ok) {
@@ -31,7 +36,9 @@ try {
     await sleep(500);
   }
 
-  if (!targets) throw new Error('native WebView2 debugging endpoint did not start');
+  if (!targets) {
+    throw new Error(`native WebView2 debugging endpoint did not start (app exit=${appExit})`);
+  }
   browser = await chromium.connectOverCDP(endpoint);
   const pages = browser.contexts().flatMap((context) => context.pages());
   const page = pages.find((candidate) => candidate.url().includes('tauri.localhost'));
