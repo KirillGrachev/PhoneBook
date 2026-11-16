@@ -3,6 +3,14 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.12] - 2026-11-16
+
+### Fixed
+
+- Editing an organization group now opens its editor directly below the group
+  card, scrolls it into view and focuses the name field. Previously the editor
+  appeared after the whole list with no indication of where it opened.
+
 ## [0.2.11] - 2026-11-16
 
 ### Added
@@ -154,7 +162,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.11...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.12...HEAD
+[0.2.12]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.8...v0.2.9
