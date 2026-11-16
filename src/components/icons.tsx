@@ -138,7 +138,6 @@ export const UserRound = createIcon('manager');
 
 // Временные эмодзи-заглушки для иконок, которых ещё нет в наборе.
 export const AlertTriangle = createEmoji('⚠️');
-export const Layers = createEmoji('🗂️');
 export const Pin = createEmoji('📌');
 export const SearchX = createEmoji('🔎');
 

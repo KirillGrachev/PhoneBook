@@ -3,6 +3,14 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.14] - 2026-11-16
+
+### Fixed
+
+- Organization-group entries in the directory filter now use the same `Groups`
+  layers icon as the organization-group settings, instead of the temporary
+  folder emoji.
+
 ## [0.2.13] - 2026-11-16
 
 ### Fixed
@@ -173,7 +181,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.13...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.14...HEAD
+[0.2.14]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.13...v0.2.14
 [0.2.13]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.12...v0.2.13
 [0.2.12]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.10...v0.2.11

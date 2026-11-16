@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Filter, Check, Layers } from '@/components/icons';
+import { Filter, Check, Groups } from '@/components/icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { cva } from 'class-variance-authority';
@@ -135,7 +135,7 @@ export function OrganizationFilter({
                           организаций выглядит как несвежий список. */}
                       <span className="flex flex-col gap-0.5 flex-1 pr-2 min-w-0">
                         <span className="flex items-center gap-2 min-w-0">
-                          <Layers className="w-[13px] h-[13px] shrink-0" aria-hidden />
+                          <Groups className="w-[13px] h-[13px] shrink-0" aria-hidden />
                           <span className="truncate">{group.name}</span>
                         </span>
                         <span className="truncate pl-[21px] text-[11px] font-normal text-muted-foreground">
