@@ -444,6 +444,19 @@ fn email_with_underscore_is_searchable() {
         page.items[0].email.as_deref(),
         Some("Grachev_ke@metholding.com")
     );
+
+    // Users often stop before «@»; the local part must stay searchable too.
+    let local_part = db
+        .search(SearchParams {
+            query: Some("Grachev_ke".into()),
+            ..Default::default()
+        })
+        .expect("local part search");
+    assert_eq!(local_part.total, 1);
+    assert_eq!(
+        local_part.items[0].email.as_deref(),
+        Some("Grachev_ke@metholding.com")
+    );
 }
 
 #[test]
