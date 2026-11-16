@@ -44,6 +44,7 @@ function sampleConfig(): AppConfigDto {
     externalPhonebookPath: 'C:\\PhoneBook\\yealink.xml',
     externalPhonebookPaths: ['C:\\PhoneBook\\yealink.xml', 'C:\\PhoneBook\\office.xml'],
     externalPhonebookEnabled: true,
+    externalPhonebookIntervals: { 'C:\\PhoneBook\\yealink.xml': 24 },
     version: '0.2.0',
   };
 }
@@ -60,6 +61,7 @@ describe('buildConfigPatch', () => {
     expect(patch.externalPhonebookPath).toBe('C:\\PhoneBook\\yealink.xml');
     expect(patch.externalPhonebookPaths).toEqual(['C:\\PhoneBook\\yealink.xml', 'C:\\PhoneBook\\office.xml']);
     expect(patch.externalPhonebookEnabled).toBe(true);
+    expect(patch.externalPhonebookIntervals).toEqual({ 'C:\\PhoneBook\\yealink.xml': 24 });
     expect(patch.orgGroups).toHaveLength(1);
     expect(patch.enterpriseGroupId).toBe('grp-1');
     // Секреты не переносятся: флаг hasPassword гасится.

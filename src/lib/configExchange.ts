@@ -47,6 +47,7 @@ export interface ConfigPatch {
   externalPhonebookPath: string | null;
   externalPhonebookPaths: string[];
   externalPhonebookEnabled: boolean;
+  externalPhonebookIntervals: Record<string, number>;
 }
 
 /** Собрать патч стора из проверенного DTO конфигурации. */
@@ -75,6 +76,7 @@ export function buildConfigPatch(config: AppConfigDto): ConfigPatch {
           ? [config.externalPhonebookPath]
           : [],
     externalPhonebookEnabled: config.externalPhonebookEnabled,
+    externalPhonebookIntervals: config.externalPhonebookIntervals ?? {},
   };
 }
 
@@ -169,6 +171,15 @@ function normalizeConfigDto(raw: Record<string, unknown>): AppConfigDto {
         ? [raw.externalPhonebookPath]
         : [],
     externalPhonebookEnabled: bool(raw.externalPhonebookEnabled, false),
+    externalPhonebookIntervals:
+      typeof raw.externalPhonebookIntervals === 'object' && raw.externalPhonebookIntervals !== null
+        ? Object.fromEntries(
+            Object.entries(raw.externalPhonebookIntervals as Record<string, unknown>).filter(
+              (entry): entry is [string, number] =>
+                typeof entry[1] === 'number' && Number.isFinite(entry[1]) && entry[1] > 0,
+            ),
+          )
+        : {},
     version: null,
   };
 }
