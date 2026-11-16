@@ -45,7 +45,11 @@ describe('SettingsExternalView', () => {
     vi.clearAllMocks();
     refreshExternalPhonebook.mockResolvedValue({ state: 'disabled' });
     pickExternalPhonebookFiles.mockResolvedValue([]);
-    useAppStore.setState({ externalPhonebookPaths: [], externalPhonebookEnabled: false });
+    useAppStore.setState({
+      externalPhonebookPaths: [],
+      externalPhonebookEnabled: false,
+      externalPhonebookIntervals: {},
+    });
   });
 
   it('тумблер без выбранного файла не отправляет запрос обновления', async () => {
@@ -58,6 +62,19 @@ describe('SettingsExternalView', () => {
     expect(refreshExternalPhonebook).not.toHaveBeenCalled();
     // Подсказка объясняет, чего не хватает, вместо мигающих кнопок.
     expect(screen.getByText('settings.externalHintNeedFile')).toBeTruthy();
+  });
+
+  it('показывает отдельный выбор автообновления для каждого файла', () => {
+    act(() =>
+      useAppStore.setState({
+        externalPhonebookPaths: ['C:/phonebook.xml'],
+        externalPhonebookEnabled: true,
+      }),
+    );
+    renderView();
+
+    expect(screen.getByRole('button', { name: 'settings.externalRefreshEvery' })).toBeTruthy();
+    expect(useAppStore.getState().externalPhonebookIntervals).toEqual({});
   });
 
   it('тумблер с заданным путём перезагружает файл в фоне', async () => {

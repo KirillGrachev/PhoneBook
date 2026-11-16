@@ -11,6 +11,7 @@
 //! * Ошибка одной организации не прерывает синхронизацию остальных;
 //!   последняя ошибка сохраняется в `sync_meta` и видна в настройках.
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -86,6 +87,8 @@ struct Inner {
     /// Single-flight «ворота»: удерживаются на всё время прогона.
     gate: AsyncMutex<()>,
     running_orgs: Mutex<Vec<String>>,
+    /// Last successful batch read of external XML files, keyed by path.
+    external_last_refresh: Mutex<HashMap<String, Instant>>,
 }
 
 #[derive(Clone)]
@@ -108,6 +111,41 @@ impl SyncManager {
 
     pub fn is_running(&self) -> bool {
         self.inner.running.load(Ordering::SeqCst)
+    }
+
+    fn mark_external_refreshed(&self, paths: &[String]) {
+        let now = Instant::now();
+        let mut last = self
+            .inner
+            .external_last_refresh
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        for path in paths {
+            last.insert(path.clone(), now);
+        }
+    }
+
+    /// True when at least one selected file has a configured interval that has
+    /// elapsed. External files are still re-read as one atomic batch.
+    fn external_refresh_due(&self, config: &AppConfig) -> bool {
+        let last = self
+            .inner
+            .external_last_refresh
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        config.external_phonebook_paths.iter().any(|path| {
+            let hours = config
+                .external_phonebook_intervals
+                .get(path)
+                .copied()
+                .unwrap_or(0);
+            if hours == 0 {
+                return false;
+            }
+            last.get(path)
+                .map(|instant| instant.elapsed() >= Duration::from_secs(u64::from(hours) * 3600))
+                .unwrap_or(true)
+        })
     }
 
     /// Запускает синхронизацию в фоне, не блокируя вызывающего.
@@ -152,6 +190,7 @@ impl SyncManager {
         // Внешний телефонный файл не зависит от подключений AD: грузим до
         // проверки организаций, чтобы справочник работал и без каталога.
         refresh_external(&state.db, &config);
+        self.mark_external_refreshed(&config.external_phonebook_paths);
 
         let orgs: Vec<&LdapOrgConfig> = config
             .ldap_configs
@@ -380,6 +419,7 @@ impl SyncManager {
     pub fn spawn_scheduler(self, app: AppHandle) {
         tauri::async_runtime::spawn(async move {
             tokio::time::sleep(STARTUP_DELAY).await;
+            let mut external_initialized = false;
             loop {
                 let state = app.state::<AppState>().inner().clone();
                 match ConfigStore::load(&state.config_dir) {
@@ -387,12 +427,14 @@ impl SyncManager {
                         if policy::needs_sync(&state.db, &config) {
                             info!("кэш устарел или пуст — запускаю фоновую синхронизацию");
                             self.run(&app, false).await;
-                        } else {
-                            // Синхронизация AD не нужна: внешний файл всё
-                            // равно перечитываем (правку файла пользователь
-                            // не сопровождает кнопкой).
+                        } else if !external_initialized || self.external_refresh_due(&config) {
+                            // External files are still re-read as one atomic
+                            // batch; the per-file interval decides when the
+                            // batch is due.
                             refresh_external(&state.db, &config);
+                            self.mark_external_refreshed(&config.external_phonebook_paths);
                         }
+                        external_initialized = true;
                     }
                     Err(e) => warn!(error = %e, "планировщик: не удалось прочитать конфигурацию"),
                 }
@@ -466,5 +508,36 @@ mod tests {
         assert!(!is_transient_ldap_error(&AppError::Validation(
             "bad input".into()
         )));
+    }
+
+    #[test]
+    fn external_refresh_due_honors_per_file_intervals() {
+        let manager = SyncManager::new();
+        let mut config = AppConfig {
+            external_phonebook_paths: vec!["a.xml".into()],
+            ..Default::default()
+        };
+        config
+            .external_phonebook_intervals
+            .insert("a.xml".into(), 24);
+
+        assert!(manager.external_refresh_due(&config), "no refresh yet");
+        manager.mark_external_refreshed(&config.external_phonebook_paths);
+        assert!(!manager.external_refresh_due(&config), "just refreshed");
+
+        config.external_phonebook_paths.push("b.xml".into());
+        config
+            .external_phonebook_intervals
+            .insert("b.xml".into(), 1);
+        assert!(
+            manager.external_refresh_due(&config),
+            "a newly scheduled file is due immediately"
+        );
+
+        config.external_phonebook_intervals.clear();
+        assert!(
+            !manager.external_refresh_due(&config),
+            "manual-only files never trigger the scheduler"
+        );
     }
 }

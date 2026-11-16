@@ -6,7 +6,7 @@
 //!   ни во фронтенд.
 //! * При удалении организации её секрет гарантированно удаляется из keyring.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -86,6 +86,10 @@ impl ConfigStore {
             request.external_phonebook_paths,
             request.external_phonebook_path,
         );
+        let external_phonebook_intervals = normalize_external_intervals(
+            request.external_phonebook_intervals,
+            &external_phonebook_paths,
+        );
 
         // Секреты удалённых организаций не должны оставаться в keyring.
         let kept: Vec<&str> = ldap_configs
@@ -118,6 +122,7 @@ impl ConfigStore {
             external_phonebook_path: external_phonebook_paths.first().cloned(),
             external_phonebook_paths,
             external_phonebook_enabled: request.external_phonebook_enabled,
+            external_phonebook_intervals,
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
         };
 
@@ -206,5 +211,22 @@ fn normalize_external_paths(paths: Vec<String>, legacy: Option<String>) -> Vec<S
         .map(|path| path.trim().to_string())
         .filter(|path| !path.is_empty())
         .filter(|path| seen.insert(path.to_lowercase()))
+        .collect()
+}
+
+/// Keep schedules only for selected files; `0` means manual refresh.
+fn normalize_external_intervals(
+    intervals: HashMap<String, u32>,
+    paths: &[String],
+) -> HashMap<String, u32> {
+    paths
+        .iter()
+        .filter_map(|path| {
+            intervals
+                .get(path)
+                .copied()
+                .filter(|hours| *hours > 0)
+                .map(|hours| (path.clone(), hours.clamp(1, 168)))
+        })
         .collect()
 }

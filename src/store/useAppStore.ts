@@ -52,6 +52,9 @@ interface SettingsSlice {
   /** Load external phone book files into the directory. */
   externalPhonebookEnabled: boolean;
   setExternalPhonebookEnabled: (enabled: boolean) => void;
+  /** Per-file refresh interval in hours; absent/0 means manual only. */
+  externalPhonebookIntervals: Record<string, number>;
+  setExternalPhonebookInterval: (path: string, hours: number) => void;
   setEnterpriseGroupId: (id: string | null) => void;
   savedContactIds: string[];
   toggleSavedContact: (id: string) => void;
@@ -129,6 +132,17 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
   setExternalPhonebookPaths: (externalPhonebookPaths) => set({ externalPhonebookPaths }),
   externalPhonebookEnabled: false,
   setExternalPhonebookEnabled: (externalPhonebookEnabled) => set({ externalPhonebookEnabled }),
+  externalPhonebookIntervals: {},
+  setExternalPhonebookInterval: (path, hours) =>
+    set((state) => {
+      const next = { ...state.externalPhonebookIntervals };
+      if (hours > 0) {
+        next[path] = hours;
+      } else {
+        delete next[path];
+      }
+      return { externalPhonebookIntervals: next };
+    }),
   savedContactIds: [],
   toggleSavedContact: (id) =>
     set((state) => {
@@ -177,6 +191,7 @@ export const useAppStore = create<AppStore>()(
       enterpriseGroupId: state.enterpriseGroupId,
       externalPhonebookPaths: state.externalPhonebookPaths,
       externalPhonebookEnabled: state.externalPhonebookEnabled,
+      externalPhonebookIntervals: state.externalPhonebookIntervals,
     }),
     /** Гидрация асинхронная (чтение config.json через IPC) — запускается из App. */
     skipHydration: true,

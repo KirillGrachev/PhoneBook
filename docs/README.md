@@ -33,7 +33,8 @@ A browser demo mode with mock data is available for UI work.
   and phone-format normalization;
 - e-mail and phone-tail search;
 - synchronization across multiple AD connections and multiple external Yealink
-  XML phone books, with a cached fallback when a file is unavailable;
+  XML phone books, per-file auto-refresh intervals and a cached fallback when a
+  file is unavailable;
 - LDAP connection/operation timeouts, retries with backoff and domain-controller
   failover;
 - employee profile with manager and colleagues by department, job title or

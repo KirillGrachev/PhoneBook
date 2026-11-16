@@ -4,6 +4,7 @@ import { FolderUpload, Refresh, X } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
 import { configApi } from '@/api/directory';
 import { DIRECTORY_QUERY_KEYS } from '@/hooks/useSyncStatus';
@@ -15,6 +16,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { ACTION_BUTTON_CLASS, SWITCH_ROW_CLASS } from './settingsStyles';
 
 const EXTERNAL_ACTION_CLASS = cn(ACTION_BUTTON_CLASS, 'h-11 flex-1 min-w-[180px] justify-center px-4 text-[15px]');
+const EXTERNAL_INTERVAL_OPTIONS = [0, 1, 6, 12, 24, 72, 168];
 
 /**
  * External phone book files (Yealink IPPhoneBook XML). Every selected file is
@@ -33,6 +35,8 @@ export function SettingsExternalView() {
   const setExternalPhonebookPaths = useAppStore((state) => state.setExternalPhonebookPaths);
   const externalPhonebookEnabled = useAppStore((state) => state.externalPhonebookEnabled);
   const setExternalPhonebookEnabled = useAppStore((state) => state.setExternalPhonebookEnabled);
+  const externalPhonebookIntervals = useAppStore((state) => state.externalPhonebookIntervals);
+  const setExternalPhonebookInterval = useAppStore((state) => state.setExternalPhonebookInterval);
 
   const queryClient = useQueryClient();
   const [externalBusy, setExternalBusy] = useState(false);
@@ -115,6 +119,7 @@ export function SettingsExternalView() {
   const handleRemove = (path: string) => {
     const next = externalPhonebookPaths.filter((existing) => existing !== path);
     setExternalPhonebookPaths(next);
+    setExternalPhonebookInterval(path, 0);
     void (async () => {
       await flushConfigSave();
       if (useAppStore.getState().externalPhonebookEnabled) {
@@ -123,6 +128,16 @@ export function SettingsExternalView() {
       }
     })();
   };
+
+  const handleIntervalChange = (path: string, hours: number) => {
+    setExternalPhonebookInterval(path, hours);
+    void flushConfigSave();
+  };
+
+  const intervalOptions = EXTERNAL_INTERVAL_OPTIONS.map((hours) => ({
+    value: hours,
+    label: hours === 0 ? t('settings.externalIntervalManual') : t('settings.externalIntervalHours', { count: hours }),
+  }));
 
   const handleLoadNow = () => {
     void (async () => {
@@ -155,23 +170,37 @@ export function SettingsExternalView() {
           {hasFiles ? (
             <ul className="flex flex-col gap-1.5">
               {externalPhonebookPaths.map((path) => (
-                <li key={path} className="flex items-start gap-2 min-w-0">
-                  <span
-                    className={cn(
-                      'text-[13px] break-all leading-snug flex-1',
-                      externalPhonebookEnabled ? 'text-muted-foreground' : 'text-muted-foreground/60',
-                    )}
-                  >
-                    {path}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(path)}
-                    className="shrink-0 mt-0.5 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors no-ring"
-                    aria-label={t('settings.externalRemove')}
-                  >
-                    <X className="w-4 h-4" aria-hidden />
-                  </button>
+                <li key={path} className="flex flex-col gap-1.5 py-1.5 border-b border-border/40 last:border-0 min-w-0">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <span
+                      className={cn(
+                        'text-[13px] break-all leading-snug flex-1',
+                        externalPhonebookEnabled ? 'text-muted-foreground' : 'text-muted-foreground/60',
+                      )}
+                    >
+                      {path}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(path)}
+                      className="shrink-0 mt-0.5 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors no-ring"
+                      aria-label={t('settings.externalRemove')}
+                    >
+                      <X className="w-4 h-4" aria-hidden />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[12px] text-muted-foreground leading-snug">
+                      {t('settings.externalRefreshEvery')}
+                    </span>
+                    <Select
+                      value={externalPhonebookIntervals[path] ?? 0}
+                      options={intervalOptions}
+                      onChange={(hours) => handleIntervalChange(path, hours)}
+                      ariaLabel={t('settings.externalRefreshEvery')}
+                      className="h-8 shrink-0"
+                    />
+                  </div>
                 </li>
               ))}
             </ul>

@@ -146,6 +146,9 @@ pub struct AppConfig {
     /// Load external phone book files into the directory.
     #[serde(default)]
     pub external_phonebook_enabled: bool,
+    /// Per-file automatic refresh interval in hours; `0`/absent means manual.
+    #[serde(default)]
+    pub external_phonebook_intervals: std::collections::HashMap<String, u32>,
     /// Версия приложения, записавшая конфиг (диагностика).
     #[serde(default)]
     pub version: Option<String>,
@@ -171,6 +174,7 @@ impl Default for AppConfig {
             external_phonebook_path: None,
             external_phonebook_paths: Vec::new(),
             external_phonebook_enabled: false,
+            external_phonebook_intervals: std::collections::HashMap::new(),
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
         }
     }
@@ -214,4 +218,6 @@ pub struct SaveConfigRequest {
     pub external_phonebook_paths: Vec<String>,
     #[serde(default)]
     pub external_phonebook_enabled: bool,
+    #[serde(default)]
+    pub external_phonebook_intervals: std::collections::HashMap<String, u32>,
 }

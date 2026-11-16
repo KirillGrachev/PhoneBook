@@ -105,6 +105,8 @@ export interface AppConfigDto {
   externalPhonebookPaths: string[];
   /** Load external phone book files into the directory. */
   externalPhonebookEnabled: boolean;
+  /** Per-file automatic refresh interval in hours; absent/0 means manual. */
+  externalPhonebookIntervals: Record<string, number>;
   version?: string | null;
 }
 
@@ -128,6 +130,7 @@ export interface SaveConfigRequest {
   externalPhonebookPath: string | null;
   externalPhonebookPaths: string[];
   externalPhonebookEnabled: boolean;
+  externalPhonebookIntervals: Record<string, number>;
 }
 
 /**
