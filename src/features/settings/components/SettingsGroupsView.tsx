@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Export, Import, Plus } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -46,6 +46,23 @@ export function SettingsGroupsView() {
   const [exportedPath, setExportedPath] = useState<string | null>(null);
   const [shareBusy, setShareBusy] = useState<'export' | 'import' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const editorId = editor?.id ?? null;
+  const editorOpen = editor !== null;
+
+  useEffect(() => {
+    if (!editorOpen) {
+      return;
+    }
+    const node = editorRef.current;
+    if (!node) {
+      return;
+    }
+    if (typeof node.scrollIntoView === 'function') {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    node.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true });
+  }, [editorId, editorOpen]);
 
   /**
    * ÃƒÂÃ‚Â­ÃƒÂÃ‚ÂºÃƒâ€˜Ã‚ÂÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬Ãƒâ€˜Ã¢â‚¬Å¡ ÃƒÂÃ‚Â³Ãƒâ€˜Ã¢â€šÂ¬Ãƒâ€˜Ã†â€™ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¿ ÃƒÂÃ‚Â² Ãƒâ€˜Ã¢â‚¬Å¾ÃƒÂÃ‚Â°ÃƒÂÃ‚Â¹ÃƒÂÃ‚Â» ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â±ÃƒÂÃ‚Â¼ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½ÃƒÂÃ‚Â°: ÃƒÂÃ‚Â² ÃƒÂÃ‚Â´ÃƒÂÃ‚ÂµÃƒâ€˜Ã‚ÂÃƒÂÃ‚ÂºÃƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¿ÃƒÂÃ‚Âµ Ãƒâ€˜Ã¢â‚¬Å¾ÃƒÂÃ‚Â°ÃƒÂÃ‚Â¹ÃƒÂÃ‚Â» ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‹â€ ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â‚¬Å¡ Rust ÃƒÂÃ‚Â² Ãƒâ€šÃ‚Â«ÃƒÂÃ¢â‚¬ÂÃƒÂÃ‚Â¾ÃƒÂÃ‚ÂºÃƒâ€˜Ã†â€™ÃƒÂÃ‚Â¼ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½Ãƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã¢â‚¬Â¹Ãƒâ€šÃ‚Â»
@@ -187,6 +204,21 @@ export function SettingsGroupsView() {
     setError(null);
   };
 
+  const editorContent = editor ? (
+    <OrgGroupEditor
+      editor={editor}
+      availableOrgs={availableOrgs}
+      error={error}
+      onNameChange={(name) => setEditor({ ...editor, name })}
+      onToggleOrg={toggleOrg}
+      onCancel={() => {
+        setEditor(null);
+        setError(null);
+      }}
+      onSubmit={submit}
+    />
+  ) : null;
+
   return (
     <div className="flex flex-col gap-4 w-full">
       <p className="text-[13px] text-muted-foreground leading-snug px-1">{t('settings.orgGroupsDesc')}</p>
@@ -199,31 +231,30 @@ export function SettingsGroupsView() {
         )}
 
         {orgGroups.map((group) => (
-          <OrgGroupCard
-            key={group.id}
-            group={group}
-            pinned={enterpriseGroupId === group.id}
-            onTogglePin={() => setEnterpriseGroupId(enterpriseGroupId === group.id ? null : group.id)}
-            onEdit={() => openEdit(group.id)}
-            onDelete={() => removeOrgGroup(group.id)}
-          />
+          <div key={group.id} className="flex flex-col gap-3">
+            <OrgGroupCard
+              group={group}
+              pinned={enterpriseGroupId === group.id}
+              onTogglePin={() => setEnterpriseGroupId(enterpriseGroupId === group.id ? null : group.id)}
+              onEdit={() => openEdit(group.id)}
+              onDelete={() => removeOrgGroup(group.id)}
+            />
+            {editor?.id === group.id && (
+              <div ref={editorRef} className="scroll-mt-24">
+                {editorContent}
+              </div>
+            )}
+          </div>
         ))}
       </div>
 
-      {editor ? (
-        <OrgGroupEditor
-          editor={editor}
-          availableOrgs={availableOrgs}
-          error={error}
-          onNameChange={(name) => setEditor({ ...editor, name })}
-          onToggleOrg={toggleOrg}
-          onCancel={() => {
-            setEditor(null);
-            setError(null);
-          }}
-          onSubmit={submit}
-        />
-      ) : (
+      {editor && editor.id === null && (
+        <div ref={editorRef} className="scroll-mt-24">
+          {editorContent}
+        </div>
+      )}
+
+      {!editor && (
         <div className="flex flex-col gap-2">
           {exportedPath && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-[12px] bg-input text-[12px] text-muted-foreground min-w-0">
