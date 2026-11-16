@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "KMAruda PhoneBook",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "identifier": "com.kmaruda.phonebook",
   "build": {
     "frontendDist": "../dist",
@@ -47,10 +47,6 @@
         "languages": ["Russian", "English"],
         "displayLanguageSelector": true,
         "startMenuFolder": "KMARUDA"
-      },
-      "wix": {
-        "bannerPath": "installer/wix-banner.bmp",
-        "dialogImagePath": "installer/wix-dialog.bmp"
       }
     },
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png", "icons/icon.ico"],

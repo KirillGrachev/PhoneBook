@@ -3,6 +3,14 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.8] - 2026-11-16
+
+### Fixed
+
+- Removed the custom MSI banner and dialog images. In the WiX layout they
+  overlapped the "Destination Folder" text; the MSI now uses the default WiX
+  page layout again. The NSIS EXE keeps its existing header/sidebar artwork.
+
 ## [0.2.7] - 2026-11-14
 
 ### Changed
@@ -120,7 +128,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.7...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.8...HEAD
+[0.2.8]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.4...v0.2.5
