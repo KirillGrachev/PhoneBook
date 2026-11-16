@@ -24,9 +24,12 @@ export function SyncMetaLine({ organization, syncStates, locale }: SyncMetaLineP
 
   if (meta.lastError) {
     return (
-      <span className="flex items-center gap-1.5 text-[13px] text-red-500 font-medium min-w-0" title={meta.lastError}>
-        <ShieldAlert className="w-4 h-4 shrink-0" aria-hidden />
-        <span className="truncate">{meta.lastError}</span>
+      <span
+        className="flex items-start gap-1.5 text-[13px] text-red-500 font-medium min-w-0 w-full text-left"
+        title={meta.lastError}
+      >
+        <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
+        <span className="min-w-0 flex-1 whitespace-normal break-words [overflow-wrap:anywhere]">{meta.lastError}</span>
       </span>
     );
   }

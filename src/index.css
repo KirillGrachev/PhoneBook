@@ -208,14 +208,21 @@ textarea::placeholder {
   border-radius: 8px !important;
   display: flex !important;
   align-items: center !important;
-  min-width: 320px !important;
-  max-width: 440px !important;
+  min-width: min(320px, calc(100vw - 32px)) !important;
+  max-width: min(440px, calc(100vw - 32px)) !important;
   border: 1px solid var(--border) !important;
   box-shadow:
     0 4px 12px -2px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
   background-color: var(--surface) !important;
   color: var(--foreground) !important;
+}
+
+[data-sonner-toast] [data-title],
+[data-sonner-toast] [data-description] {
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 
 [data-sonner-toast] [data-close-button] {
