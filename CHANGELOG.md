@@ -3,6 +3,14 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.10] - 2026-11-16
+
+### Fixed
+
+- Search by an e-mail local part without `@` now works: `grachev_ke` finds
+  `Grachev_ke@metholding.com`. FTS query building treats `_`, `.`, `-` and `+`
+  as separators for every word, not only for complete addresses.
+
 ## [0.2.9] - 2026-11-16
 
 ### Fixed
@@ -137,7 +145,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.9...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.10...HEAD
+[0.2.10]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.6...v0.2.7

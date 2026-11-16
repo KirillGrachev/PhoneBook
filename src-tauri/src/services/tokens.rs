@@ -181,10 +181,14 @@ pub fn build_fts_query(query: &str) -> Option<String> {
     for word in query.split_whitespace().take(MAX_WORDS) {
         // E-mail — не один FTS-токен: unicode61 режет адрес по «@», «.»,
         // «_», «-» и «+». Разбиваем его на части и требуем их все (клаузы
-        // соединяются через AND), иначе «grachev_ke@…» склеивался в
-        // «grachevke» и не находил ни email-колонку, ни tokens.
-        if word.contains('@') {
-            for part in word.split(['@', '.', '_', '-', '+']) {
+        // соединяются через AND), иначе «grachev_ke» (без @) или
+        // «grachev_ke@…» склеивались в один токен и не находили email.
+        let parts: Vec<&str> = word
+            .split(['@', '.', '_', '-', '+'])
+            .filter(|part| !part.is_empty())
+            .collect();
+        if parts.len() > 1 {
+            for part in parts {
                 push_fts_clause(&mut clauses, part);
             }
         } else {
@@ -312,6 +316,15 @@ mod tests {
         assert!(q.contains("\"grachev\"*"), "{q}");
         assert!(q.contains("\"ke\"*"), "{q}");
         assert!(q.contains("\"metholding\"*"), "{q}");
+        assert!(!q.contains("grachevke"), "{q}");
+    }
+
+    #[test]
+    fn fts_query_splits_email_local_part_without_at() {
+        // Пользователь часто вводит только начало адреса, без «@».
+        let q = build_fts_query("grachev_ke").expect("email local part");
+        assert!(q.contains("\"grachev\"*"), "{q}");
+        assert!(q.contains("\"ke\"*"), "{q}");
         assert!(!q.contains("grachevke"), "{q}");
     }
 }
