@@ -147,8 +147,18 @@ impl Db {
             encryption::LoadOutcome::Bytes(bytes) => Some(bytes),
             encryption::LoadOutcome::Missing => None,
             encryption::LoadOutcome::Foreign => {
-                warn!(target: "db", "файл кэша не расшифровывается — пересоздаю; данные восстановит синхронизация");
+                warn!(target: "db", "файл кэша не является нашим контейнером — пересоздаю");
                 encryption::wipe_database_files(db_path)?;
+                None
+            }
+            encryption::LoadOutcome::WrongKey => {
+                if let Some(quarantined) = encryption::quarantine_database_file(db_path)? {
+                    warn!(
+                        target: "db",
+                        path = %quarantined.display(),
+                        "ключ кэша не подошёл — контейнер сохранён, создаю новый кэш"
+                    );
+                }
                 None
             }
         };

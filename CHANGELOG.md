@@ -3,6 +3,17 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.13] - 2026-11-16
+
+### Fixed
+
+- The encrypted cache key now has a redundant Credential Manager entry
+  (`db-key-backup`). If the primary entry disappears or becomes unreadable, the
+  app recovers the key instead of minting a new one and losing the cache.
+- If the key still does not match, the encrypted container is quarantined as
+  `phonebook.db.unreadable-<timestamp>` instead of being deleted, so a later key
+  recovery is possible. The app starts with a fresh cache and re-syncs.
+
 ## [0.2.12] - 2026-11-16
 
 ### Fixed
@@ -162,7 +173,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.12...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.13...HEAD
+[0.2.13]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.12...v0.2.13
 [0.2.12]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.9...v0.2.10

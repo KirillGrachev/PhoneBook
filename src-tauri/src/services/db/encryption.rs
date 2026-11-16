@@ -37,6 +37,9 @@ const KEY_BYTES: usize = 32;
 
 /// Имя записи ключа базы в keyring (сервис общий с секретами LDAP).
 const DB_KEY_USER: &str = "db-key";
+/// Redundant copy: Windows Credential Manager occasionally drops a single
+/// generic credential during upgrades; the backup lets the cache open again.
+const DB_KEY_BACKUP_USER: &str = "db-key-backup";
 
 /// Магический заголовок зашифрованного контейнера (версия формата).
 const MAGIC: &[u8; 8] = b"KMPBENC1";
@@ -65,9 +68,11 @@ pub enum LoadOutcome {
     Bytes(Vec<u8>),
     /// Файла нет — база создаётся с нуля.
     Missing,
-    /// Файл есть, но не является нашим контейнером или не читается
-    /// (чужой/битый/не тот ключ) — пересоздать.
+    /// Файл есть, но не является нашим контейнером (чужой/битый).
     Foreign,
+    /// Контейнер наш, но ключ не подошёл. Preserve the file for recovery
+    /// instead of silently destroying a cache that may still be recoverable.
+    WrongKey,
 }
 
 /// Ключ базы: взять из keyring, при отсутствии — сгенерировать и
@@ -76,26 +81,48 @@ pub enum LoadOutcome {
 pub fn database_key() -> Result<[u8; KEY_BYTES], AppError> {
     // Fail closed: без системного хранилища секретов кэш не открывается
     // и не создаётся — ключ негде безопасно хранить.
-    let entry = keyring::Entry::new(KEYRING_SERVICE, DB_KEY_USER)
+    let primary = keyring::Entry::new(KEYRING_SERVICE, DB_KEY_USER)
         .map_err(|e| AppError::Config(format!("хранилище секретов недоступно: {e}")))?;
+    let backup = keyring::Entry::new(KEYRING_SERVICE, DB_KEY_BACKUP_USER).ok();
+
+    let primary_key = read_key(&primary)?;
+    let backup_key = backup.as_ref().and_then(|entry| match read_key(entry) {
+        Ok(key) => key,
+        Err(error) => {
+            warn!(target: "db", %error, "резервный ключ базы недоступен");
+            None
+        }
+    });
+
+    // Prefer the primary, recover from the backup when Credential Manager lost
+    // the primary entry, otherwise mint a new key.
+    let key = primary_key.or(backup_key).unwrap_or(generate_key()?);
+
+    if primary_key != Some(key) {
+        set_key(&primary, &key)?;
+    }
+    if let Some(entry) = backup.as_ref() {
+        if backup_key != Some(key) {
+            if let Err(error) = set_key(entry, &key) {
+                warn!(target: "db", %error, "не удалось сохранить резервный ключ базы");
+            }
+        }
+    }
+    Ok(key)
+}
+
+fn read_key(entry: &keyring::Entry) -> Result<Option<[u8; KEY_BYTES]>, AppError> {
     match entry.get_password() {
         Ok(hex) => match parse_key_hex(&hex) {
-            Some(key) => Ok(key),
-            // Запись повреждена — перевыпускаем ключ (кэш пересоздаст синк).
+            Some(key) => Ok(Some(key)),
             None => {
-                warn!(target: "db", "запись ключа базы повреждена — генерирую новый ключ");
-                let key = generate_key()?;
-                set_key(&entry, &key)?;
-                Ok(key)
+                warn!(target: "db", "запись ключа базы повреждена — пробую резервную");
+                Ok(None)
             }
         },
-        Err(keyring::Error::NoEntry) => {
-            let key = generate_key()?;
-            set_key(&entry, &key)?;
-            Ok(key)
-        }
-        Err(e) => Err(AppError::Config(format!(
-            "хранилище секретов недоступно: {e}"
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(error) => Err(AppError::Config(format!(
+            "хранилище секретов недоступно: {error}"
         ))),
     }
 }
@@ -153,9 +180,25 @@ pub fn load(path: &Path, key: &[u8; KEY_BYTES]) -> Result<LoadOutcome, AppError>
     let (nonce, ciphertext) = raw.split_at(HEADER_BYTES);
     match cipher(key).decrypt(Nonce::from_slice(&nonce[MAGIC.len()..]), ciphertext) {
         Ok(bytes) => Ok(LoadOutcome::Bytes(bytes)),
-        // Битый контейнер или утерянный ключ: пересоздадим, кэш наживёт синк.
-        Err(_) => Ok(LoadOutcome::Foreign),
+        // Наш контейнер, но ключ не подошёл: сохранить файл, не затирать.
+        Err(_) => Ok(LoadOutcome::WrongKey),
     }
+}
+
+/// Keep an encrypted container whose key did not match instead of deleting it.
+/// The file is useless without the key, but a later recovery can still try an
+/// older key copy; the app starts with a fresh cache in the meantime.
+pub fn quarantine_database_file(path: &Path) -> Result<Option<PathBuf>, AppError> {
+    if !path.exists() {
+        return Ok(None);
+    }
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0);
+    let target = path.with_extension(format!("db.unreadable-{stamp}"));
+    fs::rename(path, &target)?;
+    Ok(Some(target))
 }
 
 /// Зашифровать образ базы и атомарно заменить файл кэша.
@@ -318,17 +361,17 @@ mod tests {
         save(&path, &k, b"payload").expect("save");
         assert!(matches!(
             load(&path, &key(10)).expect("load"),
-            LoadOutcome::Foreign
+            LoadOutcome::WrongKey
         ));
 
-        // Бит шифртекста → auth tag не сходится → Foreign.
+        // Бит шифртекста → auth tag не сходится → WrongKey.
         let mut raw = fs::read(&path).expect("read");
         let i = raw.len() - 3;
         raw[i] ^= 0xFF;
         fs::write(&path, &raw).expect("write");
         assert!(matches!(
             load(&path, &k).expect("load"),
-            LoadOutcome::Foreign
+            LoadOutcome::WrongKey
         ));
 
         fs::write(&path, b"garbage-not-a-db").expect("write");

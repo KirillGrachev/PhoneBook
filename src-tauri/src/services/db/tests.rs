@@ -938,7 +938,7 @@ fn corrupt_or_truncated_container_is_rejected() {
     let other_key = encryption::generate_key().expect("other key");
     assert!(matches!(
         encryption::load(&path, &other_key).expect("load"),
-        encryption::LoadOutcome::Foreign
+        encryption::LoadOutcome::WrongKey
     ));
 
     encryption::wipe_database_files(&path).expect("wipe");
