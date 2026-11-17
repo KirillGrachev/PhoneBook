@@ -1,4 +1,4 @@
-name: Release dry run
+﻿name: Release dry run
 
 on:
   workflow_dispatch:
@@ -33,7 +33,7 @@ jobs:
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
           $bundle = "src-tauri/target/release/bundle"
           $nsis = Join-Path $bundle "nsis/KMAruda PhoneBook_${version}_x64-setup.exe"
-          $msi = Join-Path $bundle "msi/KMAruda PhoneBook_${version}_x64_en-US.msi"
+          $msi = Join-Path $bundle "msi/KMAruda PhoneBook_${version}_x64_ru-RU.msi"
           $portable = "KMAruda.PhoneBook_${version}_windows-x64_portable.zip"
 
           Copy-Item "src-tauri/target/release/kmaruda-phonebook.exe" "KMAruda.PhoneBook.exe" -Force
@@ -62,3 +62,4 @@ jobs:
             KMAruda.PhoneBook_*_windows-x64_portable.zip
             SHA256SUMS-windows-x64.txt
           if-no-files-found: error
+

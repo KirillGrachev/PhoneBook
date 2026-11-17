@@ -3,6 +3,14 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.16] - 2026-11-17
+
+### Changed
+
+- The MSI package is now built with `ru-RU` WiX language, so the installer UI
+  matches the Russian product and the asset is named `_x64_ru-RU.msi` instead of
+  `_x64_en-US.msi`.
+
 ## [0.2.15] - 2026-11-17
 
 ### Added
@@ -217,7 +225,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.15...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.16...HEAD
+[0.2.16]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.15...v0.2.16
 [0.2.15]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.14...v0.2.15
 [0.2.14]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.13...v0.2.14
 [0.2.13]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.12...v0.2.13
