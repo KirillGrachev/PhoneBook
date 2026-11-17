@@ -3,6 +3,18 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.20] - 2026-11-17
+
+### Fixed
+
+- The MSI now registers its uninstall launcher from a deferred action running
+  elevated before `InstallFinalize`, instead of an immediate action after it.
+  This makes the Apps & Features `UninstallString` reliably point to the
+  launcher that shows the "Delete application data" checkbox.
+- The uninstaller checkbox wording and release notes now explicitly document
+  that checked removes settings, cache, LDAP passwords and both the new and
+  legacy data directories; unchecked preserves them.
+
 ## [0.2.19] - 2026-11-17
 
 ### Changed
@@ -254,7 +266,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.19...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.20...HEAD
+[0.2.20]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.19...v0.2.20
 [0.2.19]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.18...v0.2.19
 [0.2.18]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.17...v0.2.18
 [0.2.17]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.16...v0.2.17
