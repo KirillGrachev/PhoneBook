@@ -112,13 +112,13 @@
              RegisterProduct has written the default UninstallString. -->
         <CustomAction Id="SetUninstallString"
                       Directory="INSTALLDIR"
-                      Execute="immediate"
+                      Execute="deferred"
                       Impersonate="no"
                       Return="ignore"
                       ExeCommand="&quot;[System64Folder]reg.exe&quot; add &quot;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\[ProductCode]&quot; /v UninstallString /t REG_SZ /d &quot;powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File [CommonAppDataFolder]KMAruda\uninstall.ps1&quot; /f" />
 
         <InstallExecuteSequence>
-            <Custom Action="SetUninstallString" After="InstallFinalize">NOT REMOVE</Custom>
+            <Custom Action="SetUninstallString" Before="InstallFinalize">NOT REMOVE</Custom>
         </InstallExecuteSequence>
 
         <UI>
