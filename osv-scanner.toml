@@ -19,26 +19,6 @@ ignoreUntil = 2026-12-31
 reason = "proc-macro-error is an unmaintained GTK/Linux transitive; Windows-first app."
 
 [[IgnoredVulns]]
-id = "RUSTSEC-2025-0081"
-ignoreUntil = 2026-12-31
-reason = "unic-char-property is an unmaintained GTK/Linux transitive; Windows-first app."
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2025-0075"
-ignoreUntil = 2026-12-31
-reason = "unic-char-range is an unmaintained GTK/Linux transitive; Windows-first app."
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2025-0080"
-ignoreUntil = 2026-12-31
-reason = "unic-common is an unmaintained GTK/Linux transitive; Windows-first app."
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2025-0100"
-ignoreUntil = 2026-12-31
-reason = "unic-ucd-ident is an unmaintained GTK/Linux transitive; Windows-first app."
-
-[[IgnoredVulns]]
 id = "RUSTSEC-2025-0098"
 ignoreUntil = 2026-12-31
 reason = "unic-ucd-version is an unmaintained GTK/Linux transitive; Windows-first app."
@@ -57,3 +37,14 @@ reason = "zvariant is an unmaintained GTK/Linux transitive; Windows-first app."
 id = "RUSTSEC-2026-0372"
 ignoreUntil = 2026-12-31
 reason = "zvariant_derive is an unmaintained GTK/Linux transitive; Windows-first app."
+
+# No fixed release exists yet for these two advisories (checked 2026-11-17).
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0543"
+ignoreUntil = 2027-01-31
+reason = "chrono 0.4.45 is the latest release; used for LDAP timestamp parsing; no fixed version yet."
+
+[[IgnoredVulns]]
+id = "GHSA-fc5q-39xc-vjpf"
+ignoreUntil = 2027-01-31
+reason = "picomatch 4.0.7 is the latest release; dev-only via Vite/Vitest; no fixed version yet."
