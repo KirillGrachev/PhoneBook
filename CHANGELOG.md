@@ -3,6 +3,14 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.18] - 2026-11-17
+
+### Changed
+
+- Windows publisher/manufacturer is now **KirillGrachev** instead of `kmaruda`,
+  so Apps & Features, the MSI `Manufacturer` property and the NSIS uninstall
+  entry show the correct publisher.
+
 ## [0.2.17] - 2026-11-17
 
 ### Fixed
@@ -234,7 +242,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.17...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.18...HEAD
+[0.2.18]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.17...v0.2.18
 [0.2.17]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.16...v0.2.17
 [0.2.16]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.15...v0.2.16
 [0.2.15]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.14...v0.2.15
