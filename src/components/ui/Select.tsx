@@ -16,13 +16,17 @@ interface SelectProps<T> {
   onChange: (value: T) => void;
   ariaLabel: string;
   className?: string;
+  /** Сторона, с которой открывается список. По умолчанию Radix выбирает сам. */
+  side?: 'top' | 'bottom';
+  /** Не переворачивать список, если снизу мало места. */
+  avoidCollisions?: boolean;
 }
 
 /**
  * Стилизованный выпадающий список в общем дизайне приложения
  * (вместо нативного <select>, чей системный dropdown выбивается из стиля).
  */
-export function Select<T>({ value, options, onChange, ariaLabel, className }: SelectProps<T>) {
+export function Select<T>({ value, options, onChange, ariaLabel, className, side, avoidCollisions }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
   const current = options.find((option) => option.value === value);
 
@@ -51,7 +55,9 @@ export function Select<T>({ value, options, onChange, ariaLabel, className }: Se
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           align="end"
+          side={side}
           sideOffset={6}
+          avoidCollisions={avoidCollisions}
           style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
           className="submenu-pop bg-surface rounded-[12px] border border-border shadow-[0_4px_20px_rgba(0,0,0,0.25)] py-1.5 z-50"
         >

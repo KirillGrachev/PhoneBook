@@ -61,20 +61,30 @@ describe('MockContactsService (демо-режим)', () => {
     expect(page.contacts.every((c) => c.organization && union.includes(c.organization))).toBe(true);
   });
 
-  it('вкладка предприятия учитывает организации группы из настроек', async () => {
-    const all = await service.search({ activeTab: 'global' });
-    const orgs = [...new Set(all.contacts.map((c) => c.organization).filter((o): o is string => Boolean(o)))];
-    const union = orgs.slice(0, 2);
+  it('вкладка предприятия игнорирует удалённую привязку группы', async () => {
     useAppStore.setState({
-      orgGroups: [{ id: 'g1', name: 'Группа', orgs: union }],
+      testMode: true,
+      ldapConfigs: [
+        {
+          organization: 'АО Комбинат КМАруда',
+          ldapUrl: 'ldap://dc',
+          baseDn: 'dc=kmaruda,dc=ru',
+          bindDn: null,
+          useStartTls: false,
+          allowInvalidTls: false,
+          useIntegratedAuth: true,
+          hasPassword: false,
+        },
+      ],
+      orgGroups: [{ id: 'g1', name: 'Группа', orgs: ['ООО «Рога и Копыта»'] }],
       enterpriseGroupId: 'g1',
     });
 
     const page = await service.search({ activeTab: 'kmaruda' });
     expect(page.contacts.length).toBeGreaterThan(0);
-    expect(page.contacts.every((c) => c.organization && union.includes(c.organization))).toBe(true);
+    expect(page.contacts.every((c) => c.organization === KMARUDA_ORG)).toBe(true);
 
-    useAppStore.setState({ orgGroups: [], enterpriseGroupId: null });
+    useAppStore.setState({ testMode: false, ldapConfigs: [], orgGroups: [], enterpriseGroupId: null });
   });
 
   it('ищет по строке с учётом раскладки', async () => {

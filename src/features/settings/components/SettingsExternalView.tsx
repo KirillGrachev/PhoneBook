@@ -198,7 +198,9 @@ export function SettingsExternalView() {
                       options={intervalOptions}
                       onChange={(hours) => handleIntervalChange(path, hours)}
                       ariaLabel={t('settings.externalRefreshEvery')}
-                      className="h-8 shrink-0"
+                      className="h-8 min-w-[160px] shrink-0"
+                      side="bottom"
+                      avoidCollisions={false}
                     />
                   </div>
                 </li>

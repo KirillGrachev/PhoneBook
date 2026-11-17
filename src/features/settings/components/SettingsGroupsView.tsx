@@ -26,8 +26,7 @@ import { OrgGroupEditor, type GroupEditorState } from './OrgGroupEditor';
 /**
  * Organization groups: combine filters under one name.
  *
- * In global mode the group replaces nested organizations in the filter; the
- * pinned group defines which accounts belong to the enterprise tab.
+ * In global mode the group replaces nested organizations in the filter.
  */
 export function SettingsGroupsView() {
   const { t } = useTranslation();
@@ -36,8 +35,6 @@ export function SettingsGroupsView() {
   const saveOrgGroup = useAppStore((state) => state.saveOrgGroup);
   const removeOrgGroup = useAppStore((state) => state.removeOrgGroup);
   const setOrgGroups = useAppStore((state) => state.setOrgGroups);
-  const enterpriseGroupId = useAppStore((state) => state.enterpriseGroupId);
-  const setEnterpriseGroupId = useAppStore((state) => state.setEnterpriseGroupId);
   const ldapConfigs = useAppStore((state) => state.ldapConfigs);
 
   const { data: directoryOrgs = [] } = useOrganizations();
@@ -81,7 +78,7 @@ export function SettingsGroupsView() {
         setExportedPath(path);
         toast.success(t('settings.orgGroupsExported'), { description: path });
       } else {
-        const blob = new Blob([JSON.stringify(buildOrgGroupsFile(orgGroups, enterpriseGroupId), null, 2)], {
+        const blob = new Blob([JSON.stringify(buildOrgGroupsFile(orgGroups, null), null, 2)], {
           type: 'application/json',
         });
         const url = URL.createObjectURL(blob);
@@ -101,9 +98,10 @@ export function SettingsGroupsView() {
 
   /** ÃƒÂÃ…Â¸Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¼ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Âµ ÃƒÂÃ‚Â¿Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â²ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚ÂµÃƒÂÃ‚Â½ÃƒÂÃ‚Â½ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â³ÃƒÂÃ‚Â¾ Ãƒâ€˜Ã¢â‚¬Å¾ÃƒÂÃ‚Â°ÃƒÂÃ‚Â¹ÃƒÂÃ‚Â»ÃƒÂÃ‚Â°: Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â»ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â½ÃƒÂÃ‚Â¸ÃƒÂÃ‚Âµ Ãƒâ€˜Ã¢â‚¬Â¡ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã¢â‚¬Â¹ÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¸ Ãƒâ€˜Ã¢â‚¬Å¾Ãƒâ€˜Ã†â€™ÃƒÂÃ‚Â½ÃƒÂÃ‚ÂºÃƒâ€˜Ã¢â‚¬Â ÃƒÂÃ‚Â¸Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¸, ÃƒÂÃ‚Â¿ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â€šÂ¬Ãƒâ€˜Ã‚ÂÃƒÂÃ‚Â¸Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã¢â‚¬Å¡ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¼. */
   const applyImportedFile = (file: OrgGroupsFileDto) => {
-    const merged = mergeOrgGroups(orgGroups, file, enterpriseGroupId);
+    // The enterprise-group pin was removed; the file may still contain it
+    // from an older export, but it is intentionally ignored.
+    const merged = mergeOrgGroups(orgGroups, file, null);
     setOrgGroups(merged.groups);
-    setEnterpriseGroupId(merged.enterpriseGroupId);
     setError(null);
     toast.success(t('settings.orgGroupsImported', { count: file.groups.length }));
   };
@@ -232,13 +230,7 @@ export function SettingsGroupsView() {
 
         {orgGroups.map((group) => (
           <div key={group.id} className="flex flex-col gap-3">
-            <OrgGroupCard
-              group={group}
-              pinned={enterpriseGroupId === group.id}
-              onTogglePin={() => setEnterpriseGroupId(enterpriseGroupId === group.id ? null : group.id)}
-              onEdit={() => openEdit(group.id)}
-              onDelete={() => removeOrgGroup(group.id)}
-            />
+            <OrgGroupCard group={group} onEdit={() => openEdit(group.id)} onDelete={() => removeOrgGroup(group.id)} />
             {editor?.id === group.id && (
               <div ref={editorRef} className="scroll-mt-24">
                 {editorContent}

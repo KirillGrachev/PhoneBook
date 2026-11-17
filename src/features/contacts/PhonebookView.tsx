@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Settings2 } from '@/components/icons';
 
 import { isTauri as isTauriEnv } from '@/api/backend';
-import { findOrgGroup, resolveEnterpriseName } from '@/lib/orgGroups';
+import { findOrgGroup, resolveDirectoryScope, resolveEnterpriseName } from '@/lib/orgGroups';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ColleaguesModal } from '@/components/ColleaguesModal';
 import type { ColleaguesMode } from '@/components/ColleaguesModal';
@@ -45,19 +45,31 @@ export function PhonebookView() {
   const selectedGroupId = useAppStore((state) => state.selectedGroupId);
   const setSelectedGroupId = useAppStore((state) => state.setSelectedGroupId);
   const orgGroups = useAppStore((state) => state.orgGroups);
-  const enterpriseGroupId = useAppStore((state) => state.enterpriseGroupId);
   const testMode = useAppStore((state) => state.testMode);
   const setTestMode = useAppStore((state) => state.setTestMode);
   const ldapConfigs = useAppStore((state) => state.ldapConfigs);
 
   const [colleaguesView, setColleaguesView] = useState<ColleaguesView | null>(null);
 
+  // В тестовом режиме справочник полностью демонстрационный: настройки
+  // реального AD (группы, предприятие, организации) не должны протекать
+  // в фильтры и подписи.
+  const directoryScope = useMemo(
+    () => resolveDirectoryScope(testMode, ldapConfigs, orgGroups, null),
+    [testMode, ldapConfigs, orgGroups],
+  );
+  const {
+    groups: effectiveOrgGroups,
+    ldapConfigs: effectiveLdapConfigs,
+    enterpriseGroupId: effectiveEnterpriseGroupId,
+  } = directoryScope;
+
   // Выбранная группа фильтра: союз её организаций уходит в запрос целиком.
   const selectedGroup = useMemo(() => {
-    const group = findOrgGroup(orgGroups, selectedGroupId);
+    const group = findOrgGroup(effectiveOrgGroups, selectedGroupId);
     // Пустая группа не считается выбранным фильтром (черновик без организаций).
     return group && group.orgs.some((org) => org.trim() !== '') ? group : null;
-  }, [orgGroups, selectedGroupId]);
+  }, [effectiveOrgGroups, selectedGroupId]);
   const selectedGroupOrgs = useMemo(
     () => (selectedGroup && selectedGroup.orgs.length > 0 ? selectedGroup.orgs : null),
     [selectedGroup],
@@ -80,8 +92,8 @@ export function PhonebookView() {
   // Фильтр предприятия для вкладки «КМАруда»: имя группы из настроек,
   // а без отмеченной группы — первая настроенная AD-организация.
   const enterpriseOrg = useMemo(
-    () => resolveEnterpriseName(ldapConfigs, orgGroups, enterpriseGroupId),
-    [ldapConfigs, orgGroups, enterpriseGroupId],
+    () => resolveEnterpriseName(effectiveLdapConfigs, effectiveOrgGroups, effectiveEnterpriseGroupId),
+    [effectiveLdapConfigs, effectiveOrgGroups, effectiveEnterpriseGroupId],
   );
 
   // Организация и группа фильтра взаимно исключают друг друга.
@@ -117,10 +129,13 @@ export function PhonebookView() {
     }
   }, [globalMode, activeTab, selectedOrg, selectedGroupId, setActiveTab, setSelectedOrg, setSelectedGroupId]);
 
-  // Сброс выбора при смене режима данных (тестовый ⇄ боевой).
+  // Сброс выбора при смене режима данных (тестовый ⇄ боевой). Фильтры
+  // реального AD в тестовом режиме не действуют, поэтому их тоже снимаем.
   useEffect(() => {
     setSelectedId(null);
-  }, [testMode, setSelectedId]);
+    setSelectedOrg(null);
+    setSelectedGroupId(null);
+  }, [testMode, setSelectedId, setSelectedOrg, setSelectedGroupId]);
 
   // Поиск сам открывает карточку: единственное совпадение или верхний
   // результат списка — пользователю не нужно целиться в список вручную.
@@ -229,7 +244,7 @@ export function PhonebookView() {
         setSelectedOrg={handleSelectOrg}
         selectedGroupId={selectedGroup?.id ?? null}
         setSelectedGroupId={handleSelectGroup}
-        orgGroups={orgGroups}
+        orgGroups={effectiveOrgGroups}
         globalMode={globalMode}
         onSettingsClick={handleSettingsClick}
         organizations={organizations}

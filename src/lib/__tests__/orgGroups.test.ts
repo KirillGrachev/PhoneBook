@@ -10,6 +10,7 @@ import {
   OrgGroupsFileError,
   ORG_GROUPS_SHARE_FORMAT,
   ORG_GROUPS_SHARE_VERSION,
+  resolveDirectoryScope,
   resolveEnterpriseName,
   resolveEnterpriseOrgs,
   validateOrgGroupsFile,
@@ -147,5 +148,23 @@ describe('файл обмена группами организаций', () => 
   it('mergeOrgGroups сбрасывает отметку, если локальная группа исчезла', () => {
     const merged = mergeOrgGroups([group('local1', 'Локальная', ['А'])], file([]), 'gone-id');
     expect(merged.enterpriseGroupId).toBeNull();
+  });
+
+  it('resolveDirectoryScope в тестовом режиме отбрасывает реальные AD-настройки', () => {
+    const localLdap = [ldapConfig('АО Комбинат КМАруда')];
+    const localGroups = [group('g1', 'КМАруда', ['АО Комбинат КМАруда'])];
+    const scope = resolveDirectoryScope(true, localLdap, localGroups, 'g1');
+    expect(scope.ldapConfigs).toEqual([]);
+    expect(scope.groups).toEqual([]);
+    expect(scope.enterpriseGroupId).toBeNull();
+  });
+
+  it('resolveDirectoryScope вне тестового режима сохраняет AD-настройки', () => {
+    const localLdap = [ldapConfig('АО Комбинат КМАруда')];
+    const localGroups = [group('g1', 'КМАруда', ['АО Комбинат КМАруда'])];
+    const scope = resolveDirectoryScope(false, localLdap, localGroups, 'g1');
+    expect(scope.ldapConfigs).toBe(localLdap);
+    expect(scope.groups).toBe(localGroups);
+    expect(scope.enterpriseGroupId).toBe('g1');
   });
 });

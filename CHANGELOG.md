@@ -3,6 +3,42 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.15] - 2026-11-17
+
+### Added
+
+- The MSI uninstaller now offers a "Delete application data" checkbox. The
+  checkbox lives in an uninstall launcher installed by the MSI and registered
+  as `UninstallString`, because `msiexec /x` does not show the WiX package UI.
+  When checked, a deferred action removes the configuration, encrypted cache,
+  WebView2 data and the application's Windows Credential Manager entries;
+  unchecked preserves them.
+
+### Removed
+
+- The organization-group "enterprise group" pin action was removed. The
+  KMAruda tab now always uses the first configured AD organization.
+
+### Fixed
+
+- The encrypted-cache key now also has a DPAPI-protected copy in
+  `phonebook.key` next to the database. If Windows Credential Manager loses
+  either or both `db-key` entries, the app recovers the key from this file
+  instead of minting a new one and quarantining the cache. A transient keyring
+  error no longer generates a fresh key while the database exists.
+- The organization-group card icon is now optically centered on the group name.
+- In test mode the directory no longer leaks real AD configuration into the
+  organization filter or enterprise tab, including when real LDAP connections
+  and groups are still present in the store.
+- The LDAP connection/operation timeout number fields now center their values
+  and no longer show the native up/down spin buttons.
+- The external phonebook auto-refresh dropdown now always opens below its
+  trigger instead of flipping above and covering the description; its width
+  was widened so interval labels are not truncated.
+- The MSI now carries the KMARuda artwork: the WiX dialog panel reuses the
+  NSIS sidebar image without covering page content, and the top banner uses the
+  plain application icon.
+
 ## [0.2.14] - 2026-11-16
 
 ### Fixed
@@ -181,7 +217,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.14...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.15...HEAD
+[0.2.15]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.14...v0.2.15
 [0.2.14]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.13...v0.2.14
 [0.2.13]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.12...v0.2.13
 [0.2.12]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.11...v0.2.12

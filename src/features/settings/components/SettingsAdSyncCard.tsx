@@ -59,6 +59,7 @@ export function SettingsAdSyncCard({
           label={t('settings.ad.connectTimeout')}
           hint={t('settings.ad.connectTimeoutHint')}
           value={connectTimeoutSecs}
+          className="h-11 py-0 leading-[42px] text-center"
           onChange={(event) => onConnectTimeoutChange(Math.min(300, Math.max(1, Number(event.target.value) || 1)))}
         />
         <TextField
@@ -68,6 +69,7 @@ export function SettingsAdSyncCard({
           label={t('settings.ad.operationTimeout')}
           hint={t('settings.ad.operationTimeoutHint')}
           value={operationTimeoutSecs}
+          className="h-11 py-0 leading-[42px] text-center"
           onChange={(event) => onOperationTimeoutChange(Math.min(300, Math.max(1, Number(event.target.value) || 1)))}
         />
       </div>

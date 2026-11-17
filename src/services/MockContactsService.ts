@@ -1,7 +1,7 @@
 import { ApiError } from '@/api/backend';
 import type { Contact } from '@/types';
 
-import { resolveEnterpriseOrgs } from '@/lib/orgGroups';
+import { resolveDirectoryScope, resolveEnterpriseOrgs } from '@/lib/orgGroups';
 import { useAppStore } from '@/store/useAppStore';
 
 import { ContactSearchEngine } from './ContactSearchEngine';
@@ -27,10 +27,11 @@ export class MockContactsService implements ContactsService {
       list = list.filter((contact) => saved.has(contact.id));
     } else {
       if (query.activeTab === 'kmaruda') {
-        // Семантика боевого сервиса: союз организаций группы предприятия,
-        // без группы и настроек AD — демо-организация комбината.
-        const { ldapConfigs, orgGroups, enterpriseGroupId } = useAppStore.getState();
-        const orgs = resolveEnterpriseOrgs(ldapConfigs, orgGroups, enterpriseGroupId);
+        // Семантика боевого сервиса: организация первого AD-подключения,
+        // без настроек AD — демо-организация комбината.
+        const { testMode, ldapConfigs, orgGroups } = useAppStore.getState();
+        const scope = resolveDirectoryScope(testMode, ldapConfigs, orgGroups, null);
+        const orgs = resolveEnterpriseOrgs(scope.ldapConfigs, scope.groups, scope.enterpriseGroupId);
         const allowed = new Set(orgs.length > 0 ? orgs : [KMARUDA_ORG]);
         list = list.filter((contact) => contact.organization && allowed.has(contact.organization));
       } else if (query.organizations?.length) {

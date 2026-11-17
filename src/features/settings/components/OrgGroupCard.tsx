@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import type { OrgGroupDto } from '@/api/contracts';
-import { Edit, Groups, Pin, Trash } from '@/components/icons';
+import { Edit, Groups, Trash } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
 const ACTION_BUTTON_CLASS =
@@ -9,14 +9,12 @@ const ACTION_BUTTON_CLASS =
 
 interface OrgGroupCardProps {
   group: OrgGroupDto;
-  pinned: boolean;
-  onTogglePin: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
 /** Карточка сохранённой группы организаций. */
-export function OrgGroupCard({ group, pinned, onTogglePin, onEdit, onDelete }: OrgGroupCardProps) {
+export function OrgGroupCard({ group, onEdit, onDelete }: OrgGroupCardProps) {
   const { t } = useTranslation();
 
   return (
@@ -26,20 +24,10 @@ export function OrgGroupCard({ group, pinned, onTogglePin, onEdit, onDelete }: O
     >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 font-bold text-[15px] text-foreground min-w-0">
-          <Groups className="w-4 h-4 text-primary shrink-0" aria-hidden />
+          <Groups className="w-4 h-4 text-primary shrink-0 translate-y-px" aria-hidden />
           <span className="truncate">{group.name}</span>
         </span>
         <span className="flex items-center gap-0.5 shrink-0">
-          <button
-            type="button"
-            onClick={onTogglePin}
-            className={cn(ACTION_BUTTON_CLASS, pinned && 'text-primary hover:text-primary')}
-            aria-label={t('settings.orgGroupsEnterprise')}
-            aria-pressed={pinned}
-            title={t('settings.orgGroupsEnterprise')}
-          >
-            <Pin className={cn('w-4 h-4', pinned && 'fill-primary/20')} aria-hidden />
-          </button>
           <button
             type="button"
             onClick={onEdit}
@@ -72,8 +60,6 @@ export function OrgGroupCard({ group, pinned, onTogglePin, onEdit, onDelete }: O
       ) : (
         <span className="text-[13px] text-muted-foreground">{t('settings.orgGroupsNoOrgs')}</span>
       )}
-
-      {pinned && <span className="text-[12px] text-primary font-medium">{t('settings.orgGroupsEnterpriseHint')}</span>}
     </section>
   );
 }

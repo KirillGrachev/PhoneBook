@@ -142,7 +142,7 @@ impl Db {
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let key = encryption::database_key()?;
+        let key = encryption::database_key(db_path)?;
         let image: Option<Vec<u8>> = match encryption::load(db_path, &key)? {
             encryption::LoadOutcome::Bytes(bytes) => Some(bytes),
             encryption::LoadOutcome::Missing => None,
