@@ -1,4 +1,4 @@
-# Release notes template
+﻿# Release notes template
 
 Replace every `X.Y.Z`, file name, commit hash and comparison range. Keep the
 same section order as the GitHub releases.
@@ -7,7 +7,7 @@ same section order as the GitHub releases.
 ## Install
 
 Normal users: use `KMAruda.PhoneBook_X.Y.Z_x64-setup.exe`. The
-`KMAruda.PhoneBook_X.Y.Z_x64_en-US.msi` is the MSI payload for enterprise
+`KMAruda.PhoneBook_X.Y.Z_x64_ru-RU.msi` is the MSI payload for enterprise
 deployment. The `KMAruda.PhoneBook_X.Y.Z_windows-x64_portable.zip` runs without
 installation. The WebView2 bootstrapper is embedded in the installer.
 
@@ -36,3 +36,4 @@ show a warning.
 
 Every `###` change bullet needs its own commit link. The `Release X.Y.Z` line
 does not need a link.
+

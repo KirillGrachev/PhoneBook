@@ -1,4 +1,4 @@
-name: Release
+﻿name: Release
 
 # Builds the release when a v* tag is pushed (the tag must match the version
 # in package.json / tauri.conf.json / Cargo.toml, checked by the version job)
@@ -73,7 +73,7 @@ jobs:
             ## Install
 
             Normal users: use `KMAruda.PhoneBook___VERSION___x64-setup.exe`. The
-            `KMAruda.PhoneBook___VERSION___x64_en-US.msi` is the MSI payload for
+            `KMAruda.PhoneBook___VERSION___x64_ru-RU.msi` is the MSI payload for
             enterprise deployment. The WebView2 bootstrapper is embedded in the
             installer.
 
@@ -106,7 +106,7 @@ jobs:
 
           $files = @(
             (Join-Path $bundle "nsis/KMAruda PhoneBook_${version}_x64-setup.exe"),
-            (Join-Path $bundle "msi/KMAruda PhoneBook_${version}_x64_en-US.msi"),
+            (Join-Path $bundle "msi/KMAruda PhoneBook_${version}_x64_ru-RU.msi"),
             (Join-Path (Get-Location) $portable)
           )
           if ($symbols) {
@@ -124,7 +124,7 @@ jobs:
           # status is recorded even while the project has no Authenticode cert.
           $required = @(
             (Join-Path $bundle "nsis/KMAruda PhoneBook_${version}_x64-setup.exe"),
-            (Join-Path $bundle "msi/KMAruda PhoneBook_${version}_x64_en-US.msi"),
+            (Join-Path $bundle "msi/KMAruda PhoneBook_${version}_x64_ru-RU.msi"),
             (Join-Path (Get-Location) $portable)
           )
           foreach ($file in $required) {
@@ -169,3 +169,4 @@ jobs:
           name: sbom
           path: artifacts/sbom
           if-no-files-found: error
+
