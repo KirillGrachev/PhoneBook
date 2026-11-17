@@ -29,6 +29,13 @@ use rusqlite::serialize::OwnedData;
 use rusqlite::{Connection, MAIN_DB};
 use tracing::warn;
 
+#[cfg(windows)]
+use windows::Win32::Foundation::{LocalFree, HLOCAL};
+#[cfg(windows)]
+use windows::Win32::Security::Cryptography::{
+    CryptProtectData, CryptUnprotectData, CRYPTPROTECT_UI_FORBIDDEN, CRYPT_INTEGER_BLOB,
+};
+
 use crate::error::AppError;
 use crate::services::config::store::KEYRING_SERVICE;
 
@@ -40,6 +47,13 @@ const DB_KEY_USER: &str = "db-key";
 /// Redundant copy: Windows Credential Manager occasionally drops a single
 /// generic credential during upgrades; the backup lets the cache open again.
 const DB_KEY_BACKUP_USER: &str = "db-key-backup";
+
+/// Второй, независимый от Credential Manager носитель ключа: файл рядом
+/// с базой, зашифрованный DPAPI (привязка к учётной записи Windows).
+/// Credential Manager иногда теряет обе generic-записи (переустановка,
+/// чистка профиля, политика), и тогда кэш становился недоступен.
+#[cfg(windows)]
+const KEY_FILE_MAGIC: &[u8; 8] = b"KMPBKEY1";
 
 /// Магический заголовок зашифрованного контейнера (версия формата).
 const MAGIC: &[u8; 8] = b"KMPBENC1";
@@ -75,40 +89,203 @@ pub enum LoadOutcome {
     WrongKey,
 }
 
-/// Ключ базы: взять из keyring, при отсутствии — сгенерировать и
-/// сохранить. Ошибка хранилища секретов → `Config` (fail closed: без
-/// ключа кэш не открывается и не создаётся).
-pub fn database_key() -> Result<[u8; KEY_BYTES], AppError> {
-    // Fail closed: без системного хранилища секретов кэш не открывается
-    // и не создаётся — ключ негде безопасно хранить.
+/// Ключ базы: взять из keyring, затем из DPAPI-файла, при отсутствии —
+/// сгенерировать и сохранить во все доступные хранилища. Ошибка keyring не
+/// фатальна, если ключ нашёлся в файле: это переживает чистку Credential
+/// Manager и перезагрузку.
+pub fn database_key(db_path: &Path) -> Result<[u8; KEY_BYTES], AppError> {
+    let key_path = key_file_path(db_path);
+    let mut key_store_error = false;
+
     let primary = keyring::Entry::new(KEYRING_SERVICE, DB_KEY_USER)
-        .map_err(|e| AppError::Config(format!("хранилище секретов недоступно: {e}")))?;
+        .map_err(|error| {
+            key_store_error = true;
+            warn!(target: "db", %error, "хранилище секретов недоступно — пробую файл ключа");
+        })
+        .ok();
     let backup = keyring::Entry::new(KEYRING_SERVICE, DB_KEY_BACKUP_USER).ok();
 
-    let primary_key = read_key(&primary)?;
+    let primary_key = primary.as_ref().and_then(|entry| match read_key(entry) {
+        Ok(key) => key,
+        Err(error) => {
+            warn!(target: "db", %error, "ключ базы в keyring недоступен — пробую файл ключа");
+            key_store_error = true;
+            None
+        }
+    });
     let backup_key = backup.as_ref().and_then(|entry| match read_key(entry) {
         Ok(key) => key,
         Err(error) => {
             warn!(target: "db", %error, "резервный ключ базы недоступен");
+            key_store_error = true;
             None
         }
     });
+    let file_key = match read_key_file(&key_path) {
+        Ok(key) => key,
+        Err(error) => {
+            warn!(target: "db", %error, "файл ключа базы недоступен");
+            None
+        }
+    };
 
-    // Prefer the primary, recover from the backup when Credential Manager lost
-    // the primary entry, otherwise mint a new key.
-    let key = primary_key.or(backup_key).unwrap_or(generate_key()?);
+    // Не mint-им новый ключ при временной ошибке keyring и существующей
+    // базе: иначе контейнер будет отправлен в карантин. Файл ключа —
+    // последний шанс восстановить доступ.
+    if primary_key.is_none()
+        && backup_key.is_none()
+        && file_key.is_none()
+        && key_store_error
+        && db_path.exists()
+    {
+        return Err(AppError::Config(
+            "хранилище ключа базы временно недоступно; перезапустите приложение".into(),
+        ));
+    }
+
+    let generated = primary_key.is_none() && backup_key.is_none() && file_key.is_none();
+    let key = primary_key
+        .or(backup_key)
+        .or(file_key)
+        .unwrap_or(generate_key()?);
+    let mut persisted = !generated;
 
     if primary_key != Some(key) {
-        set_key(&primary, &key)?;
-    }
-    if let Some(entry) = backup.as_ref() {
-        if backup_key != Some(key) {
-            if let Err(error) = set_key(entry, &key) {
-                warn!(target: "db", %error, "не удалось сохранить резервный ключ базы");
+        if let Some(entry) = primary.as_ref() {
+            match set_key(entry, &key) {
+                Ok(()) => persisted = true,
+                Err(error) => {
+                    warn!(target: "db", %error, "не удалось сохранить основной ключ базы")
+                }
             }
         }
     }
+    if backup_key != Some(key) {
+        if let Some(entry) = backup.as_ref() {
+            match set_key(entry, &key) {
+                Ok(()) => persisted = true,
+                Err(error) => {
+                    warn!(target: "db", %error, "не удалось сохранить резервный ключ базы")
+                }
+            }
+        }
+    }
+    if file_key != Some(key) {
+        match write_key_file(&key_path, &key) {
+            Ok(()) => persisted = true,
+            Err(error) => warn!(target: "db", %error, "не удалось сохранить файл ключа базы"),
+        }
+    }
+
+    if generated && !persisted {
+        return Err(AppError::Config(
+            "не удалось сохранить ключ базы ни в keyring, ни в файл".into(),
+        ));
+    }
+
     Ok(key)
+}
+
+/// Путь к DPAPI-файлу ключа рядом с зашифрованным контейнером.
+fn key_file_path(db_path: &Path) -> PathBuf {
+    db_path.with_extension("key")
+}
+
+#[cfg(windows)]
+fn read_key_file(path: &Path) -> Result<Option<[u8; KEY_BYTES]>, AppError> {
+    let data = match fs::read(path) {
+        Ok(data) => data,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    if data.len() < KEY_FILE_MAGIC.len() || &data[..KEY_FILE_MAGIC.len()] != KEY_FILE_MAGIC {
+        warn!(target: "db", "файл ключа базы повреждён — игнорирую");
+        return Ok(None);
+    }
+    Ok(Some(unprotect_key(&data[KEY_FILE_MAGIC.len()..])?))
+}
+
+#[cfg(not(windows))]
+fn read_key_file(_path: &Path) -> Result<Option<[u8; KEY_BYTES]>, AppError> {
+    Ok(None)
+}
+
+#[cfg(windows)]
+fn write_key_file(path: &Path, key: &[u8; KEY_BYTES]) -> Result<(), AppError> {
+    let protected = protect_key(key)?;
+    let mut data = Vec::with_capacity(KEY_FILE_MAGIC.len() + protected.len());
+    data.extend_from_slice(KEY_FILE_MAGIC);
+    data.extend_from_slice(&protected);
+
+    let temp_path = path.with_extension("key.tmp");
+    fs::write(&temp_path, &data)?;
+    let _ = fs::remove_file(path);
+    if let Err(error) = fs::rename(&temp_path, path) {
+        let _ = fs::remove_file(&temp_path);
+        return Err(error.into());
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn write_key_file(_path: &Path, _key: &[u8; KEY_BYTES]) -> Result<(), AppError> {
+    Ok(())
+}
+
+#[cfg(windows)]
+fn protect_key(key: &[u8; KEY_BYTES]) -> Result<Vec<u8>, AppError> {
+    let input = CRYPT_INTEGER_BLOB {
+        cbData: KEY_BYTES as u32,
+        pbData: key.as_ptr() as *mut u8,
+    };
+    let mut output = CRYPT_INTEGER_BLOB::default();
+    unsafe {
+        CryptProtectData(
+            &input,
+            windows::core::w!("KMAruda PhoneBook database key"),
+            None,
+            None,
+            None,
+            CRYPTPROTECT_UI_FORBIDDEN,
+            &mut output,
+        )
+        .map_err(|error| AppError::Config(format!("DPAPI: {error}")))?;
+
+        let bytes = std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec();
+        let _ = LocalFree(Some(HLOCAL(output.pbData as _)));
+        Ok(bytes)
+    }
+}
+
+#[cfg(windows)]
+fn unprotect_key(blob: &[u8]) -> Result<[u8; KEY_BYTES], AppError> {
+    let input = CRYPT_INTEGER_BLOB {
+        cbData: blob.len() as u32,
+        pbData: blob.as_ptr() as *mut u8,
+    };
+    let mut output = CRYPT_INTEGER_BLOB::default();
+    unsafe {
+        CryptUnprotectData(
+            &input,
+            None,
+            None,
+            None,
+            None,
+            CRYPTPROTECT_UI_FORBIDDEN,
+            &mut output,
+        )
+        .map_err(|error| AppError::Config(format!("DPAPI: {error}")))?;
+
+        if output.cbData as usize != KEY_BYTES {
+            let _ = LocalFree(Some(HLOCAL(output.pbData as _)));
+            return Err(AppError::Config("неверная длина ключа базы".into()));
+        }
+
+        let mut key = [0u8; KEY_BYTES];
+        std::ptr::copy_nonoverlapping(output.pbData, key.as_mut_ptr(), KEY_BYTES);
+        let _ = LocalFree(Some(HLOCAL(output.pbData as _)));
+        Ok(key)
+    }
 }
 
 fn read_key(entry: &keyring::Entry) -> Result<Option<[u8; KEY_BYTES]>, AppError> {
@@ -409,5 +586,16 @@ mod tests {
     fn restore_of_empty_image_does_not_panic() {
         let mut conn = Connection::open_in_memory().expect("conn");
         let _ = restore(&mut conn, &[]);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn dpapi_key_file_roundtrip() {
+        let path = db_path("dpapi-key").with_extension("key");
+        let expected = key(7);
+        write_key_file(&path, &expected).expect("write key file");
+        assert_eq!(read_key_file(&path).expect("read key file"), Some(expected));
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(path.with_extension("key.tmp"));
     }
 }

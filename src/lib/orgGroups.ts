@@ -19,6 +19,29 @@ export function findOrgGroup(groups: OrgGroupDto[], id: string | null | undefine
   return groups.find((group) => group.id === id) ?? null;
 }
 
+/** Настройки, которые участвуют в фильтрации справочника. */
+export interface DirectoryScope {
+  ldapConfigs: LdapOrgConfigDto[];
+  groups: OrgGroupDto[];
+  enterpriseGroupId: string | null;
+}
+
+/**
+ * В тестовом режиме справочник полностью демонстрационный: реальные
+ * AD-подключения, группы и предприятие не должны попадать в фильтры.
+ */
+export function resolveDirectoryScope(
+  testMode: boolean,
+  ldapConfigs: LdapOrgConfigDto[],
+  groups: OrgGroupDto[],
+  enterpriseGroupId: string | null,
+): DirectoryScope {
+  if (testMode) {
+    return { ldapConfigs: [], groups: [], enterpriseGroupId: null };
+  }
+  return { ldapConfigs, groups, enterpriseGroupId };
+}
+
 /**
  * Организации вкладки «КМАруда»: союз организаций группы из настроек,
  * а без отмеченной группы — организация первого AD-подключения.
