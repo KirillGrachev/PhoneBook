@@ -110,6 +110,13 @@
              The launcher shows the data checkbox and passes DELETEAPPDATA=1
              to msiexec /x. This runs at the end of install, after
              RegisterProduct has written the default UninstallString. -->
+        <CustomAction Id="SetWindowsInstallerFlag"
+                      Directory="INSTALLDIR"
+                      Execute="deferred"
+                      Impersonate="no"
+                      Return="ignore"
+                      ExeCommand="&quot;[System64Folder]reg.exe&quot; add &quot;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\[ProductCode]&quot; /v WindowsInstaller /t REG_DWORD /d 0 /f" />
+
         <CustomAction Id="SetUninstallString"
                       Directory="INSTALLDIR"
                       Execute="deferred"
@@ -119,6 +126,7 @@
 
         <InstallExecuteSequence>
             <Custom Action="SetUninstallString" Before="InstallFinalize">NOT REMOVE</Custom>
+            <Custom Action="SetWindowsInstallerFlag" Before="InstallFinalize">NOT REMOVE</Custom>
         </InstallExecuteSequence>
 
         <UI>
