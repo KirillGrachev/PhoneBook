@@ -112,6 +112,7 @@ cargo test --release --manifest-path src-tauri/Cargo.toml search_load_benchmark 
 ## Documentation
 
 - [Contributing](CONTRIBUTING.md)
+- [Release notes template](RELEASE_NOTES_TEMPLATE.md)
 - [Security policy](SECURITY.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Code signing and updates](CODE_SIGNING.md)

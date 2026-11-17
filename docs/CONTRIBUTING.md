@@ -103,5 +103,8 @@ OSV scanner; see [.github/workflows](../.github/workflows).
 3. The Release workflow builds MSI/NSIS, creates the portable ZIP, symbols,
    `SHA256SUMS-windows-x64.txt` and the SBOM, and publishes the GitHub Release.
 4. Write the release notes in the same `Features` / `Fixes` / `Internal` format
-   as the previous releases, with links to the relevant commits. Releases are
-   unsigned until an Authenticode certificate is configured.
+   as the previous releases. **Every change bullet must end with the short hash
+   and a full-link to the commit that made that change** — even when several
+   bullets come from one squash commit. Use
+   [RELEASE_NOTES_TEMPLATE.md](RELEASE_NOTES_TEMPLATE.md). Releases are unsigned
+   until an Authenticode certificate is configured.
