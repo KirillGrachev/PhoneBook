@@ -24,6 +24,9 @@ Get-Process -Name 'kmaruda-phonebook' -ErrorAction SilentlyContinue | ForEach-Ob
 Start-Sleep -Milliseconds 800
 
 $paths = @(
+    (Join-Path $env:APPDATA 'KMAruda PhoneBook'),
+    (Join-Path $env:LOCALAPPDATA 'KMAruda PhoneBook'),
+    # Older builds stored data under the reverse-DNS identifier.
     (Join-Path $env:APPDATA 'com.kmaruda.phonebook'),
     (Join-Path $env:LOCALAPPDATA 'com.kmaruda.phonebook')
 )
