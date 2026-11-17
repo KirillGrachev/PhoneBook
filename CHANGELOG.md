@@ -3,6 +3,18 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.19] - 2026-11-17
+
+### Changed
+
+- Application data now lives in `%APPDATA%\KMAruda PhoneBook` and local data in
+  `%LOCALAPPDATA%\KMAruda PhoneBook` instead of the reverse-DNS identifier
+  directory `com.kmaruda.phonebook`.
+- The previous `%APPDATA%\com.kmaruda.phonebook` directory is migrated to the
+  new location on first launch, so configuration, cache and the database key
+  file are preserved.
+- The uninstall data cleanup removes both the new and the legacy directories.
+
 ## [0.2.18] - 2026-11-17
 
 ### Changed
@@ -242,7 +254,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.18...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.19...HEAD
+[0.2.19]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.18...v0.2.19
 [0.2.18]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.17...v0.2.18
 [0.2.17]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.16...v0.2.17
 [0.2.16]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.15...v0.2.16
