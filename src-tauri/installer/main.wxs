@@ -114,7 +114,7 @@
                       Directory="INSTALLDIR"
                       Execute="immediate"
                       Impersonate="no"
-                      Return="check"
+                      Return="ignore"
                       ExeCommand="&quot;[System64Folder]reg.exe&quot; add &quot;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\[ProductCode]&quot; /v UninstallString /t REG_SZ /d &quot;powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File [CommonAppDataFolder]KMAruda\uninstall.ps1&quot; /f" />
 
         <InstallExecuteSequence>
