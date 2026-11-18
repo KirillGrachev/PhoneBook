@@ -3,6 +3,17 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.23] - 2026-11-18
+
+### Fixed
+
+- Test mode now honors the starred organization group too: local groups are
+  preserved in the test-mode directory scope, and the demo KMAruda tab filters
+  by the selected group's organizations. With no star it returns an empty list
+  instead of always showing the KMAruda demo contacts.
+- Selecting or clearing the star in test mode refreshes the list immediately
+  through the `enterpriseGroupId` React Query key; no restart is needed.
+
 ## [0.2.22] - 2026-11-18
 
 ### Changed
@@ -357,7 +368,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.22...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.23...HEAD
+[0.2.23]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.22...v0.2.23
 [0.2.22]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.21...v0.2.22
 [0.2.21]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.20...v0.2.21
 [0.2.20]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.19...v0.2.20

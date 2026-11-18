@@ -173,8 +173,8 @@ describe('файл обмена группами организаций', () => 
     const localGroups = [group('g1', 'КМАруда', ['АО Комбинат КМАруда'])];
     const scope = resolveDirectoryScope(true, localLdap, localGroups, 'g1');
     expect(scope.ldapConfigs).toEqual([]);
-    expect(scope.groups).toEqual([]);
-    expect(scope.enterpriseGroupId).toBeNull();
+    expect(scope.groups).toBe(localGroups);
+    expect(scope.enterpriseGroupId).toBe('g1');
   });
 
   it('resolveDirectoryScope вне тестового режима сохраняет AD-настройки', () => {
