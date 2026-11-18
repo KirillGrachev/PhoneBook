@@ -1,4 +1,8 @@
 name: KMAruda PhoneBook CodeQL
 
-# Intentionally no paths or paths-ignore filters: every repository file is in
-# scope for the security scanner, including generated and vendored content.
+# Production sources are all in scope. `vendor/picomatch` is a dev-only,
+# build-time dependency patched locally (see vendor/picomatch/PATCH-NOTES.md);
+# it is not part of the application bundle, so keep it out of CodeQL. Its
+# dependency advisory is covered separately by Dependabot/OSV.
+paths-ignore:
+  - vendor/**
