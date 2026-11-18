@@ -64,6 +64,22 @@ impl OrgGroupsShareFile {
 
     /// Разобрать и проверить содержимое файла обмена.
     pub fn parse(content: &str) -> Result<Self, AppError> {
+        #[derive(Deserialize)]
+        struct FormatProbe {
+            #[serde(default)]
+            format: Option<String>,
+        }
+
+        // The Organization groups screen is also a convenient place to pick a
+        // full configuration export. Accept it and take only its groups
+        // instead of failing with a confusing "missing field `groups`".
+        if let Ok(probe) = serde_json::from_str::<FormatProbe>(content) {
+            if probe.format.as_deref() == Some(CONFIG_SHARE_FORMAT) {
+                let config = ConfigShareFile::parse(content)?;
+                return Ok(Self::new(config.org_groups, config.enterprise_group_id));
+            }
+        }
+
         let file: Self = serde_json::from_str(content).map_err(|e| {
             AppError::Validation(format!(
                 "Файл групп организаций не является корректным JSON: {e}"
@@ -261,6 +277,22 @@ mod tests {
         let blank = r#"{"format":"kmaruda-phonebook/org-groups","version":1,
             "groups":[{"id":"a","name":"  ","orgs":[]}]}"#;
         assert!(OrgGroupsShareFile::parse(blank).is_err());
+    }
+
+    #[test]
+    fn accepts_full_config_export_as_groups_file() {
+        let group = group("g1", "KMAruda", &["AO Kombinat KMAruda"]);
+        let config = AppConfig {
+            org_groups: vec![group.clone()],
+            enterprise_group_id: Some("g1".into()),
+            ..Default::default()
+        };
+        let rendered = ConfigShareFile::new(config).render().expect("render");
+
+        let parsed = OrgGroupsShareFile::parse(&rendered).expect("config import");
+        assert_eq!(parsed.groups, vec![group]);
+        assert_eq!(parsed.enterprise_group_id.as_deref(), Some("g1"));
+        assert_eq!(parsed.format, SHARE_FORMAT);
     }
 
     #[test]

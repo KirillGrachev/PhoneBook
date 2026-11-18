@@ -8,6 +8,8 @@ import {
   mergeOrgGroups,
   newOrgGroupId,
   OrgGroupsFileError,
+  CONFIG_SHARE_FORMAT,
+  CONFIG_SHARE_VERSION,
   ORG_GROUPS_SHARE_FORMAT,
   ORG_GROUPS_SHARE_VERSION,
   resolveDirectoryScope,
@@ -47,21 +49,22 @@ describe('orgGroups', () => {
     expect(resolveEnterpriseName(ldap, groups, 'g1')).toBe('КМАруда');
   });
 
-  it('без группы вкладка предприятия наследует первую AD-организацию', () => {
-    expect(resolveEnterpriseOrgs(ldap, groups, null)).toEqual(['АО Комбинат КМаруда']);
-    expect(resolveEnterpriseName(ldap, groups, null)).toBe('АО Комбинат КМаруда');
+  it('без выбранной группы вкладка предприятия возвращает пусто', () => {
+    expect(resolveEnterpriseOrgs(ldap, groups, null)).toEqual([]);
+    expect(resolveEnterpriseName(ldap, groups, null)).toBeNull();
     expect(resolveEnterpriseOrgs([], groups, null)).toEqual([]);
     expect(resolveEnterpriseName([], groups, null)).toBeNull();
   });
 
-  it('битая ссылка на удалённую группу деградирует в базовое поведение', () => {
-    expect(resolveEnterpriseOrgs(ldap, groups, 'deleted')).toEqual(['АО Комбинат КМаруда']);
+  it('битая ссылка на удалённую группу возвращает пусто', () => {
+    expect(resolveEnterpriseOrgs(ldap, groups, 'deleted')).toEqual([]);
+    expect(resolveEnterpriseName(ldap, groups, 'deleted')).toBeNull();
   });
 
-  it('пустая отмеченная группа не снимает фильтр предприятия', () => {
+  it('пустая отмеченная группа возвращает пусто', () => {
     const withEmpty = [...groups, group('g3', 'Черновик', [])];
-    expect(resolveEnterpriseOrgs(ldap, withEmpty, 'g3')).toEqual(['АО Комбинат КМаруда']);
-    expect(resolveEnterpriseName(ldap, withEmpty, 'g3')).toBe('АО Комбинат КМаруда');
+    expect(resolveEnterpriseOrgs(ldap, withEmpty, 'g3')).toEqual([]);
+    expect(resolveEnterpriseName(ldap, withEmpty, 'g3')).toBeNull();
   });
 
   it('collectGroupedOrgs собирает поглощённые организациями группы', () => {
@@ -102,6 +105,21 @@ describe('файл обмена группами организаций', () => 
       OrgGroupsFileError,
     );
     expect(() => validateOrgGroupsFile('строка')).toThrow(OrgGroupsFileError);
+  });
+
+  it('accepts groups from a full config export', () => {
+    const parsed = validateOrgGroupsFile({
+      format: CONFIG_SHARE_FORMAT,
+      version: CONFIG_SHARE_VERSION,
+      config: {
+        orgGroups: [group('g1', 'Config group', ['Org'])],
+        enterpriseGroupId: 'g1',
+      },
+    });
+
+    expect(parsed.format).toBe(ORG_GROUPS_SHARE_FORMAT);
+    expect(parsed.groups).toEqual([group('g1', 'Config group', ['Org'])]);
+    expect(parsed.enterpriseGroupId).toBe('g1');
   });
 
   it('mergeOrgGroups добавляет новые группы и не трогает локальные', () => {

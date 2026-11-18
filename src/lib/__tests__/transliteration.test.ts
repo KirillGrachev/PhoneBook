@@ -18,4 +18,9 @@ describe('transliterateRussian', () => {
     expect(personNameForLanguage('Грачев Кирилл', 'en')).toBe('Grachev Kirill');
     expect(personNameForLanguage('Грачев Кирилл', 'ru')).toBe('Грачев Кирилл');
   });
+
+  it('транслитерирует название организации для уведомления синхронизации', () => {
+    expect(personNameForLanguage('АО Комбинат КМАруда', 'en')).toBe('AO Kombinat KMAruda');
+    expect(personNameForLanguage('АО Комбинат КМАруда', 'ru')).toBe('АО Комбинат КМАруда');
+  });
 });

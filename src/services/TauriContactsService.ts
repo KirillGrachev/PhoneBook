@@ -91,22 +91,15 @@ export class TauriContactsService implements ContactsService {
     };
 
     if (query.activeTab === 'kmaruda') {
-      // Вкладка предприятия: поиск внутри организации первого настроенного
-      // AD-подключения (по атрибуту `company`, тот же механизм, что и
-      // «Фильтр по предприятию»): один источник синхронизации может
-      // держать весь домен холдинга, поэтому фильтр по sourceOrg границу
-      // предприятия не задаёт. sourceOrg дублируется как страховка: если ни
-      // одно имя группы не совпадает ни с одним `company` в AD, бэкенд
-      // откатится к источнику.
-      const { ldapConfigs, orgGroups } = useAppStore.getState();
-      const orgs = resolveEnterpriseOrgs(ldapConfigs, orgGroups, null);
-      if (orgs.length > 0) {
-        params.organizations = orgs;
-        const primaryOrg = ldapConfigs[0]?.organization?.trim();
-        if (primaryOrg) {
-          params.sourceOrg = primaryOrg;
-        }
+      // Вкладка предприятия работает только по группе, отмеченной звездой.
+      // Без выбранной группы возвращаем пусто: нельзя подставлять первое
+      // AD-подключение или отдавать весь источник холдинга.
+      const { ldapConfigs, orgGroups, enterpriseGroupId } = useAppStore.getState();
+      const orgs = resolveEnterpriseOrgs(ldapConfigs, orgGroups, enterpriseGroupId);
+      if (orgs.length === 0) {
+        return { contacts: [], total: 0 };
       }
+      params.organizations = orgs;
     } else if (query.organizations?.length) {
       // Группа фильтра по организации (глобальная версия): союз организаций.
       params.organizations = query.organizations;

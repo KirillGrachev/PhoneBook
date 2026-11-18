@@ -55,6 +55,9 @@ export function useContactsList(
   const { t } = useTranslation();
   const testMode = useAppStore((state) => state.testMode);
   const hideEmptyContacts = useAppStore((state) => state.hideEmptyContacts);
+  // Звезда в «Группах организаций» меняет выбор предприятия; ключ запроса
+  // обязан измениться, иначе React Query отдаёт старый кэш до перезапуска.
+  const enterpriseGroupId = useAppStore((state) => state.enterpriseGroupId);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
 
   // Стабильный ключ для избранных контактов: перерисовка только при реальном изменении набора.
@@ -85,6 +88,7 @@ export function useContactsList(
         search: debouncedSearch,
         selectedOrg: effectiveOrg,
         groupKey: effectiveGroupKey,
+        enterpriseGroupId,
         savedKey,
         testMode,
         hideEmptyContacts,

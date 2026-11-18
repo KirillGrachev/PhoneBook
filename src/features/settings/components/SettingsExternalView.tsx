@@ -183,7 +183,7 @@ export function SettingsExternalView() {
                     <button
                       type="button"
                       onClick={() => handleRemove(path)}
-                      className="shrink-0 mt-0.5 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors no-ring"
+                      className="shrink-0 inline-flex h-[18px] w-[18px] items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors no-ring"
                       aria-label={t('settings.externalRemove')}
                     >
                       <X className="w-4 h-4" aria-hidden />
@@ -198,9 +198,9 @@ export function SettingsExternalView() {
                       options={intervalOptions}
                       onChange={(hours) => handleIntervalChange(path, hours)}
                       ariaLabel={t('settings.externalRefreshEvery')}
-                      className="h-8 min-w-[160px] shrink-0"
+                      className="h-8 min-w-[160px] shrink-0 focus-visible:ring-0 focus-visible:outline-none"
                       side="bottom"
-                      avoidCollisions={false}
+                      collisionPadding={12}
                     />
                   </div>
                 </li>

@@ -43,7 +43,7 @@ export function OrgGroupEditor({
           value={editor.name}
           onChange={(event) => onNameChange(event.target.value)}
           placeholder={t('settings.orgGroupsNamePlaceholder')}
-          className="px-3 py-2 rounded-[12px] bg-input text-[14px] font-normal text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-shadow"
+          className="px-3 py-2 rounded-[12px] bg-input text-[14px] font-normal text-foreground outline-none focus-visible:ring-0 focus-visible:outline-none transition-colors"
         />
       </label>
 

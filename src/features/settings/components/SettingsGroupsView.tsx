@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Export, Import, Plus } from '@/components/icons';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -35,6 +36,8 @@ export function SettingsGroupsView() {
   const saveOrgGroup = useAppStore((state) => state.saveOrgGroup);
   const removeOrgGroup = useAppStore((state) => state.removeOrgGroup);
   const setOrgGroups = useAppStore((state) => state.setOrgGroups);
+  const enterpriseGroupId = useAppStore((state) => state.enterpriseGroupId);
+  const setEnterpriseGroupId = useAppStore((state) => state.setEnterpriseGroupId);
   const ldapConfigs = useAppStore((state) => state.ldapConfigs);
 
   const { data: directoryOrgs = [] } = useOrganizations();
@@ -78,7 +81,7 @@ export function SettingsGroupsView() {
         setExportedPath(path);
         toast.success(t('settings.orgGroupsExported'), { description: path });
       } else {
-        const blob = new Blob([JSON.stringify(buildOrgGroupsFile(orgGroups, null), null, 2)], {
+        const blob = new Blob([JSON.stringify(buildOrgGroupsFile(orgGroups, enterpriseGroupId), null, 2)], {
           type: 'application/json',
         });
         const url = URL.createObjectURL(blob);
@@ -100,7 +103,7 @@ export function SettingsGroupsView() {
   const applyImportedFile = (file: OrgGroupsFileDto) => {
     // The enterprise-group pin was removed; the file may still contain it
     // from an older export, but it is intentionally ignored.
-    const merged = mergeOrgGroups(orgGroups, file, null);
+    const merged = mergeOrgGroups(orgGroups, file, enterpriseGroupId);
     setOrgGroups(merged.groups);
     setError(null);
     toast.success(t('settings.orgGroupsImported', { count: file.groups.length }));
@@ -230,21 +233,47 @@ export function SettingsGroupsView() {
 
         {orgGroups.map((group) => (
           <div key={group.id} className="flex flex-col gap-3">
-            <OrgGroupCard group={group} onEdit={() => openEdit(group.id)} onDelete={() => removeOrgGroup(group.id)} />
-            {editor?.id === group.id && (
-              <div ref={editorRef} className="scroll-mt-24">
-                {editorContent}
-              </div>
-            )}
+            <OrgGroupCard
+              group={group}
+              pinned={enterpriseGroupId === group.id}
+              onTogglePin={() => setEnterpriseGroupId(enterpriseGroupId === group.id ? null : group.id)}
+              onEdit={() => openEdit(group.id)}
+              onDelete={() => removeOrgGroup(group.id)}
+            />
+            <AnimatePresence initial={false}>
+              {editor?.id === group.id && (
+                <motion.div
+                  ref={editorRef}
+                  key={`group-editor-${group.id}`}
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="scroll-mt-24"
+                >
+                  {editorContent}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         ))}
       </div>
 
-      {editor && editor.id === null && (
-        <div ref={editorRef} className="scroll-mt-24">
-          {editorContent}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {editor && editor.id === null && (
+          <motion.div
+            ref={editorRef}
+            key="new-group-editor"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="scroll-mt-24"
+          >
+            {editorContent}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {!editor && (
         <div className="flex flex-col gap-2">
@@ -279,7 +308,7 @@ export function SettingsGroupsView() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={shareBusy !== null}
-              title={t('settings.orgGroupsImport')}
+              title={t('settings.orgGroupsImportHint')}
               className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[16px] border border-border bg-surface hover:bg-surface-hover text-[13px] font-bold text-muted-foreground hover:text-foreground shadow-sm transition-all outline-none cursor-pointer disabled:opacity-60"
             >
               <Import className="w-4 h-4" aria-hidden />

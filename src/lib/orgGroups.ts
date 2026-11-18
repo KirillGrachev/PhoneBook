@@ -5,8 +5,8 @@ import type { LdapOrgConfigDto, OrgGroupDto, OrgGroupsFileDto } from '@/api/cont
  *
  * Семантика (синхронизирована с бэкендом, `services/db/read.rs`):
  * * вкладка «КМАруда» не глобальной версии учитывает союз организаций
- *   группы, отмеченной в настройках; без группы — наследуемое поведение
- *   (организация первого AD-подключения);
+ *   группы, отмеченной в настройках; без выбранной группы — пустая выдача,
+ *   без подстановки первого AD-подключения;
  * * в глобальной версии группа заменяет в фильтре поглощённые организации
  *   ({@link collectGroupedOrgs}).
  */
@@ -43,23 +43,16 @@ export function resolveDirectoryScope(
 }
 
 /**
- * Организации вкладки «КМАруда»: союз организаций группы из настроек,
- * а без отмеченной группы — организация первого AD-подключения.
- * Пустой массив означает «фильтр не задан» (вкладка покажет весь источник).
+ * Организации вкладки «КМАруда»: союз организаций группы, отмеченной
+ * звездой. Без выбранной группы возвращается пустой массив: вкладка не
+ * должна подставлять первое AD-подключение и показывать весь холдинг.
  */
 export function resolveEnterpriseOrgs(
-  ldapConfigs: LdapOrgConfigDto[],
+  _ldapConfigs: LdapOrgConfigDto[],
   groups: OrgGroupDto[],
   enterpriseGroupId: string | null,
 ): string[] {
-  const groupOrgs = groupOrgNames(findOrgGroup(groups, enterpriseGroupId));
-  if (groupOrgs.length > 0) {
-    return groupOrgs;
-  }
-  // Группа не отмечена или пуста: наследуемое поведение — организация
-  // первого AD-подключения (группа-черновик не должна снимать фильтр).
-  const primaryOrg = ldapConfigs[0]?.organization?.trim();
-  return primaryOrg ? [primaryOrg] : [];
+  return groupOrgNames(findOrgGroup(groups, enterpriseGroupId));
 }
 
 /** Организации группы без пустых значений; `null`-группа → пустой список. */
@@ -72,7 +65,7 @@ function groupOrgNames(group: OrgGroupDto | null): string[] {
 
 /** Имя объединённого фильтра предприятия для плейсхолдеров поиска. */
 export function resolveEnterpriseName(
-  ldapConfigs: LdapOrgConfigDto[],
+  _ldapConfigs: LdapOrgConfigDto[],
   groups: OrgGroupDto[],
   enterpriseGroupId: string | null,
 ): string | null {
@@ -80,7 +73,7 @@ export function resolveEnterpriseName(
   if (group && groupOrgNames(group).length > 0) {
     return group.name.trim() || null;
   }
-  return ldapConfigs[0]?.organization?.trim() || null;
+  return null;
 }
 
 /** Организации, поглощённые группами: в глобальной версии их заменяет группа. */
@@ -112,6 +105,10 @@ export function newOrgGroupId(): string {
 export const ORG_GROUPS_SHARE_FORMAT = 'kmaruda-phonebook/org-groups';
 /** Версия формата файла обмена (зеркалит Rust `SHARE_VERSION`). */
 export const ORG_GROUPS_SHARE_VERSION = 1;
+/** Маркер полного файла конфигурации (зеркалит Rust `CONFIG_SHARE_FORMAT`). */
+export const CONFIG_SHARE_FORMAT = 'kmaruda-phonebook/config';
+/** Версия формата полного файла конфигурации. */
+export const CONFIG_SHARE_VERSION = 1;
 /** Имя файла при экспорте в браузере (демо-режим). */
 export const ORG_GROUPS_SHARE_FILE_NAME = 'kmaruda-org-groups.json';
 
@@ -141,24 +138,48 @@ export function validateOrgGroupsFile(value: unknown): OrgGroupsFileDto {
   if (!value || typeof value !== 'object') {
     throw new OrgGroupsFileError('Файл групп организаций не является корректным JSON-объектом');
   }
-  const candidate = value as Partial<OrgGroupsFileDto>;
-  if (candidate.format !== ORG_GROUPS_SHARE_FORMAT) {
-    throw new OrgGroupsFileError(
-      `Это не файл групп организаций KMAruda PhoneBook (неизвестный формат «${String(candidate.format)}»)`,
-    );
+  const candidate = value as Partial<OrgGroupsFileDto> & {
+    config?: { orgGroups?: unknown; enterpriseGroupId?: unknown };
+  };
+
+  let sourceGroups: unknown[];
+  let sourceEnterpriseGroupId: unknown;
+  let sourceExportedAt: unknown;
+
+  if (candidate.format === CONFIG_SHARE_FORMAT) {
+    if (typeof candidate.version !== 'number' || candidate.version > CONFIG_SHARE_VERSION) {
+      throw new OrgGroupsFileError(
+        'Файл конфигурации создан более новой версией приложения (версия формата новее поддерживаемой)',
+      );
+    }
+    if (!candidate.config || !Array.isArray(candidate.config.orgGroups)) {
+      throw new OrgGroupsFileError('В файле конфигурации нет списка групп организаций');
+    }
+    sourceGroups = candidate.config.orgGroups;
+    sourceEnterpriseGroupId = candidate.config.enterpriseGroupId;
+  } else {
+    if (candidate.format !== ORG_GROUPS_SHARE_FORMAT) {
+      throw new OrgGroupsFileError(
+        `Это не файл групп организаций KMAruda PhoneBook (неизвестный формат «${String(candidate.format)}»)`,
+      );
+    }
+    if (typeof candidate.version !== 'number' || candidate.version > ORG_GROUPS_SHARE_VERSION) {
+      throw new OrgGroupsFileError(
+        'Файл групп организаций создан более новой версией приложения (версия формата новее поддерживаемой)',
+      );
+    }
+    if (!Array.isArray(candidate.groups)) {
+      throw new OrgGroupsFileError('В файле групп организаций нет списка групп');
+    }
+    sourceGroups = candidate.groups;
+    sourceEnterpriseGroupId = candidate.enterpriseGroupId;
+    sourceExportedAt = candidate.exportedAt;
   }
-  if (typeof candidate.version !== 'number' || candidate.version > ORG_GROUPS_SHARE_VERSION) {
-    throw new OrgGroupsFileError(
-      'Файл групп организаций создан более новой версией приложения (версия формата новее поддерживаемой)',
-    );
-  }
-  if (!Array.isArray(candidate.groups)) {
-    throw new OrgGroupsFileError('В файле групп организаций нет списка групп');
-  }
+
   const groups: OrgGroupDto[] = [];
   const ids = new Set<string>();
   const names = new Set<string>();
-  for (const raw of candidate.groups) {
+  for (const raw of sourceGroups) {
     const group = normalizeGroup(raw as OrgGroupDto);
     if (!group) {
       throw new OrgGroupsFileError('В файле групп организаций есть группа без названия или идентификатора');
@@ -173,14 +194,15 @@ export function validateOrgGroupsFile(value: unknown): OrgGroupsFileDto {
     names.add(group.name.toLowerCase());
     groups.push(group);
   }
+
   const enterpriseGroupId =
-    typeof candidate.enterpriseGroupId === 'string' && candidate.enterpriseGroupId.trim() !== ''
-      ? candidate.enterpriseGroupId
+    typeof sourceEnterpriseGroupId === 'string' && sourceEnterpriseGroupId.trim() !== ''
+      ? sourceEnterpriseGroupId
       : null;
   return {
     format: ORG_GROUPS_SHARE_FORMAT,
     version: ORG_GROUPS_SHARE_VERSION,
-    exportedAt: typeof candidate.exportedAt === 'number' ? candidate.exportedAt : null,
+    exportedAt: typeof sourceExportedAt === 'number' ? sourceExportedAt : null,
     groups,
     enterpriseGroupId,
   };
