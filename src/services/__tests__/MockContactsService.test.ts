@@ -16,10 +16,34 @@ describe('MockContactsService (демо-режим)', () => {
     expect(names).toEqual(sorted);
   });
 
-  it('фильтрует по вкладке предприятия', async () => {
+  it('фильтрует по вкладке предприятия по выбранной звезде', async () => {
+    useAppStore.setState({
+      testMode: true,
+      ldapConfigs: [],
+      orgGroups: [{ id: 'demo', name: 'Демо', orgs: [KMARUDA_ORG] }],
+      enterpriseGroupId: 'demo',
+    });
+
     const page = await service.search({ activeTab: 'kmaruda' });
     expect(page.contacts.length).toBeGreaterThan(0);
     expect(page.contacts.every((c) => c.organization === KMARUDA_ORG)).toBe(true);
+
+    useAppStore.setState({ testMode: false, ldapConfigs: [], orgGroups: [], enterpriseGroupId: null });
+  });
+
+  it('без выбранной звезды не показывает демо-контакты KMAruda', async () => {
+    useAppStore.setState({
+      testMode: true,
+      ldapConfigs: [],
+      orgGroups: [{ id: 'demo', name: 'Демо', orgs: [KMARUDA_ORG] }],
+      enterpriseGroupId: null,
+    });
+
+    const page = await service.search({ activeTab: 'kmaruda' });
+    expect(page.contacts).toEqual([]);
+    expect(page.total).toBe(0);
+
+    useAppStore.setState({ testMode: false, ldapConfigs: [], orgGroups: [], enterpriseGroupId: null });
   });
 
   it('фильтрует по организации и отделу', async () => {
@@ -61,7 +85,7 @@ describe('MockContactsService (демо-режим)', () => {
     expect(page.contacts.every((c) => c.organization && union.includes(c.organization))).toBe(true);
   });
 
-  it('вкладка предприятия игнорирует удалённую привязку группы', async () => {
+  it('выбранная группа без подходящих демо-организаций даёт пусто', async () => {
     useAppStore.setState({
       testMode: true,
       ldapConfigs: [
@@ -82,7 +106,7 @@ describe('MockContactsService (демо-режим)', () => {
 
     const page = await service.search({ activeTab: 'kmaruda' });
     expect(page.contacts.length).toBeGreaterThan(0);
-    expect(page.contacts.every((c) => c.organization === KMARUDA_ORG)).toBe(true);
+    expect(page.contacts.every((c) => c.organization === 'ООО «Рога и Копыта»')).toBe(true);
 
     useAppStore.setState({ testMode: false, ldapConfigs: [], orgGroups: [], enterpriseGroupId: null });
   });

@@ -227,7 +227,7 @@ export function PhonebookView() {
   // AD-подключение и не показываем весь холдинг.
   const enterpriseGroup = findOrgGroup(effectiveOrgGroups, effectiveEnterpriseGroupId);
   const enterpriseGroupReady = Boolean(enterpriseGroup && enterpriseGroup.orgs.some((org) => org.trim() !== ''));
-  const enterpriseGroupScopeActive = !browserLocked && !testMode && activeTab === 'kmaruda' && ldapConfigs.length > 0;
+  const enterpriseGroupScopeActive = !browserLocked && activeTab === 'kmaruda' && (testMode || ldapConfigs.length > 0);
   const enterpriseGroupsMissing = enterpriseGroupScopeActive && orgGroups.length === 0;
   const enterpriseGroupNotSelected = enterpriseGroupScopeActive && orgGroups.length > 0 && !enterpriseGroupReady;
   const enterpriseGroupsUnavailable = enterpriseGroupsMissing || enterpriseGroupNotSelected;
