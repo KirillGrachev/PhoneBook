@@ -12,10 +12,13 @@ const DEVELOPER_URL = 'https://github.com/KirillGrachev';
 export function SettingsAboutView() {
   const { t } = useTranslation();
   const [showConfirm, setShowConfirm] = useState(false);
-  const [version, setVersion] = useState<string | null>(null);
+  // Vite подставляет версию из package.json на этапе сборки. Это убирает
+  // промежуточный хардкод и мигание «0.2.0 → актуальная» при открытии экрана.
+  const buildVersion = typeof __APP_VERSION__ === 'string' && __APP_VERSION__ ? __APP_VERSION__ : null;
+  const [version, setVersion] = useState<string | null>(buildVersion);
 
   useEffect(() => {
-    if (!isTauri()) {
+    if (buildVersion || !isTauri()) {
       return;
     }
     let cancelled = false;
@@ -30,7 +33,7 @@ export function SettingsAboutView() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [buildVersion]);
 
   const confirmNavigation = async () => {
     setShowConfirm(false);
@@ -67,7 +70,7 @@ export function SettingsAboutView() {
 
           <div className="flex flex-col items-center gap-1.5">
             <span className="font-bold text-muted-foreground uppercase text-[13px]">{t('version')}</span>
-            <span className="font-bold text-foreground text-[18px]">{version ?? '0.2.0'}</span>
+            <span className="font-bold text-foreground text-[18px]">{version ?? '—'}</span>
           </div>
         </div>
       </div>

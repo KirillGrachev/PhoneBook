@@ -8,6 +8,7 @@ mod commands;
 mod error;
 mod services;
 mod state;
+mod uninstaller;
 
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -28,6 +29,15 @@ const MAIN_WINDOW: &str = "main";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // MSI `UninstallString` starts this executable with `--uninstall`. Handle it
+    // before WebView2/Tauri initialization: the uninstaller must work even if
+    // the webview runtime is broken, and must not create the single-instance
+    // lock or the main window.
+    #[cfg(windows)]
+    if uninstaller::is_requested() {
+        uninstaller::run();
+    }
+
     // Без WebView2 Runtime окно создать нечем: процесс жил бы только в трее.
     // Проверяем рантайм до инициализации Tauri и говорим с пользователем
     // нативным диалогом; отключение проверки — KMPB_SKIP_WEBVIEW_CHECK=1.

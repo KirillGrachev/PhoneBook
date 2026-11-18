@@ -11,6 +11,7 @@ import type { DuplicatesPreviewDto, LdapOrgConfigDto } from '@/api/contracts';
 import { Switch } from '@/components/ui/Switch';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { translateBackendError } from '@/lib/errors';
+import { personNameForLanguage } from '@/lib/transliteration';
 import { useAppStore } from '@/store/useAppStore';
 
 import { toInput } from './settingsAdUtils';
@@ -90,6 +91,9 @@ export function SettingsAdView() {
   };
 
   const testOrg = async (index: number) => {
+    if (testingOrg !== null) {
+      return;
+    }
     const config = configs[index];
     if (!config.organization.trim()) {
       toast.error(t('settings.ad.orgRequired'), { id: 'ad-test-error' });
@@ -119,7 +123,9 @@ export function SettingsAdView() {
         result.defaultNamingContext ? t('settings.ad.testNamingContext', { nc: result.defaultNamingContext }) : null,
         result.sampleNames.length > 0
           ? t('settings.ad.testSample', {
-              names: result.sampleNames.join(', ') + (result.sampleIsTruncated ? ` ${t('settings.ad.testMore')}` : ''),
+              names:
+                result.sampleNames.map((name) => personNameForLanguage(name, i18n.language)).join(', ') +
+                (result.sampleIsTruncated ? ` ${t('settings.ad.testMore')}` : ''),
             })
           : t('settings.ad.testNoUsers'),
       ]
@@ -256,7 +262,7 @@ export function SettingsAdView() {
                   index={index}
                   passwordDraft={passwordDrafts[config.organization] ?? ''}
                   testing={testingOrg === index}
-                  busy={testingOrg !== null}
+                  busy={testingOrg !== null && testingOrg !== index}
                   locale={i18n.language}
                   syncStates={syncStates}
                   onChange={(patch) => updateOrg(index, patch)}

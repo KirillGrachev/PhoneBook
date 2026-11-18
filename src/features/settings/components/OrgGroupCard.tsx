@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
 import type { OrgGroupDto } from '@/api/contracts';
+import starBadge from '@/assets/icons/star-badge.svg';
+import starBadgeOutline from '@/assets/icons/star-badge-outline.svg';
 import { Edit, Groups, Trash } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
@@ -9,12 +11,14 @@ const ACTION_BUTTON_CLASS =
 
 interface OrgGroupCardProps {
   group: OrgGroupDto;
+  pinned: boolean;
+  onTogglePin: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
 /** Карточка сохранённой группы организаций. */
-export function OrgGroupCard({ group, onEdit, onDelete }: OrgGroupCardProps) {
+export function OrgGroupCard({ group, pinned, onTogglePin, onEdit, onDelete }: OrgGroupCardProps) {
   const { t } = useTranslation();
 
   return (
@@ -22,12 +26,22 @@ export function OrgGroupCard({ group, onEdit, onDelete }: OrgGroupCardProps) {
       className="border border-border bg-surface rounded-[16px] p-3.5 shadow-sm flex flex-col gap-2.5"
       aria-label={group.name}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 font-bold text-[15px] text-foreground min-w-0">
-          <Groups className="w-4 h-4 text-primary shrink-0 translate-y-px" aria-hidden />
+      <div className="flex min-h-8 items-center justify-between gap-2">
+        <span className="flex h-8 min-w-0 items-center gap-2 font-bold text-[15px] leading-none text-foreground">
+          <Groups className="w-4 h-4 shrink-0 text-primary" aria-hidden />
           <span className="truncate">{group.name}</span>
         </span>
-        <span className="flex items-center gap-0.5 shrink-0">
+        <span className="flex h-8 items-center gap-0.5 shrink-0">
+          <button
+            type="button"
+            onClick={onTogglePin}
+            className={cn(ACTION_BUTTON_CLASS, pinned ? 'text-amber-500 hover:text-amber-600' : 'hover:text-amber-500')}
+            aria-label={t(pinned ? 'settings.orgGroupsUnpin' : 'settings.orgGroupsPin')}
+            aria-pressed={pinned}
+            title={t(pinned ? 'settings.orgGroupsUnpin' : 'settings.orgGroupsPin')}
+          >
+            <img src={pinned ? starBadge : starBadgeOutline} alt="" className="w-4 h-4" draggable={false} />
+          </button>
           <button
             type="button"
             onClick={onEdit}

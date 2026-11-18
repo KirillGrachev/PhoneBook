@@ -7,6 +7,7 @@ import { isTauri } from '@/api/backend';
 import { syncApi } from '@/api/directory';
 import { onSyncEvent } from '@/api/events';
 import type { OrgSyncStateDto } from '@/api/contracts';
+import { personNameForLanguage } from '@/lib/transliteration';
 import { useAppStore } from '@/store/useAppStore';
 import { useContactCount } from '@/hooks/useDirectory';
 
@@ -43,7 +44,7 @@ export function useSyncStatus(): SyncState {
   const testMode = useAppStore((state) => state.testMode);
   const enabled = isTauri() && !testMode;
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data: status } = useQuery({
     queryKey: ['sync-status'],
     queryFn: () => syncApi.status(),
@@ -99,7 +100,11 @@ export function useSyncStatus(): SyncState {
         case 'finished':
           setLive((prev) => ({ ...prev, fetched: event.count ?? prev.fetched }));
           if (toastsEnabledRef.current) {
-            toast.success(t('sync.finished', { count: event.count ?? 0, org: event.organization ?? '' }), {
+            // Название организации приходит из AD по-русски. В английской
+            // локали показываем его по тем же правилам транслитерации, что и
+            // имена контактов, чтобы уведомление не было наполовину русским.
+            const organization = personNameForLanguage(event.organization ?? '', i18n.language);
+            toast.success(t('sync.finished', { count: event.count ?? 0, org: organization }), {
               id: SYNC_TOAST_ID,
               duration: 4000,
             });
@@ -114,7 +119,7 @@ export function useSyncStatus(): SyncState {
           break;
       }
     });
-  }, [enabled, queryClient, t]);
+  }, [enabled, queryClient, t, i18n.language]);
 
   const organizations = useMemo(() => status?.organizations ?? [], [status]);
   const running = enabled && (live.running || (status?.running ?? false));

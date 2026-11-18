@@ -1,6 +1,6 @@
 [package]
 name = "kmaruda-phonebook"
-version = "0.2.21"
+version = "0.2.22"
 description = "Корпоративный телефонный справочник КМАруда (Active Directory)"
 authors = ["Kirill Grachev"]
 repository = "https://github.com/KirillGrachev/PhoneBook"
@@ -31,7 +31,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"
 # Локальный кэш контактов и полнотекстовый поиск (FTS5 входит в сборку).
 # Фича `serialize` нужна для шифрования at-rest: рабочая база живёт в
 # памяти, на диск пишется только зашифрованный образ (см. db/encryption.rs).
-rusqlite = { version = "0.41", features = ["bundled", "serialize"] }
+rusqlite = { version = "0.41", features = ["bundled", "backup", "serialize"] }
 # Шифрование кэша: AES-256-GCM (pure Rust, без OpenSSL/Perl/NASM).
 aes-gcm = "0.10"
 # Нативный LDAP-клиент: больше не нужны PowerShell и модуль RSAT.
@@ -58,6 +58,7 @@ keyring = { version = "3", default-features = false, features = ["windows-native
 # Интегрированная аутентификация (Kerberos/NTLM текущей сессии Windows) через SSPI.
 ldap3 = { version = "0.11", features = ["gssapi"] }
 webview2-com = "0.39.1"
+winreg = "0.55"
 windows = { version = "0.62.2", features = [
     "Win32_UI_Controls",
     "Win32_Foundation",

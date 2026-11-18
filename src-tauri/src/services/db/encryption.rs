@@ -23,8 +23,10 @@
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
+use rusqlite::backup::Backup;
 use rusqlite::serialize::OwnedData;
 use rusqlite::{Connection, MAIN_DB};
 use tracing::warn;
@@ -410,6 +412,14 @@ pub fn serialize(conn: &mut Connection) -> Result<Vec<u8>, AppError> {
 pub fn restore(conn: &mut Connection, bytes: &[u8]) -> Result<(), AppError> {
     let len = i32::try_from(bytes.len())
         .map_err(|_| AppError::Internal("образ кэша слишком большой".into()))?;
+    // Десериализуем образ в отдельное соединение, а затем копируем его в
+    // целевое через backup API. Прямой sqlite3_deserialize в shared-cache
+    // соединение подменяет образ только у этого соединения: reader-пул
+    // продолжает видеть пустую базу, и список контактов после перезапуска
+    // оказывается пустым при живых count/sync_meta. Backup пишет страницы
+    // через обычный механизм SQLite, поэтому данные видны всем соединениям
+    // общего кэша.
+    let mut source = Connection::open_in_memory()?;
     unsafe {
         let buf = rusqlite::ffi::sqlite3_malloc(len);
         if buf.is_null() {
@@ -426,8 +436,11 @@ pub fn restore(conn: &mut Connection, bytes: &[u8]) -> Result<(), AppError> {
             Some(ptr) => OwnedData::from_raw_nonnull(ptr, bytes.len()),
             None => return Err(AppError::Internal("пустой образ кэша".into())),
         };
-        conn.deserialize(MAIN_DB, owned, false)?;
+        source.deserialize(MAIN_DB, owned, false)?;
     }
+
+    let backup = Backup::new(&source, conn)?;
+    backup.run_to_completion(1024, Duration::ZERO, None)?;
     Ok(())
 }
 

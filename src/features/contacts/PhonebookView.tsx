@@ -48,6 +48,7 @@ export function PhonebookView() {
   const testMode = useAppStore((state) => state.testMode);
   const setTestMode = useAppStore((state) => state.setTestMode);
   const ldapConfigs = useAppStore((state) => state.ldapConfigs);
+  const enterpriseGroupId = useAppStore((state) => state.enterpriseGroupId);
 
   const [colleaguesView, setColleaguesView] = useState<ColleaguesView | null>(null);
 
@@ -55,8 +56,8 @@ export function PhonebookView() {
   // реального AD (группы, предприятие, организации) не должны протекать
   // в фильтры и подписи.
   const directoryScope = useMemo(
-    () => resolveDirectoryScope(testMode, ldapConfigs, orgGroups, null),
-    [testMode, ldapConfigs, orgGroups],
+    () => resolveDirectoryScope(testMode, ldapConfigs, orgGroups, enterpriseGroupId),
+    [testMode, ldapConfigs, orgGroups, enterpriseGroupId],
   );
   const {
     groups: effectiveOrgGroups,
@@ -162,7 +163,7 @@ export function PhonebookView() {
 
   // Смена вкладки/фильтра начинает новую выборку; карточка из предыдущего
   // фильтра не должна оставаться открытой.
-  const filterKey = `${activeTab}|${selectedOrg ?? ''}|${selectedGroupId ?? ''}`;
+  const filterKey = `${activeTab}|${selectedOrg ?? ''}|${selectedGroupId ?? ''}|${effectiveEnterpriseGroupId ?? ''}`;
   const previousFilterKey = useRef(filterKey);
   useEffect(() => {
     if (previousFilterKey.current === filterKey) {
@@ -174,6 +175,7 @@ export function PhonebookView() {
 
   const handleSettingsClick = useCallback(() => navigate('/settings'), [navigate]);
   const handleConfigureAdClick = useCallback(() => navigate('/settings?view=ad'), [navigate]);
+  const handleConfigureGroupsClick = useCallback(() => navigate('/settings?view=groups'), [navigate]);
   // Клик по отделу / должности / кабинету в карточке открывает список
   // коллег по тому же полю; организация контакта ограничивает выдачу,
   // чтобы одинаковые кабинеты и должности разных организаций не смешивались.
@@ -220,18 +222,32 @@ export function PhonebookView() {
 
   const browserLocked = !isTauriEnv() && !testMode;
   const directoryNotConfigured = !isMockMode() && !browserLocked && ldapConfigs.length === 0;
+  // В неглобальном режиме вкладка «КМАруда» работает только по группе,
+  // отмеченной звездой. Без выбранной группы не подставляем первое
+  // AD-подключение и не показываем весь холдинг.
+  const enterpriseGroup = findOrgGroup(effectiveOrgGroups, effectiveEnterpriseGroupId);
+  const enterpriseGroupReady = Boolean(enterpriseGroup && enterpriseGroup.orgs.some((org) => org.trim() !== ''));
+  const enterpriseGroupScopeActive = !browserLocked && !testMode && activeTab === 'kmaruda' && ldapConfigs.length > 0;
+  const enterpriseGroupsMissing = enterpriseGroupScopeActive && orgGroups.length === 0;
+  const enterpriseGroupNotSelected = enterpriseGroupScopeActive && orgGroups.length > 0 && !enterpriseGroupReady;
+  const enterpriseGroupsUnavailable = enterpriseGroupsMissing || enterpriseGroupNotSelected;
 
   // Пустое состояние зависит от контекста: браузер / избранное /
-  // поисковый запрос / не настроен AD / ещё не синхронизировано.
+  // поисковый запрос / не настроен AD / нет групп предприятия /
+  // ещё не синхронизировано.
   const emptyState = browserLocked
     ? { title: t('browserMode.title'), description: t('browserMode.desc') }
     : activeTab === 'local'
       ? { title: t('emptyLocal.title'), description: t('emptyLocal.desc') }
       : search.trim()
         ? { title: t('noMatches'), description: t('tryAnotherSearch') }
-        : directoryNotConfigured
-          ? { title: t('emptyState.title'), description: t('emptyState.desc') }
-          : { title: t('emptyState.notSyncedTitle'), description: t('emptyState.notSyncedDesc') };
+        : enterpriseGroupNotSelected
+          ? { title: t('emptyEnterprise.noSelectionTitle'), description: t('emptyEnterprise.noSelectionDesc') }
+          : enterpriseGroupsMissing
+            ? { title: t('emptyEnterprise.title'), description: t('emptyEnterprise.desc') }
+            : directoryNotConfigured
+              ? { title: t('emptyState.title'), description: t('emptyState.desc') }
+              : { title: t('emptyState.notSyncedTitle'), description: t('emptyState.notSyncedDesc') };
 
   return (
     <>
@@ -281,6 +297,15 @@ export function PhonebookView() {
                     className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-primary text-white text-[13px] font-bold hover:bg-primary-hover transition-colors cursor-pointer"
                   >
                     {t('browserMode.enableTest')}
+                  </button>
+                ) : enterpriseGroupsUnavailable ? (
+                  <button
+                    type="button"
+                    onClick={handleConfigureGroupsClick}
+                    className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-primary text-white text-[13px] font-bold hover:bg-primary-hover transition-colors cursor-pointer"
+                  >
+                    <Settings2 className="w-4 h-4" aria-hidden />
+                    {t('emptyEnterprise.action')}
                   </button>
                 ) : directoryNotConfigured ? (
                   <button

@@ -1,7 +1,7 @@
 {
   "name": "kmaruda-phonebook",
   "private": true,
-  "version": "0.2.21",
+  "version": "0.2.22",
   "type": "module",
   "description": "Корпоративный телефонный справочник КМАруда (Active Directory)",
   "author": "Kirill Grachev (https://github.com/KirillGrachev)",
@@ -74,6 +74,7 @@
     "tailwindcss": "^4.1.14",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.9.3",
+    "picomatch": "file:vendor/picomatch",
     "vite": "^8.3.8",
     "vitest": "^4.1.9",
     "vitest-axe": "^0.1.0"
@@ -87,6 +88,7 @@
     },
     "@eslint/config-array": {
       "minimatch": "^11.0.4"
-    }
+    },
+    "picomatch": "$picomatch"
   }
 }

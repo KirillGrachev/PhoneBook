@@ -1,4 +1,4 @@
-﻿<?if $(sys.BUILDARCH)="x86"?>
+<?if $(sys.BUILDARCH)="x86"?>
     <?define Win64 = "no" ?>
     <?define PlatformProgramFilesFolder = "ProgramFilesFolder" ?>
 <?elseif $(sys.BUILDARCH)="x64"?>
@@ -64,9 +64,6 @@
         <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />      <!-- Remove repair -->
         <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
 
-        <!-- Set from the custom uninstall page. 0 keeps the local data, 1 removes it. -->
-        <Property Id="DELETEAPPDATA" Value="0" Secure="yes" />
-
         {{#if homepage}}
         <Property Id="ARPURLINFOABOUT" Value="{{homepage}}"/>
         <Property Id="ARPHELPLINK" Value="{{homepage}}"/>
@@ -86,30 +83,16 @@
         </Property>
 
         <!-- launch app checkbox -->
-        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.LaunchApp)" />
+        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Запустить KMAruda PhoneBook" />
         <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1"/>
         <CustomAction Id="LaunchApplication" Impersonate="yes" FileKey="Path" ExeCommand="[LAUNCHAPPARGS]" Return="asyncNoWait" />
 
         <!-- Runs as the invoking user so %APPDATA%, %LOCALAPPDATA% and cmdkey
              refer to that user's profile and Credential Manager. -->
-        <CustomAction Id="DeleteAppData"
-                      Directory="INSTALLDIR"
-                      Execute="deferred"
-                      Impersonate="yes"
-                      Return="check"
-                      ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;[#DeleteAppDataScript]&quot;" />
-
-        <InstallExecuteSequence>
-            <Custom Action="DeleteAppData" Before="RemoveFiles">
-                REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE AND DELETEAPPDATA=1
-            </Custom>
-        </InstallExecuteSequence>
-
         <!-- Windows Installer writes MsiExec.exe /X{ProductCode}, which skips
-             any package UI, so ARP points at the uninstall launcher instead.
-             The launcher shows the data checkbox and passes DELETEAPPDATA=1
-             to msiexec /x. This runs at the end of install, after
-             RegisterProduct has written the default UninstallString. -->
+             package UI. ARP points at the application executable with the
+             uninstall flag; the native dialog lives inside the app and removes
+             user data before launching msiexec /x elevated. -->
         <CustomAction Id="SetWindowsInstallerFlag"
                       Directory="INSTALLDIR"
                       Execute="deferred"
@@ -122,11 +105,21 @@
                       Execute="deferred"
                       Impersonate="no"
                       Return="ignore"
-                      ExeCommand="&quot;[System64Folder]reg.exe&quot; add &quot;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\[ProductCode]&quot; /v UninstallString /t REG_SZ /d &quot;powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File [CommonAppDataFolder]KMAruda\uninstall.ps1&quot; /f" />
+                      ExeCommand="&quot;[System64Folder]reg.exe&quot; add &quot;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\[ProductCode]&quot; /v UninstallString /t REG_SZ /d &quot;[#Path] --uninstall&quot; /f" />
+
+        <!-- WindowsInstaller=0 makes Apps treat the entry as a non-MSI product;
+             without DisplayIcon it falls back to a generic icon. -->
+        <CustomAction Id="SetArpDisplayIcon"
+                      Directory="INSTALLDIR"
+                      Execute="deferred"
+                      Impersonate="no"
+                      Return="ignore"
+                      ExeCommand="&quot;[System64Folder]reg.exe&quot; add &quot;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\[ProductCode]&quot; /v DisplayIcon /t REG_SZ /d &quot;[#Path],0&quot; /f" />
 
         <InstallExecuteSequence>
             <Custom Action="SetUninstallString" Before="InstallFinalize">NOT REMOVE</Custom>
             <Custom Action="SetWindowsInstallerFlag" Before="InstallFinalize">NOT REMOVE</Custom>
+            <Custom Action="SetArpDisplayIcon" Before="InstallFinalize">NOT REMOVE</Custom>
         </InstallExecuteSequence>
 
         <UI>
@@ -166,9 +159,6 @@
             <Directory Id="ProgramMenuFolder">
                 <Directory Id="ApplicationProgramsFolder" Name="{{product_name}}"/>
             </Directory>
-            <Directory Id="CommonAppDataFolder">
-                <Directory Id="KMArudaLauncherDir" Name="KMAruda"/>
-            </Directory>
         </Directory>
 
         <DirectoryRef Id="INSTALLDIR">
@@ -189,9 +179,6 @@
                     </RegistryKey>
                 </RegistryKey>
                 {{/each~}}
-            </Component>
-            <Component Id="DeleteAppDataScript" Guid="*" Win64="$(var.Win64)">
-                <File Id="DeleteAppDataScript" Source="..\..\..\..\installer\delete-appdata.ps1" KeyPath="yes" />
             </Component>
             <Component Id="Path" Guid="{{path_component_guid}}" Win64="$(var.Win64)">
                 <File Id="Path" Source="{{main_binary_path}}" KeyPath="yes" Checksum="yes"/>
@@ -227,8 +214,10 @@
                 <Shortcut Id="UninstallShortcut"
 						  Name="Uninstall {{product_name}}"
 						  Description="Uninstalls {{product_name}}"
-						  Target="[System64Folder]WindowsPowerShell\v1.0\powershell.exe"
-						  Arguments="-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File &quot;[CommonAppDataFolder]KMAruda\uninstall.ps1&quot;" />
+						  Target="[!Path]"
+						  Arguments="--uninstall"
+						  Icon="ProductIcon"
+						  WorkingDirectory="INSTALLDIR" />
 
 				<RemoveFolder Id="INSTALLDIR"
 							  On="uninstall" />
@@ -239,13 +228,6 @@
 							   Type="integer"
 							   Value="1"
 							   KeyPath="yes" />
-            </Component>
-        </DirectoryRef>
-
-        <DirectoryRef Id="KMArudaLauncherDir">
-            <Component Id="UninstallLauncher" Guid="*" Win64="$(var.Win64)">
-                <File Id="UninstallLauncher" Source="..\..\..\..\installer\uninstall.ps1" KeyPath="yes" />
-                <RemoveFolder Id="KMArudaLauncherDir" On="uninstall" />
             </Component>
         </DirectoryRef>
 
@@ -285,8 +267,6 @@
                 Absent="disallow">
 
             <ComponentRef Id="RegistryEntries"/>
-            <ComponentRef Id="DeleteAppDataScript"/>
-            <ComponentRef Id="UninstallLauncher"/>
 
             {{#each resource_file_ids as |resource_file_id| ~}}
                 <ComponentRef Id="{{ resource_file_id }}"/>

@@ -3,6 +3,86 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.22] - 2026-11-18
+
+### Changed
+
+- The MSI uninstaller is now a normal application flow: `UninstallString`
+  launches `kmaruda-phonebook.exe --uninstall`, which shows a native Win32
+  TaskDialog with the "Delete application data" checkbox and then starts
+  `msiexec /x` elevated. The PowerShell scripts `uninstall.ps1` and
+  `delete-appdata.ps1` were removed; data and Credential Manager cleanup now
+  happens in the uninstaller binary before MSI removal.
+- The NSIS uninstaller now has its own icon: the full phonebook logo with the
+  red trash mark overlaid in the lower-right corner.
+
+### Security
+
+- Removed the remaining high-severity `npm audit` findings. All 11 came from
+  the dev-only `picomatch@4.0.7` (CVE-2026-112366), pulled in by Vite, Vitest
+  and `@typescript-eslint`. No patched npm release exists yet, so the upstream
+  fix from micromatch/picomatch#237 is vendored in `vendor/picomatch` as local
+  version `4.0.8` and wired through `devDependencies`/`overrides`. `npm audit`
+  is now clean; remove the local patch when upstream publishes a fixed release.
+
+### Fixed
+
+- The MSI and NSIS "launch application" checkbox is now labelled in Russian:
+  "Запустить KMAruda PhoneBook" instead of "Launch KMAruda PhoneBook".
+- The MSI entry keeps the application icon in Settings > Apps. Because the
+  uninstaller rewrite sets ARP `WindowsInstaller=0`, Windows no longer derives
+  the icon from the MSI; the installer now writes an explicit `DisplayIcon`
+  pointing at the installed executable.
+- The LDAP connection and operation timeout fields no longer draw a blue
+  border/outline when focused.
+- Contacts no longer disappear from the list after an application restart
+  while sync metadata and organization groups are still present. The cache
+  was restored with `sqlite3_deserialize` on the main shared-cache connection
+  only; reader connections kept seeing an empty database, so `count`/sync
+  status were non-zero but `search_contacts` returned nothing. Restore now
+  copies the deserialized image through SQLite's backup API, which publishes
+  the pages to every shared-cache reader. Added a regression test for reader
+  visibility after restore.
+- The sync-finished toast now transliterates the organization name when the
+  UI language is English, using the same Russian-to-Latin rules as contact
+  names.
+- The external-phonebook interval dropdown no longer clips at the viewport
+  edge: collision avoidance is enabled with padding, so it flips/repositions
+  instead of being cut off. The interval trigger no longer shows a focus ring,
+  and the path clear button is centered on the first text line.
+- Importing a full configuration export from the Organization groups screen
+  now takes the `orgGroups` from its `config` block instead of rejecting the
+  file with `missing field groups`. A hint on the Import button explains that
+  both file kinds are accepted.
+- The organization-group editor no longer draws a blue focus ring around the
+  group-name input; its appearance/disappearance is now animated with a short
+  fade/slide transition.
+- Testing an AD connection no longer scrolls the settings page to the top.
+  The active "Test connection" button stays focusable while its test is
+  running (other cards are disabled), and repeated clicks are guarded.
+- The enterprise tab no longer shows the whole holding when its organization
+  filter cannot be resolved. It now honors the legacy `enterpriseGroupId`
+  when that group still exists, skips empty LDAP connections when choosing the
+  default organization, and no longer passes `sourceOrg` (which disabled the
+  backend's org filter and returned every company).
+- About screen no longer flashes a placeholder version: the version from
+  `package.json` is embedded at build time, so `0.2.21` is shown on the first
+  render instead of `0.2.0`/an intermediate value before Tauri resolves it.
+- The KMAruda tab can now be assigned a group explicitly: each organization
+  group has a star button, and the selected group's organizations are used by
+  the enterprise tab (including non-global mode).
+- When no organization groups exist, the KMAruda tab no longer falls back to
+  the first AD connection: it shows "Organization groups are not configured"
+  with a button that opens the groups settings.
+- LDAP connection-test sample users are transliterated when the UI language is
+  English, using the same name rules as contacts.
+- The non-global KMAruda tab now returns an empty list when no organization
+  group is selected with a star, even if groups exist. It no longer falls back
+  to the first AD connection or shows the whole holding.
+- Selecting or clearing the KMAruda group star now refetches the contact list
+  immediately: the selected `enterpriseGroupId` is part of the React Query key,
+  so the stale cached list is no longer kept until the app restarts.
+
 ## [0.2.21] - 2026-11-17
 
 ### Fixed
@@ -277,7 +357,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.21...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.22...HEAD
+[0.2.22]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.21...v0.2.22
 [0.2.21]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.20...v0.2.21
 [0.2.20]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.19...v0.2.20
 [0.2.19]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.18...v0.2.19

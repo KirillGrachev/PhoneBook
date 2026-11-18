@@ -460,6 +460,37 @@ fn email_with_underscore_is_searchable() {
 }
 
 #[test]
+fn restored_shared_cache_is_visible_to_readers() {
+    let flags = OpenFlags::SQLITE_OPEN_URI
+        | OpenFlags::SQLITE_OPEN_READ_WRITE
+        | OpenFlags::SQLITE_OPEN_CREATE;
+    let uri = format!(
+        "file:phonebook-restore-reader-{}-{}?mode=memory&cache=shared",
+        std::process::id(),
+        unix_now()
+    );
+    let mut source = Connection::open_with_flags(&uri, flags).expect("source");
+    source
+        .execute_batch("CREATE TABLE probe(value TEXT); INSERT INTO probe VALUES ('ok');")
+        .expect("seed");
+    let bytes = encryption::serialize(&mut source).expect("serialize");
+
+    let target_uri = format!(
+        "file:phonebook-restore-reader-target-{}-{}?mode=memory&cache=shared",
+        std::process::id(),
+        unix_now()
+    );
+    let mut target = Connection::open_with_flags(&target_uri, flags).expect("target");
+    encryption::restore(&mut target, &bytes).expect("restore");
+
+    let reader = Connection::open_with_flags(&target_uri, flags).expect("reader");
+    let count: i64 = reader
+        .query_row("SELECT COUNT(*) FROM probe", [], |row| row.get(0))
+        .expect("reader query");
+    assert_eq!(count, 1, "reader must see the restored shared-cache image");
+}
+
+#[test]
 fn shared_cache_readers_serve_search() {
     let db = Db::open_shared_in_memory().expect("shared db");
     db.replace_org_users(
