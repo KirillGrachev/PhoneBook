@@ -6,7 +6,7 @@ import { useAppStore } from '@/store/useAppStore';
 
 import { ContactSearchEngine } from './ContactSearchEngine';
 import type { ContactsPage, ContactsQuery, ContactsService } from './ContactsService';
-import { KMARUDA_ORG, mockContacts, mockOrganizations } from './mockData';
+import { mockContacts, mockOrganizations } from './mockData';
 
 const DEMO_DELAY_MS = 150;
 const RU_COLLATOR = new Intl.Collator('ru');
@@ -27,12 +27,16 @@ export class MockContactsService implements ContactsService {
       list = list.filter((contact) => saved.has(contact.id));
     } else {
       if (query.activeTab === 'kmaruda') {
-        // Семантика боевого сервиса: организация первого AD-подключения,
-        // без настроек AD — демо-организация комбината.
-        const { testMode, ldapConfigs, orgGroups } = useAppStore.getState();
-        const scope = resolveDirectoryScope(testMode, ldapConfigs, orgGroups, null);
+        // В тестовом режиме тоже уважаем звезду: без выбранной группы
+        // демо-контакты не подставляются, с группой — фильтруем по её
+        // организациям. Реальные LDAP-подключения при этом игнорируются.
+        const { testMode, ldapConfigs, orgGroups, enterpriseGroupId } = useAppStore.getState();
+        const scope = resolveDirectoryScope(testMode, ldapConfigs, orgGroups, enterpriseGroupId);
         const orgs = resolveEnterpriseOrgs(scope.ldapConfigs, scope.groups, scope.enterpriseGroupId);
-        const allowed = new Set(orgs.length > 0 ? orgs : [KMARUDA_ORG]);
+        if (orgs.length === 0) {
+          return { contacts: [], total: 0 };
+        }
+        const allowed = new Set(orgs);
         list = list.filter((contact) => contact.organization && allowed.has(contact.organization));
       } else if (query.organizations?.length) {
         const allowed = new Set(query.organizations);

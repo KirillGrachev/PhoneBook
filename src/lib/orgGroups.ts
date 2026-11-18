@@ -27,8 +27,8 @@ export interface DirectoryScope {
 }
 
 /**
- * В тестовом режиме справочник полностью демонстрационный: реальные
- * AD-подключения, группы и предприятие не должны попадать в фильтры.
+ * В тестовом режиме реальные AD-подключения скрываются, но локальные группы
+ * остаются доступны — иначе нельзя проверить выбор группы звездой на демо-данных.
  */
 export function resolveDirectoryScope(
   testMode: boolean,
@@ -37,7 +37,7 @@ export function resolveDirectoryScope(
   enterpriseGroupId: string | null,
 ): DirectoryScope {
   if (testMode) {
-    return { ldapConfigs: [], groups: [], enterpriseGroupId: null };
+    return { ldapConfigs: [], groups, enterpriseGroupId };
   }
   return { ldapConfigs, groups, enterpriseGroupId };
 }
