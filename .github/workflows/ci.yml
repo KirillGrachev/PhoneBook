@@ -135,6 +135,10 @@ jobs:
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - name: Cargo tests
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - name: Cargo tests (embedded profile)
+        env:
+          KMPB_EMBED_CONFIG: ${{ github.workspace }}/src-tauri/tests/fixtures/embedded-config.json
+        run: cargo test --manifest-path src-tauri/Cargo.toml --features embedded-config --locked
 
   cargo-deny:
     name: Rust dependency policy (cargo-deny)
@@ -171,6 +175,10 @@ jobs:
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - name: Cargo tests
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - name: Cargo tests (embedded profile)
+        env:
+          KMPB_EMBED_CONFIG: ${{ github.workspace }}/src-tauri/tests/fixtures/embedded-config.json
+        run: cargo test --manifest-path src-tauri/Cargo.toml --features embedded-config --locked
 
   e2e:
     name: E2E (Playwright)

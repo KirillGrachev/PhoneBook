@@ -21,6 +21,10 @@ interface SettingsSlice {
   setLanguage: (language: LanguageCode) => void;
   globalMode: boolean;
   setGlobalMode: (value: boolean) => void;
+  /** Administrative settings come from an embedded managed profile. */
+  managed: boolean;
+  managedProfile: string | null;
+  managedRevision: number | null;
   testMode: boolean;
   setTestMode: (value: boolean) => void;
   animationsEnabled: boolean;
@@ -92,6 +96,9 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
   },
   globalMode: false,
   setGlobalMode: (globalMode) => set({ globalMode }),
+  managed: false,
+  managedProfile: null,
+  managedRevision: null,
   testMode: false,
   setTestMode: (testMode) => set({ testMode }),
   animationsEnabled: true,
@@ -178,6 +185,9 @@ export const useAppStore = create<AppStore>()(
       theme: state.theme,
       language: state.language,
       globalMode: state.globalMode,
+      managed: state.managed,
+      managedProfile: state.managedProfile,
+      managedRevision: state.managedRevision,
       testMode: state.testMode,
       animationsEnabled: state.animationsEnabled,
       syncIntervalHours: state.syncIntervalHours,

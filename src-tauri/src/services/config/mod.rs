@@ -8,6 +8,7 @@
 //!   (Windows Credential Manager / macOS Keychain / Secret Service),
 //!   а конфигурация несёт только флаг `hasPassword`.
 //! * При удалении организации её секрет гарантированно удаляется из keyring.
+mod embedded;
 mod model;
 pub(crate) mod share;
 pub(crate) mod store;
@@ -114,5 +115,83 @@ mod tests {
         assert_eq!(normalize_theme("hacker"), "system");
         assert_eq!(normalize_language("en"), "en");
         assert_eq!(normalize_language("de"), "en");
+    }
+
+    #[cfg(feature = "embedded-config")]
+    fn managed_temp_dir() -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "kma-embedded-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("time")
+                .as_nanos()
+        ));
+        fs::create_dir_all(&dir).expect("temp dir");
+        dir
+    }
+
+    #[cfg(feature = "embedded-config")]
+    #[test]
+    fn managed_profile_overlays_admin_fields_and_keeps_user_fields() {
+        let dir = managed_temp_dir();
+        let path = dir.join("config.json");
+        fs::write(
+            &path,
+            serde_json::json!({
+                "theme": "light",
+                "language": "ru",
+                "savedContactIds": ["saved-1"],
+                "ldapConfigs": [],
+                "orgGroups": [],
+                "enterpriseGroupId": null
+            })
+            .to_string(),
+        )
+        .expect("write local config");
+
+        let config = ConfigStore::load(&dir).expect("load");
+        assert!(config.managed);
+        assert_eq!(config.managed_profile.as_deref(), Some("test-profile"));
+        assert_eq!(config.managed_revision, Some(7));
+        assert_eq!(config.theme, "light");
+        assert_eq!(config.language, "ru");
+        assert_eq!(config.saved_contact_ids, vec!["saved-1".to_string()]);
+        assert_eq!(config.ldap_configs[0].organization, "Test KMAruda");
+        assert_eq!(
+            config.enterprise_group_id.as_deref(),
+            Some("embedded-test-group")
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(feature = "embedded-config")]
+    #[test]
+    fn save_cannot_override_managed_fields() {
+        let dir = managed_temp_dir();
+        let request: SaveConfigRequest = serde_json::from_value(serde_json::json!({
+            "theme": "dark",
+            "language": "en",
+            "ldapConfigs": [{
+                "organization": "Local override",
+                "ldapUrl": "ldap://local.test",
+                "baseDn": "DC=local,DC=test",
+                "useIntegratedAuth": true
+            }],
+            "orgGroups": [],
+            "enterpriseGroupId": null
+        }))
+        .expect("request");
+
+        let saved = ConfigStore::save(&dir, request).expect("save");
+        assert!(saved.managed);
+        assert_eq!(saved.ldap_configs[0].organization, "Test KMAruda");
+        assert_eq!(saved.theme, "dark", "user theme is local");
+
+        let disk = ConfigStore::load_from_disk(&ConfigStore::config_path(&dir));
+        assert!(!disk.managed, "managed flag is runtime-only");
+        assert_eq!(disk.ldap_configs[0].organization, "Test KMAruda");
+        let _ = fs::remove_dir_all(&dir);
     }
 }

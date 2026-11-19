@@ -47,6 +47,14 @@ impl ConfigStore {
             }
         }
         config.external_phonebook_path = config.external_phonebook_paths.first().cloned();
+        // Managed fields are computed on every load; never trust a stale
+        // `managed` flag written to disk.
+        config.managed = false;
+        config.managed_profile = None;
+        config.managed_revision = None;
+        if let Some(profile) = super::embedded::profile() {
+            apply_managed(&mut config, profile);
+        }
         Self::attach_password_flags(&mut config);
         Ok(config)
     }
@@ -104,7 +112,7 @@ impl ConfigStore {
             }
         }
 
-        let config = AppConfig {
+        let mut config = AppConfig {
             theme: normalize_theme(&request.theme),
             language: normalize_language(&request.language),
             global_mode: request.global_mode,
@@ -124,7 +132,16 @@ impl ConfigStore {
             external_phonebook_enabled: request.external_phonebook_enabled,
             external_phonebook_intervals,
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
+            managed: false,
+            managed_profile: None,
+            managed_revision: None,
         };
+
+        // The UI is disabled for managed sections, but a direct IPC call could
+        // still send overridden values. Rust remains the source of truth.
+        if let Some(profile) = super::embedded::profile() {
+            apply_managed(&mut config, profile);
+        }
 
         Self::write_atomic(&path, &config)?;
         Ok(config)
@@ -134,7 +151,13 @@ impl ConfigStore {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let json = serde_json::to_string_pretty(config)
+        // `managed` and profile metadata are runtime-only; keep config.json a
+        // normal local file even when the embedded profile is active.
+        let mut disk = config.clone();
+        disk.managed = false;
+        disk.managed_profile = None;
+        disk.managed_revision = None;
+        let json = serde_json::to_string_pretty(&disk)
             .map_err(|e| AppError::Internal(format!("сериализация конфигурации: {e}")))?;
         let tmp = path.with_extension("json.tmp");
         let mut file = fs::File::create(&tmp)?;
@@ -195,6 +218,28 @@ impl ConfigStore {
             }
         }
     }
+}
+
+/// Administrative fields come from the embedded profile; theme/language/
+/// favorites/email overrides remain local to the machine.
+fn apply_managed(local: &mut AppConfig, profile: super::embedded::EmbeddedProfile) {
+    let managed = profile.config;
+    local.ldap_configs = managed.ldap_configs;
+    local.org_groups = managed.org_groups;
+    local.enterprise_group_id = managed.enterprise_group_id;
+    local.global_mode = managed.global_mode;
+    local.test_mode = managed.test_mode;
+    local.sync_interval_hours = managed.sync_interval_hours;
+    local.ldap_connect_timeout_secs = managed.ldap_connect_timeout_secs;
+    local.ldap_operation_timeout_secs = managed.ldap_operation_timeout_secs;
+    local.hide_empty_contacts = managed.hide_empty_contacts;
+    local.external_phonebook_path = managed.external_phonebook_path;
+    local.external_phonebook_paths = managed.external_phonebook_paths;
+    local.external_phonebook_enabled = managed.external_phonebook_enabled;
+    local.external_phonebook_intervals = managed.external_phonebook_intervals;
+    local.managed = true;
+    local.managed_profile = profile.name;
+    local.managed_revision = profile.revision;
 }
 
 /// Trims, drops empty entries and de-duplicates external phone book paths.
