@@ -26,6 +26,9 @@ interface PersistedState {
   theme: string;
   language: string;
   globalMode: boolean;
+  managed: boolean;
+  managedProfile: string | null;
+  managedRevision: number | null;
   testMode: boolean;
   animationsEnabled: boolean;
   syncIntervalHours: number;
@@ -102,6 +105,13 @@ async function persistNow(value: string): Promise<void> {
     if (storeState.enterpriseGroupId !== saved.enterpriseGroupId) {
       useAppStore.setState({ enterpriseGroupId: saved.enterpriseGroupId });
     }
+    if (saved.managed) {
+      useAppStore.setState({
+        managed: true,
+        managedProfile: saved.managedProfile,
+        managedRevision: saved.managedRevision,
+      });
+    }
   } catch (error) {
     console.error('[configStorage] не удалось сохранить конфигурацию', error);
     toast.error(i18n.t('settings.saveError'), { id: 'config-save-error' });
@@ -143,6 +153,9 @@ export const configStorage: StateStorage = {
           theme: config.theme,
           language,
           globalMode: config.globalMode,
+          managed: config.managed,
+          managedProfile: config.managedProfile,
+          managedRevision: config.managedRevision,
           testMode: config.testMode,
           animationsEnabled: config.animationsEnabled,
           syncIntervalHours: config.syncIntervalHours,

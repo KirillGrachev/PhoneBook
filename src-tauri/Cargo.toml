@@ -1,6 +1,6 @@
 [package]
 name = "kmaruda-phonebook"
-version = "0.2.23"
+version = "0.2.24"
 description = "Корпоративный телефонный справочник КМАруда (Active Directory)"
 authors = ["Kirill Grachev"]
 repository = "https://github.com/KirillGrachev/PhoneBook"
@@ -11,8 +11,14 @@ rust-version = "1.89"
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+default = []
+# Managed rollout: administrative settings are compiled into the exe.
+embedded-config = []
+
 [build-dependencies]
 tauri-build = { version = "2.6.2", features = [] }
+serde_json = "1"
 
 [dependencies]
 tauri = { version = "2.12.4", features = ["tray-icon"] }

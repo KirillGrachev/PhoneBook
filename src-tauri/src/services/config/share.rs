@@ -171,6 +171,12 @@ pub struct ConfigShareFile {
     /// Момент экспорта (unix-секунды): справочное поле для получателя.
     #[serde(default)]
     pub exported_at: Option<i64>,
+    /// Имя профиля раскатки (необязательно; для встроенных сборок).
+    #[serde(default)]
+    pub profile: Option<String>,
+    /// Ревизия профиля раскатки (необязательно; для диагностики).
+    #[serde(default)]
+    pub revision: Option<u32>,
     /// Конфигурация машины-источника.
     pub config: AppConfig,
 }
@@ -186,6 +192,8 @@ impl ConfigShareFile {
             format: CONFIG_SHARE_FORMAT.to_string(),
             version: CONFIG_SHARE_VERSION,
             exported_at: Some(now),
+            profile: None,
+            revision: None,
             config,
         }
     }
