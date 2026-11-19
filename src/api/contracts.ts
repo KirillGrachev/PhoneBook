@@ -108,6 +108,10 @@ export interface AppConfigDto {
   /** Per-file automatic refresh interval in hours; absent/0 means manual. */
   externalPhonebookIntervals: Record<string, number>;
   version?: string | null;
+  /** True when administrative settings come from an embedded managed profile. */
+  managed: boolean;
+  managedProfile: string | null;
+  managedRevision: number | null;
 }
 
 /** Запрос сохранения конфига; секрет передаётся отдельным каналом. */

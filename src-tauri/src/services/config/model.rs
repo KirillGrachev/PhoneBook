@@ -152,6 +152,20 @@ pub struct AppConfig {
     /// Версия приложения, записавшая конфиг (диагностика).
     #[serde(default)]
     pub version: Option<String>,
+    /// Активен ли встроенный управляемый профиль. Вычисляется при загрузке;
+    /// на диск не пишется.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub managed: bool,
+    /// Имя встроенного профиля (диагностика; на диск не пишется).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub managed_profile: Option<String>,
+    /// Ревизия встроенного профиля (диагностика; на диск не пишется).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub managed_revision: Option<u32>,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 impl Default for AppConfig {
@@ -176,6 +190,9 @@ impl Default for AppConfig {
             external_phonebook_enabled: false,
             external_phonebook_intervals: std::collections::HashMap::new(),
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
+            managed: false,
+            managed_profile: None,
+            managed_revision: None,
         }
     }
 }

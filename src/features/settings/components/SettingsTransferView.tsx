@@ -69,6 +69,9 @@ export function SettingsTransferView() {
           externalPhonebookPaths: state.externalPhonebookPaths,
           externalPhonebookEnabled: state.externalPhonebookEnabled,
           externalPhonebookIntervals: state.externalPhonebookIntervals,
+          managed: state.managed,
+          managedProfile: state.managedProfile,
+          managedRevision: state.managedRevision,
         };
         const blob = new Blob([renderConfigFile(buildConfigPatch(dto))], { type: 'application/json' });
         const url = URL.createObjectURL(blob);

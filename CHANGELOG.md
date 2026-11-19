@@ -3,6 +3,30 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.24] - 2026-11-19
+
+### Added
+
+- **Embedded managed profile (`embedded-config` Cargo feature):** a standard
+  `kmaruda-config.json` export can be compiled into the executable with
+  `KMPB_EMBED_CONFIG=...`. AD connections, organization groups, the KMAruda
+  group, synchronization timings, external phone books and managed switches come
+  from the profile on every load and save.
+- Profile metadata (`profile`, `revision`) is shown in Settings and About.
+- Administrative settings sections are blocked in the UI when a managed profile
+  is active; theme, language, animations, favorites and email overrides remain
+  local.
+- A manual **Embedded configuration build** workflow builds MSI/NSIS artifacts
+  from a base64 profile stored in the `KMPB_EMBED_CONFIG_B64` repository secret.
+- Deployment documentation: `docs/DEPLOYMENT.md`.
+
+### Security
+
+- Passwords are never embedded: the profile parser resets `hasPassword`, and
+  bind secrets remain in Windows Credential Manager.
+- Rust enforces managed fields on both load and save, so direct IPC calls cannot
+  override the embedded profile.
+
 ## [0.2.23] - 2026-11-18
 
 ### Fixed
@@ -368,7 +392,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.23...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.24...HEAD
+[0.2.24]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.23...v0.2.24
 [0.2.23]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.22...v0.2.23
 [0.2.22]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.21...v0.2.22
 [0.2.21]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.20...v0.2.21

@@ -165,6 +165,9 @@ function normalizeConfigDto(raw: Record<string, unknown>): AppConfigDto {
     orgGroups,
     enterpriseGroupId: typeof raw.enterpriseGroupId === 'string' ? raw.enterpriseGroupId : null,
     externalPhonebookPath: typeof raw.externalPhonebookPath === 'string' ? raw.externalPhonebookPath : null,
+    managed: bool(raw.managed, false),
+    managedProfile: typeof raw.managedProfile === 'string' ? raw.managedProfile : null,
+    managedRevision: typeof raw.managedRevision === 'number' ? raw.managedRevision : null,
     externalPhonebookPaths: Array.isArray(raw.externalPhonebookPaths)
       ? raw.externalPhonebookPaths.filter((path): path is string => typeof path === 'string')
       : typeof raw.externalPhonebookPath === 'string'

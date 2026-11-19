@@ -4,6 +4,7 @@ import FocusLock from 'react-focus-lock';
 import { useTranslation } from 'react-i18next';
 
 import { isTauri } from '@/api/backend';
+import { useAppStore } from '@/store/useAppStore';
 
 import { SettingsAboutView } from './components/SettingsAboutView';
 import { SettingsAdView } from './components/SettingsAdView';
@@ -56,6 +57,8 @@ function parseView(raw: string | null): SettingsView {
  */
 export function SettingsPage({ onClose }: SettingsPageProps) {
   const { t } = useTranslation();
+  const managed = useAppStore((state) => state.managed);
+  const managedProfile = useAppStore((state) => state.managedProfile);
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setViewState] = useState<SettingsView>(() => parseView(searchParams.get('view')));
 
@@ -101,6 +104,15 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
               title={t(VIEW_TITLE_KEYS[view])}
               onBack={view === 'main' ? onClose : () => setView('main')}
             />
+            {managed && (
+              <div
+                role="status"
+                className="mb-4 rounded-[12px] border border-primary/25 bg-primary/10 px-4 py-3 text-[13px] leading-snug text-foreground"
+              >
+                <span className="font-bold">{t('managed.bannerTitle')}</span>{' '}
+                {t('managed.bannerDesc', { profile: managedProfile ?? t('managed.defaultProfile') })}
+              </div>
+            )}
             {/* Раздел переключается мгновенно, без анимации: экран настроек
               не должен «подниматься» или мигать при навигации. */}
             <div className="flex flex-col">
@@ -108,11 +120,23 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
               {view === 'interface' && <SettingsInterfaceView />}
               {/* Внешний телефонный файл — функция десктоп-сборки: в браузере
                 раздела нет ни в навигации, ни по прямой ссылке. */}
-              {view === 'external' && isTauri() && <SettingsExternalView />}
+              {view === 'external' && isTauri() && (
+                <fieldset disabled={managed} className="min-w-0 border-0 p-0 m-0 disabled:opacity-60">
+                  <SettingsExternalView />
+                </fieldset>
+              )}
               {view === 'transfer' && <SettingsTransferView />}
               {view === 'about' && <SettingsAboutView />}
-              {view === 'ad' && <SettingsAdView />}
-              {view === 'groups' && <SettingsGroupsView />}
+              {view === 'ad' && (
+                <fieldset disabled={managed} className="min-w-0 border-0 p-0 m-0 disabled:opacity-60">
+                  <SettingsAdView />
+                </fieldset>
+              )}
+              {view === 'groups' && (
+                <fieldset disabled={managed} className="min-w-0 border-0 p-0 m-0 disabled:opacity-60">
+                  <SettingsGroupsView />
+                </fieldset>
+              )}
             </div>
           </div>
         </div>

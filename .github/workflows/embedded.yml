@@ -1,0 +1,72 @@
+name: Embedded configuration build
+
+# Manual production build of the managed variant. The profile is supplied as
+# base64 in the KMPB_EMBED_CONFIG_B64 repository secret and is never committed.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-embedded:
+    name: Windows embedded-config installers
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: src-tauri
+
+      - name: Materialize embedded profile
+        shell: pwsh
+        env:
+          PROFILE_B64: ${{ secrets.KMPB_EMBED_CONFIG_B64 }}
+        run: |
+          if (-not $env:PROFILE_B64) {
+            throw "KMPB_EMBED_CONFIG_B64 repository secret is not configured"
+          }
+          $path = Join-Path $env:RUNNER_TEMP "embedded-config.json"
+          [IO.File]::WriteAllBytes($path, [Convert]::FromBase64String($env:PROFILE_B64))
+          "KMPB_EMBED_CONFIG=$path" >> $env:GITHUB_ENV
+
+      - name: Build MSI and NSIS
+        run: npm run tauri build -- --features embedded-config --bundles msi,nsis
+
+      - name: Package embedded artifacts
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $bundle = "src-tauri/target/release/bundle"
+          $portable = "KMAruda.PhoneBook_${version}_windows-x64_embedded-portable.zip"
+          $msiSource = Join-Path $bundle "msi/KMAruda PhoneBook_${version}_x64_ru-RU.msi"
+          $exeSource = Join-Path $bundle "nsis/KMAruda PhoneBook_${version}_x64-setup.exe"
+          $msi = "KMAruda.PhoneBook_${version}_x64_embedded-ru-RU.msi"
+          $exe = "KMAruda.PhoneBook_${version}_x64_embedded-setup.exe"
+          Copy-Item $msiSource $msi -Force
+          Copy-Item $exeSource $exe -Force
+          Copy-Item "src-tauri/target/release/kmaruda-phonebook.exe" "KMAruda.PhoneBook-embedded.exe" -Force
+          Compress-Archive -Path "KMAruda.PhoneBook-embedded.exe" -DestinationPath $portable -Force
+          $files = @($msi, $exe, $portable)
+          $keys = foreach ($file in $files) {
+            $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+            "$hash  $file"
+          }
+          $keys | Set-Content -Encoding ascii "SHA256SUMS-embedded-windows-x64.txt"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: embedded-config-windows-x64
+          path: |
+            KMAruda.PhoneBook_*_x64_embedded-ru-RU.msi
+            KMAruda.PhoneBook_*_x64_embedded-setup.exe
+            KMAruda.PhoneBook_*_windows-x64_embedded-portable.zip
+            SHA256SUMS-embedded-windows-x64.txt
+          if-no-files-found: error

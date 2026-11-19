@@ -1,0 +1,33 @@
+{
+  "format": "kmaruda-phonebook/config",
+  "version": 1,
+  "profile": "test-profile",
+  "revision": 7,
+  "config": {
+    "theme": "dark",
+    "language": "en",
+    "ldapConfigs": [
+      {
+        "organization": "Test KMAruda",
+        "ldapUrl": "ldap://dc.test.local",
+        "baseDn": "DC=test,DC=local",
+        "bindDn": null,
+        "useStartTls": false,
+        "allowInvalidTls": false,
+        "useIntegratedAuth": true,
+        "hasPassword": false
+      }
+    ],
+    "orgGroups": [
+      {
+        "id": "embedded-test-group",
+        "name": "Test group",
+        "orgs": ["Test KMAruda"]
+      }
+    ],
+    "enterpriseGroupId": "embedded-test-group",
+    "syncIntervalHours": 24,
+    "ldapConnectTimeoutSecs": 15,
+    "ldapOperationTimeoutSecs": 30
+  }
+}
