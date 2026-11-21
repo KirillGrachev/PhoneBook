@@ -72,7 +72,7 @@ mod write;
 mod tests;
 
 pub use dedup::DuplicatesPreview;
-pub use model::{Employee, SearchPage, SearchParams, UserRecord};
+pub use model::{AdDuplicateRecord, Employee, SearchPage, SearchParams, UserRecord};
 
 /// Небольшой кэш готовых страниц: повторный/обратный ввод не должен каждый
 /// раз сериализоваться на общем `Mutex<Connection>`.

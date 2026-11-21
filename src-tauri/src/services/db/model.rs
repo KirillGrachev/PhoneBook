@@ -53,6 +53,23 @@ pub struct Employee {
     pub pager: Option<String>,
 }
 
+/// AD-контакт, используемый для отсечения дублей во внешней телефонной книге.
+///
+/// Сравнение идёт по ФИО + любому непустому контакту/атрибуту. Отдельная
+/// структура нужна, чтобы `external` не зависел от SQL-схемы.
+#[derive(Debug, Clone)]
+pub struct AdDuplicateRecord {
+    pub display_name: String,
+    pub title: Option<String>,
+    pub department: Option<String>,
+    pub company: Option<String>,
+    pub office: Option<String>,
+    pub email: Option<String>,
+    pub ip_phone: Option<String>,
+    pub phone_external: Option<String>,
+    pub phone_mobile: Option<String>,
+}
+
 /// Запись, подготовленная сервисом синхронизации для вставки в БД.
 ///
 /// Текстовые значения (организация, подразделение, кабинет) нормализуются

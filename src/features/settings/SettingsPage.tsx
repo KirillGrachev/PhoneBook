@@ -84,6 +84,18 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     setSearchParams(params, { replace: true });
   };
 
+  // В embedded/managed-профиле административные разделы не показываем вовсе:
+  // остаются только «Интерфейс и поиск» и «О программе». Прямые ссылки
+  // (?view=ad и т.п.) возвращают на главный экран настроек.
+  useEffect(() => {
+    if (!managed) {
+      return;
+    }
+    if (view === 'external' || view === 'transfer' || view === 'ad' || view === 'groups') {
+      setView('main');
+    }
+  }, [managed, view, setView]);
+
   return (
     // Экран настроек открывается мгновенно: без собственной анимации
     // появления/закрытия. Общий тумблер «Анимации» продолжает управлять
@@ -104,7 +116,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
               title={t(VIEW_TITLE_KEYS[view])}
               onBack={view === 'main' ? onClose : () => setView('main')}
             />
-            {managed && (
+            {managed && view !== 'about' && (
               <div
                 role="status"
                 className="mb-4 rounded-[12px] border border-primary/25 bg-primary/10 px-4 py-3 text-[13px] leading-snug text-foreground"
@@ -121,19 +133,28 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
               {/* Внешний телефонный файл — функция десктоп-сборки: в браузере
                 раздела нет ни в навигации, ни по прямой ссылке. */}
               {view === 'external' && isTauri() && (
-                <fieldset disabled={managed} className="min-w-0 border-0 p-0 m-0 disabled:opacity-60">
+                <fieldset
+                  disabled={managed}
+                  className={`min-w-0 border-0 p-0 m-0 disabled:opacity-60 ${managed ? 'pointer-events-none' : ''}`}
+                >
                   <SettingsExternalView />
                 </fieldset>
               )}
               {view === 'transfer' && <SettingsTransferView />}
               {view === 'about' && <SettingsAboutView />}
               {view === 'ad' && (
-                <fieldset disabled={managed} className="min-w-0 border-0 p-0 m-0 disabled:opacity-60">
+                <fieldset
+                  disabled={managed}
+                  className={`min-w-0 border-0 p-0 m-0 disabled:opacity-60 ${managed ? 'pointer-events-none' : ''}`}
+                >
                   <SettingsAdView />
                 </fieldset>
               )}
               {view === 'groups' && (
-                <fieldset disabled={managed} className="min-w-0 border-0 p-0 m-0 disabled:opacity-60">
+                <fieldset
+                  disabled={managed}
+                  className={`min-w-0 border-0 p-0 m-0 disabled:opacity-60 ${managed ? 'pointer-events-none' : ''}`}
+                >
                   <SettingsGroupsView />
                 </fieldset>
               )}

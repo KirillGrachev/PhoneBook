@@ -69,6 +69,7 @@ export function SettingsTransferView() {
           externalPhonebookPaths: state.externalPhonebookPaths,
           externalPhonebookEnabled: state.externalPhonebookEnabled,
           externalPhonebookIntervals: state.externalPhonebookIntervals,
+          externalHideAdDuplicates: state.externalHideAdDuplicates,
           managed: state.managed,
           managedProfile: state.managedProfile,
           managedRevision: state.managedRevision,

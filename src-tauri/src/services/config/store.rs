@@ -131,6 +131,7 @@ impl ConfigStore {
             external_phonebook_paths,
             external_phonebook_enabled: request.external_phonebook_enabled,
             external_phonebook_intervals,
+            external_hide_ad_duplicates: request.external_hide_ad_duplicates,
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
             managed: false,
             managed_profile: None,
@@ -237,6 +238,7 @@ fn apply_managed(local: &mut AppConfig, profile: super::embedded::EmbeddedProfil
     local.external_phonebook_paths = managed.external_phonebook_paths;
     local.external_phonebook_enabled = managed.external_phonebook_enabled;
     local.external_phonebook_intervals = managed.external_phonebook_intervals;
+    local.external_hide_ad_duplicates = managed.external_hide_ad_duplicates;
     local.managed = true;
     local.managed_profile = profile.name;
     local.managed_revision = profile.revision;

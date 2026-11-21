@@ -107,6 +107,8 @@ export interface AppConfigDto {
   externalPhonebookEnabled: boolean;
   /** Per-file automatic refresh interval in hours; absent/0 means manual. */
   externalPhonebookIntervals: Record<string, number>;
+  /** Hide Yealink entries that duplicate an AD employee. */
+  externalHideAdDuplicates: boolean;
   version?: string | null;
   /** True when administrative settings come from an embedded managed profile. */
   managed: boolean;
@@ -135,6 +137,7 @@ export interface SaveConfigRequest {
   externalPhonebookPaths: string[];
   externalPhonebookEnabled: boolean;
   externalPhonebookIntervals: Record<string, number>;
+  externalHideAdDuplicates: boolean;
 }
 
 /**

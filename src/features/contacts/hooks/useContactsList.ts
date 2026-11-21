@@ -78,8 +78,14 @@ export function useContactsList(
   const effectiveTab: TabType = phoneSearch ? 'global' : activeTab;
   const effectiveOrg = phoneSearch ? null : selectedOrg;
   const effectiveGroupKey = phoneSearch ? '' : groupKey;
+  // Не показываем весь справочник при входе: запрос уходит только при
+  // непустом поиске или явно выбранной организации/группе. «Мои контакты»
+  // остаются отдельным исключением — там набор уже ограничен избранным.
+  const hasExplicitScope = activeTab === 'local' || Boolean(selectedOrg?.trim()) || Boolean(selectedGroupOrgs?.length);
+  const hasQuery = debouncedSearch.trim() !== '' || hasExplicitScope;
 
   const query = useInfiniteQuery({
+    enabled: hasQuery,
     queryKey: [
       'contacts',
       'search',
@@ -133,14 +139,17 @@ export function useContactsList(
     }
   }, [query.isFetching, debouncedSearch, t]);
 
-  const contacts = useMemo(() => query.data?.pages.flatMap((page) => page.contacts) ?? [], [query.data]);
-  const total = query.data?.pages[0]?.total ?? 0;
+  const contacts = useMemo(
+    () => (hasQuery ? (query.data?.pages.flatMap((page) => page.contacts) ?? []) : []),
+    [hasQuery, query.data],
+  );
+  const total = hasQuery ? (query.data?.pages[0]?.total ?? 0) : 0;
 
   return {
     contacts,
     total,
-    isLoading: query.isLoading,
-    isFetching: query.isFetching,
+    isLoading: hasQuery && query.isLoading,
+    isFetching: hasQuery && query.isFetching,
     isFetchingNextPage: query.isFetchingNextPage,
     hasNextPage: query.hasNextPage ?? false,
     fetchNextPage: () => void query.fetchNextPage(),

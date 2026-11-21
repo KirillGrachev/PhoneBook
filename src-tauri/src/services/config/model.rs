@@ -149,6 +149,10 @@ pub struct AppConfig {
     /// Per-file automatic refresh interval in hours; `0`/absent means manual.
     #[serde(default)]
     pub external_phonebook_intervals: std::collections::HashMap<String, u32>,
+    /// Drop Yealink entries that duplicate an AD employee by full name + any
+    /// contact/attribute. `true` — hide duplicates, `false` — keep them.
+    #[serde(default = "default_true")]
+    pub external_hide_ad_duplicates: bool,
     /// Версия приложения, записавшая конфиг (диагностика).
     #[serde(default)]
     pub version: Option<String>,
@@ -189,6 +193,7 @@ impl Default for AppConfig {
             external_phonebook_paths: Vec::new(),
             external_phonebook_enabled: false,
             external_phonebook_intervals: std::collections::HashMap::new(),
+            external_hide_ad_duplicates: true,
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
             managed: false,
             managed_profile: None,
@@ -237,4 +242,6 @@ pub struct SaveConfigRequest {
     pub external_phonebook_enabled: bool,
     #[serde(default)]
     pub external_phonebook_intervals: std::collections::HashMap<String, u32>,
+    #[serde(default = "default_true")]
+    pub external_hide_ad_duplicates: bool,
 }

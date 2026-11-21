@@ -37,6 +37,8 @@ export function SettingsExternalView() {
   const setExternalPhonebookEnabled = useAppStore((state) => state.setExternalPhonebookEnabled);
   const externalPhonebookIntervals = useAppStore((state) => state.externalPhonebookIntervals);
   const setExternalPhonebookInterval = useAppStore((state) => state.setExternalPhonebookInterval);
+  const externalHideAdDuplicates = useAppStore((state) => state.externalHideAdDuplicates);
+  const setExternalHideAdDuplicates = useAppStore((state) => state.setExternalHideAdDuplicates);
 
   const queryClient = useQueryClient();
   const [externalBusy, setExternalBusy] = useState(false);
@@ -134,6 +136,16 @@ export function SettingsExternalView() {
     void flushConfigSave();
   };
 
+  const handleHideDuplicatesToggle = (checked: boolean) => {
+    setExternalHideAdDuplicates(checked);
+    void (async () => {
+      await flushConfigSave();
+      if (useAppStore.getState().externalPhonebookEnabled) {
+        await runRefresh(false);
+      }
+    })();
+  };
+
   const intervalOptions = EXTERNAL_INTERVAL_OPTIONS.map((hours) => ({
     value: hours,
     label: hours === 0 ? t('settings.externalIntervalManual') : t('settings.externalIntervalHours', { count: hours }),
@@ -153,7 +165,15 @@ export function SettingsExternalView() {
   return (
     <div className="flex flex-col gap-5 w-full pb-4">
       <section className="space-y-2.5">
-        <p className="text-[13px] text-muted-foreground leading-snug px-1">{t('settings.externalDesc')}</p>
+        <div className="flex flex-col gap-1.5 px-1">
+          {t('settings.externalDesc')
+            .split(/\n{2,}/)
+            .map((paragraph, index) => (
+              <p key={index} className="text-[13px] text-muted-foreground leading-snug">
+                {paragraph}
+              </p>
+            ))}
+        </div>
 
         <div className={SWITCH_ROW_CLASS}>
           <div className="flex flex-col gap-0.5 pr-4">
@@ -163,6 +183,20 @@ export function SettingsExternalView() {
             checked={externalPhonebookEnabled}
             onChange={handleEnabledToggle}
             ariaLabel={t('settings.externalEnabled')}
+          />
+        </div>
+
+        <div className={SWITCH_ROW_CLASS}>
+          <div className="flex flex-col gap-0.5 pr-4">
+            <span className="text-[15px] font-bold text-foreground">{t('settings.externalHideDuplicates')}</span>
+            <span className="text-[13px] leading-snug text-muted-foreground">
+              {t('settings.externalHideDuplicatesDesc')}
+            </span>
+          </div>
+          <Switch
+            checked={externalHideAdDuplicates}
+            onChange={handleHideDuplicatesToggle}
+            ariaLabel={t('settings.externalHideDuplicates')}
           />
         </div>
 

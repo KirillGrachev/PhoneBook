@@ -43,6 +43,7 @@ interface PersistedState {
   externalPhonebookPaths: string[];
   externalPhonebookEnabled: boolean;
   externalPhonebookIntervals: Record<string, number>;
+  externalHideAdDuplicates: boolean;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -82,6 +83,7 @@ async function persistNow(value: string): Promise<void> {
       externalPhonebookPaths: state.externalPhonebookPaths ?? [],
       externalPhonebookEnabled: state.externalPhonebookEnabled ?? false,
       externalPhonebookIntervals: state.externalPhonebookIntervals ?? {},
+      externalHideAdDuplicates: state.externalHideAdDuplicates ?? true,
       // Черновики без названия не сохраняем: бэкенд валидирует имя,
       // а незаполненная карточка — это ещё не организация.
       ldapConfigs: (state.ldapConfigs ?? []).filter((org) => org.organization.trim() !== '').map(toLdapOrgInput),
@@ -178,6 +180,7 @@ export const configStorage: StateStorage = {
                 : [],
           externalPhonebookEnabled: config.externalPhonebookEnabled,
           externalPhonebookIntervals: config.externalPhonebookIntervals ?? {},
+          externalHideAdDuplicates: config.externalHideAdDuplicates ?? true,
         },
         version: 0,
       });

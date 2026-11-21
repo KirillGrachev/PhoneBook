@@ -49,15 +49,18 @@ export function Select<T>({
           aria-label={ariaLabel}
           aria-expanded={open}
           className={cn(
-            'flex items-center gap-2 h-[34px] px-3 rounded-[10px] border border-border bg-input',
+            'inline-flex h-[34px] items-center justify-between gap-2 px-3 py-0 leading-none rounded-[10px] border border-border bg-input',
             'text-[13px] font-semibold text-foreground outline-none cursor-pointer',
             'hover:bg-input-hover transition-colors focus-visible:ring-2 focus-visible:ring-ring',
             className,
           )}
         >
-          <span className="truncate">{current?.label ?? '—'}</span>
+          <span className="truncate leading-none">{current?.label ?? '—'}</span>
           <ChevronDown
-            className={cn('w-4 h-4 text-muted-foreground transition-transform duration-200', open && 'rotate-180')}
+            className={cn(
+              'w-4 h-4 shrink-0 self-center text-muted-foreground transition-transform duration-200',
+              open && 'rotate-180',
+            )}
             aria-hidden
           />
         </button>
@@ -84,7 +87,7 @@ export function Select<T>({
                   option.value === value ? 'text-primary font-semibold bg-primary/10' : 'text-foreground',
                 )}
               >
-                <span className="truncate">{option.label}</span>
+                <span className="truncate leading-none">{option.label}</span>
                 {option.value === value && <Check className="w-4 h-4 shrink-0" aria-hidden />}
               </button>
             </DropdownMenu.Item>
