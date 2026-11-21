@@ -6,7 +6,7 @@ use rusqlite::{params_from_iter, Connection, OptionalExtension, Row, ToSql};
 
 use crate::error::AppError;
 
-use super::model::{Employee, SearchPage, SearchParams};
+use super::model::{AdDuplicateRecord, Employee, SearchPage, SearchParams};
 use super::schema::{EMPLOYEE_COLUMNS, LOOKUP_JOINS};
 use super::Db;
 
@@ -564,6 +564,40 @@ impl Db {
     pub fn count(&self) -> Result<u64, AppError> {
         let conn = self.lock();
         Ok(conn.query_row("SELECT COUNT(*) FROM users", [], |row| row.get::<_, i64>(0))? as u64)
+    }
+
+    /// AD-контакты для отсечения дублей внешней телефонной книги: ФИО и
+    /// контакты/атрибуты, по которым можно доказать, что запись уже есть в AD.
+    pub fn ad_duplicates(&self) -> Result<Vec<AdDuplicateRecord>, AppError> {
+        let conn = self.lock();
+        let mut stmt = conn.prepare(
+            "SELECT users.display_name, users.title, departments.name, orgs.name, locations.name,
+                    users.email, users.ip_phone, users.phone_external, users.phone_mobile
+             FROM users
+             JOIN sources ON sources.id = users.source_id
+             LEFT JOIN departments ON departments.id = users.department_id
+             LEFT JOIN orgs ON orgs.id = users.org_id
+             LEFT JOIN locations ON locations.id = users.location_id
+             WHERE sources.kind = 'ad'",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(AdDuplicateRecord {
+                display_name: row.get(0)?,
+                title: row.get(1)?,
+                department: row.get(2)?,
+                company: row.get(3)?,
+                office: row.get(4)?,
+                email: row.get(5)?,
+                ip_phone: row.get(6)?,
+                phone_external: row.get(7)?,
+                phone_mobile: row.get(8)?,
+            })
+        })?;
+        let mut out = Vec::new();
+        for row in rows {
+            out.push(row?);
+        }
+        Ok(out)
     }
 
     /// Number of users currently cached from external phone book sources.

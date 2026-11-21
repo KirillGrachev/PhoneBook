@@ -24,7 +24,7 @@ export function TextField({ label, hint, error, className, containerClassName, i
         className={cn(
           'w-full bg-input border rounded-[10px] px-3 py-2 text-[15px] text-foreground outline-none transition-colors',
           'placeholder:text-muted-foreground disabled:opacity-50',
-          error ? 'border-red-500/60 focus:border-red-500' : 'border-border focus:border-primary',
+          error ? 'border-red-500/60 focus:border-red-500' : 'border-border focus:border-foreground/30',
           className,
         )}
         aria-invalid={Boolean(error)}

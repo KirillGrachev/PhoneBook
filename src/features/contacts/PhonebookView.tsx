@@ -247,7 +247,9 @@ export function PhonebookView() {
             ? { title: t('emptyEnterprise.title'), description: t('emptyEnterprise.desc') }
             : directoryNotConfigured
               ? { title: t('emptyState.title'), description: t('emptyState.desc') }
-              : { title: t('emptyState.notSyncedTitle'), description: t('emptyState.notSyncedDesc') };
+              : !search.trim() && !selectedOrg && !selectedGroup
+                ? { title: t('emptySearch.title'), description: t('emptySearch.desc') }
+                : { title: t('emptyState.notSyncedTitle'), description: t('emptyState.notSyncedDesc') };
 
   return (
     <>

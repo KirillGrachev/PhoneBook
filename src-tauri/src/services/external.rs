@@ -25,7 +25,7 @@ use serde::Serialize;
 use tracing::{debug, info, warn};
 
 use crate::error::AppError;
-use crate::services::db::{Db, UserRecord};
+use crate::services::db::{AdDuplicateRecord, Db, UserRecord};
 use crate::services::tokens;
 
 /// Имя источника, когда в файле нет заголовка `IPPhoneBook/Title`.
@@ -164,7 +164,12 @@ fn cached_fallback(db: &Db, path: &str, reason: String) -> Result<ExternalRefres
 /// Каждый файл становится отдельным источником справочника. Все файлы
 /// проверяются до записи в БД: битый файл не оставляет частично обновлённый
 /// кэш. Если исходный файл исчез, сохраняется ранее зашифрованный кэш.
-pub fn refresh(db: &Db, enabled: bool, paths: &[String]) -> Result<ExternalRefresh, AppError> {
+pub fn refresh(
+    db: &Db,
+    enabled: bool,
+    paths: &[String],
+    hide_ad_duplicates: bool,
+) -> Result<ExternalRefresh, AppError> {
     let paths: Vec<&str> = paths
         .iter()
         .map(|path| path.trim())
@@ -181,6 +186,11 @@ pub fn refresh(db: &Db, enabled: bool, paths: &[String]) -> Result<ExternalRefre
 
     let mut loaded: Vec<(String, Vec<UserRecord>)> = Vec::new();
     let mut used_names = HashSet::new();
+    let ad_contacts = if hide_ad_duplicates {
+        db.ad_duplicates()?
+    } else {
+        Vec::new()
+    };
 
     for path in paths {
         let metadata = match fs::metadata(path) {
@@ -229,6 +239,14 @@ pub fn refresh(db: &Db, enabled: bool, paths: &[String]) -> Result<ExternalRefre
         used_names.insert(organization.to_lowercase());
 
         let records = build_records(&parsed, &organization);
+        let records = if hide_ad_duplicates {
+            records
+                .into_iter()
+                .filter(|record| !is_ad_duplicate(record, &ad_contacts))
+                .collect::<Vec<_>>()
+        } else {
+            records
+        };
         loaded.push((organization, records));
     }
 
@@ -245,6 +263,53 @@ pub fn refresh(db: &Db, enabled: bool, paths: &[String]) -> Result<ExternalRefre
         count, "внешние телефонные файлы загружены в справочник"
     );
     Ok(ExternalRefresh::Loaded { sources, count })
+}
+
+/// ФИО + любой непустой контакт/атрибут совпадает с AD-контактом.
+///
+/// Внешняя запись считается дублем только при совпадении имени; одного
+/// телефона/почты без совпадения имени недостаточно.
+fn is_ad_duplicate(record: &UserRecord, ad_contacts: &[AdDuplicateRecord]) -> bool {
+    let name = normalized_text(&record.display_name);
+    if name.is_empty() {
+        return false;
+    }
+    ad_contacts.iter().any(|ad| {
+        normalized_text(&ad.display_name) == name
+            && (same_text(record.email.as_deref(), ad.email.as_deref())
+                || same_phone(record.ip_phone.as_deref(), ad.ip_phone.as_deref())
+                || same_phone(
+                    record.phone_external.as_deref(),
+                    ad.phone_external.as_deref(),
+                )
+                || same_phone(record.phone_mobile.as_deref(), ad.phone_mobile.as_deref())
+                || same_text(record.title.as_deref(), ad.title.as_deref())
+                || same_text(record.department.as_deref(), ad.department.as_deref())
+                || same_text(record.company.as_deref(), ad.company.as_deref())
+                || same_text(record.office.as_deref(), ad.office.as_deref()))
+    })
+}
+
+fn normalized_text(value: &str) -> String {
+    tokens::collapse_spaces(value).to_lowercase()
+}
+
+fn same_text(left: Option<&str>, right: Option<&str>) -> bool {
+    let left = left.map(normalized_text).filter(|value| !value.is_empty());
+    let right = right.map(normalized_text).filter(|value| !value.is_empty());
+    matches!((left, right), (Some(left), Some(right)) if left == right)
+}
+
+fn same_phone(left: Option<&str>, right: Option<&str>) -> bool {
+    let digits = |value: &str| {
+        value
+            .chars()
+            .filter(|c| c.is_ascii_digit())
+            .collect::<String>()
+    };
+    let left = left.map(digits).filter(|value| !value.is_empty());
+    let right = right.map(digits).filter(|value| !value.is_empty());
+    matches!((left, right), (Some(left), Some(right)) if left == right)
 }
 
 #[cfg(test)]
@@ -399,7 +464,7 @@ mod tests {
             first.to_string_lossy().into_owned(),
             second.to_string_lossy().into_owned(),
         ];
-        let result = refresh(&db, true, &paths).expect("refresh");
+        let result = refresh(&db, true, &paths, true).expect("refresh");
         let ExternalRefresh::Loaded { sources, count } = result else {
             panic!("expected loaded result");
         };
@@ -429,8 +494,45 @@ mod tests {
             .join("kmpb-external-missing.xml")
             .to_string_lossy()
             .into_owned();
-        let result = refresh(&db, true, &[missing]).expect("cached fallback");
+        let result = refresh(&db, true, &[missing], true).expect("cached fallback");
         assert_eq!(result, ExternalRefresh::Cached { count: 4 });
         assert_eq!(db.external_count().expect("count"), 4);
+    }
+
+    #[test]
+    fn external_duplicate_of_ad_contact_is_filtered() {
+        let parsed = parse_phonebook_xml(SAMPLE).expect("parse");
+        let records = build_records(&parsed, "Yealink");
+        let external = &records[0];
+        let ad = AdDuplicateRecord {
+            display_name: external.display_name.clone(),
+            title: None,
+            department: external.department.clone(),
+            company: None,
+            office: None,
+            email: None,
+            ip_phone: external.ip_phone.clone(),
+            phone_external: None,
+            phone_mobile: None,
+        };
+
+        assert!(is_ad_duplicate(external, std::slice::from_ref(&ad)));
+
+        let mut wrong_name = ad.clone();
+        wrong_name.display_name = format!("{} 2", external.display_name);
+        assert!(!is_ad_duplicate(external, &[wrong_name]));
+
+        let unrelated = AdDuplicateRecord {
+            display_name: external.display_name.clone(),
+            title: None,
+            department: None,
+            company: None,
+            office: None,
+            email: Some("other@example.invalid".into()),
+            ip_phone: Some("999999".into()),
+            phone_external: None,
+            phone_mobile: None,
+        };
+        assert!(!is_ad_duplicate(external, &[unrelated]));
     }
 }

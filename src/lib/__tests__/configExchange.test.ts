@@ -45,6 +45,7 @@ function sampleConfig(): AppConfigDto {
     externalPhonebookPaths: ['C:\\PhoneBook\\yealink.xml', 'C:\\PhoneBook\\office.xml'],
     externalPhonebookEnabled: true,
     externalPhonebookIntervals: { 'C:\\PhoneBook\\yealink.xml': 24 },
+    externalHideAdDuplicates: true,
     managed: false,
     managedProfile: null,
     managedRevision: null,
