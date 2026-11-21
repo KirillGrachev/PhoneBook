@@ -100,6 +100,7 @@ pub async fn refresh_external_phonebook(
             &db,
             config.external_phonebook_enabled,
             &config.external_phonebook_paths,
+            config.external_hide_ad_duplicates,
         )
     })
     .await

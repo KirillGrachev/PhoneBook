@@ -48,6 +48,7 @@ export interface ConfigPatch {
   externalPhonebookPaths: string[];
   externalPhonebookEnabled: boolean;
   externalPhonebookIntervals: Record<string, number>;
+  externalHideAdDuplicates: boolean;
 }
 
 /** Собрать патч стора из проверенного DTO конфигурации. */
@@ -77,6 +78,7 @@ export function buildConfigPatch(config: AppConfigDto): ConfigPatch {
           : [],
     externalPhonebookEnabled: config.externalPhonebookEnabled,
     externalPhonebookIntervals: config.externalPhonebookIntervals ?? {},
+    externalHideAdDuplicates: config.externalHideAdDuplicates ?? true,
   };
 }
 
@@ -174,6 +176,7 @@ function normalizeConfigDto(raw: Record<string, unknown>): AppConfigDto {
         ? [raw.externalPhonebookPath]
         : [],
     externalPhonebookEnabled: bool(raw.externalPhonebookEnabled, false),
+    externalHideAdDuplicates: bool(raw.externalHideAdDuplicates, true),
     externalPhonebookIntervals:
       typeof raw.externalPhonebookIntervals === 'object' && raw.externalPhonebookIntervals !== null
         ? Object.fromEntries(

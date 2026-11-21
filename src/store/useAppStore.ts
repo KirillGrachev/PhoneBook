@@ -59,6 +59,9 @@ interface SettingsSlice {
   /** Per-file refresh interval in hours; absent/0 means manual only. */
   externalPhonebookIntervals: Record<string, number>;
   setExternalPhonebookInterval: (path: string, hours: number) => void;
+  /** Hide Yealink entries that duplicate an AD employee. */
+  externalHideAdDuplicates: boolean;
+  setExternalHideAdDuplicates: (hidden: boolean) => void;
   setEnterpriseGroupId: (id: string | null) => void;
   savedContactIds: string[];
   toggleSavedContact: (id: string) => void;
@@ -150,6 +153,8 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
       }
       return { externalPhonebookIntervals: next };
     }),
+  externalHideAdDuplicates: true,
+  setExternalHideAdDuplicates: (externalHideAdDuplicates) => set({ externalHideAdDuplicates }),
   savedContactIds: [],
   toggleSavedContact: (id) =>
     set((state) => {
@@ -202,6 +207,7 @@ export const useAppStore = create<AppStore>()(
       externalPhonebookPaths: state.externalPhonebookPaths,
       externalPhonebookEnabled: state.externalPhonebookEnabled,
       externalPhonebookIntervals: state.externalPhonebookIntervals,
+      externalHideAdDuplicates: state.externalHideAdDuplicates,
     }),
     /** Гидрация асинхронная (чтение config.json через IPC) — запускается из App. */
     skipHydration: true,

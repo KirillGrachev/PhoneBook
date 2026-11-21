@@ -3,6 +3,36 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.25] - 2026-11-21
+
+### Fixed
+
+- The "Current Windows user credentials" section no longer repeats the
+  password-free explanation twice; only the concise description remains.
+- Settings `TextField`s (organization name, server address, Base DN, bind
+  fields, password, timeouts) no longer show a blue focus border. Focus uses a
+  neutral gray border; validation errors stay red.
+- About no longer shows the "Managed by your organization" banner, the
+  configuration-profile block or its revision; only the normal version block
+  remains.
+- Configuration transfer and the other administrative settings sections are
+  hidden in a managed profile; only "Interface and search" and "About" remain,
+  and direct links to hidden sections return to the settings root.
+- Buttons inside the managed-profile locked sections no longer show hover
+  colors; navigation rows keep their normal hover styling and local settings
+  stay active.
+- Select triggers now center their label and chevron vertically; the external
+  phonebook description is split into readable paragraphs instead of one long
+  block.
+- Yealink entries are dropped when their full name and any contact/attribute
+  (e-mail, phone, title, department, company or office) match an AD employee;
+  external files are re-applied after AD sync so newly appeared duplicates are
+  removed too. The new **Hide AD duplicates** switch (on by default) can keep
+  duplicates when turned off.
+- The directory starts with an empty result list and a "Start searching" hint;
+  contacts are queried only after typing or selecting an organization/group.
+  The "My contacts" tab still shows saved contacts immediately.
+
 ## [0.2.24] - 2026-11-19
 
 ### Added
@@ -63,7 +93,7 @@ follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - The MSI and NSIS "launch application" checkbox is now labelled in Russian:
-  "Запустить KMAruda PhoneBook" instead of "Launch KMAruda PhoneBook".
+  "Ð—Ð°Ð¿ÑƒÑÑ‚Ð¸Ñ‚ÑŒ KMAruda PhoneBook" instead of "Launch KMAruda PhoneBook".
 - The MSI entry keeps the application icon in Settings > Apps. Because the
   uninstaller rewrite sets ARP `WindowsInstaller=0`, Windows no longer derives
   the icon from the MSI; the installer now writes an explicit `DisplayIcon`
@@ -292,7 +322,7 @@ follows [Semantic Versioning](https://semver.org/).
   encrypted directory cache is kept and a warning is shown instead of a sync
   error.
 - Montserrat as the application font, with local 400/500/600/700 weights.
-- Configurable LDAP connection and operation timeouts (1–300 seconds) in AD
+- Configurable LDAP connection and operation timeouts (1â€“300 seconds) in AD
   settings.
 - Transient LDAP resets/timeouts are retried twice with exponential backoff.
 - LDAP fetch logs include page count, elapsed time and retry context.
@@ -392,7 +422,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.24...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.25...HEAD
+[0.2.25]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.24...v0.2.25
 [0.2.24]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.23...v0.2.24
 [0.2.23]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.22...v0.2.23
 [0.2.22]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.21...v0.2.22
@@ -418,3 +449,4 @@ follows [Semantic Versioning](https://semver.org/).
 [0.2.2]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/KirillGrachev/PhoneBook/releases/tag/v0.2.0
+

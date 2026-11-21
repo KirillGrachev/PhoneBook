@@ -31,4 +31,18 @@ describe('SettingsPage: доступность', () => {
     expect(screen.getByRole('status').textContent).toContain('KMAruda');
     useAppStore.setState({ managed: false, managedProfile: null, managedRevision: null });
   });
+
+  it('hides configuration transfer in a managed profile', () => {
+    useAppStore.setState({ managed: true, managedProfile: 'KMAruda', managedRevision: 3 });
+    render(
+      <MemoryRouter>
+        <SettingsPage onClose={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Configuration transfer')).toBeNull();
+    expect(screen.queryByText('Active Directory Settings')).toBeNull();
+    expect(screen.queryByText('Organization groups')).toBeNull();
+    useAppStore.setState({ managed: false, managedProfile: null, managedRevision: null });
+  });
 });

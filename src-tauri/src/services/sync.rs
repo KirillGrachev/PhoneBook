@@ -227,6 +227,14 @@ impl SyncManager {
             )
             .await;
         }
+
+        // AD sync может добавить сотрудника, которого ещё не было в кэше на
+        // момент первой загрузки внешнего файла. Повторно применяем файлы,
+        // чтобы отсечь появившиеся дубли Yealink + AD по ФИО и контактам.
+        if config.external_phonebook_enabled && !config.external_phonebook_paths.is_empty() {
+            refresh_external(&state.db, &config);
+            self.mark_external_refreshed(&config.external_phonebook_paths);
+        }
         Ok(())
     }
 
@@ -456,6 +464,7 @@ fn refresh_external(db: &Db, config: &AppConfig) {
         db,
         config.external_phonebook_enabled,
         &config.external_phonebook_paths,
+        config.external_hide_ad_duplicates,
     ) {
         Ok(external::ExternalRefresh::Loaded { sources, count }) => {
             info!(

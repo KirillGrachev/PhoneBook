@@ -25,9 +25,6 @@ export function SettingsAdAuthToggle({ config, onChange }: SettingsAdAuthToggleP
           ariaLabel={t('settings.ad.integratedAuth')}
         />
       </label>
-      {config.useIntegratedAuth && (
-        <span className="text-[13px] text-muted-foreground leading-snug">{t('settings.ad.integratedAuthHint')}</span>
-      )}
     </div>
   );
 }

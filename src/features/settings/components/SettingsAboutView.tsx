@@ -5,16 +5,12 @@ import { useTranslation } from 'react-i18next';
 
 import { isTauri } from '@/api/backend';
 import { systemApi } from '@/api/directory';
-import { useAppStore } from '@/store/useAppStore';
 
 const DEVELOPER_URL = 'https://github.com/KirillGrachev';
 
 /** Экран «О программе». Версия берётся из бандла (Tauri API), а не хардкодом. */
 export function SettingsAboutView() {
   const { t } = useTranslation();
-  const managed = useAppStore((state) => state.managed);
-  const managedProfile = useAppStore((state) => state.managedProfile);
-  const managedRevision = useAppStore((state) => state.managedRevision);
   const [showConfirm, setShowConfirm] = useState(false);
   // Vite подставляет версию из package.json на этапе сборки. Это убирает
   // промежуточный хардкод и мигание «0.2.0 → актуальная» при открытии экрана.
@@ -76,20 +72,6 @@ export function SettingsAboutView() {
             <span className="font-bold text-muted-foreground uppercase text-[13px]">{t('version')}</span>
             <span className="font-bold text-foreground text-[18px]">{version ?? '—'}</span>
           </div>
-
-          {managed && (
-            <div className="flex flex-col items-center gap-1.5">
-              <span className="font-bold text-muted-foreground uppercase text-[13px]">{t('managed.profile')}</span>
-              <span className="font-bold text-foreground text-[18px]">
-                {managedProfile ?? t('managed.defaultProfile')}
-              </span>
-              {managedRevision !== null && (
-                <span className="text-[13px] text-muted-foreground">
-                  {t('managed.revision', { revision: managedRevision })}
-                </span>
-              )}
-            </div>
-          )}
         </div>
       </div>
 

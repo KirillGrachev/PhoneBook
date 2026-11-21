@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { isTauri } from '@/api/backend';
 import { systemApi } from '@/api/directory';
+import { useAppStore } from '@/store/useAppStore';
 
 import { NAV_ITEM_CLASS } from './settingsStyles';
 
@@ -27,6 +28,7 @@ interface NavRow {
  */
 export function SettingsMainView({ onNavigate }: SettingsMainViewProps) {
   const { t } = useTranslation();
+  const managed = useAppStore((state) => state.managed);
   const showDevtools = import.meta.env.DEV && isTauri();
 
   const rows: NavRow[] = [
@@ -34,7 +36,7 @@ export function SettingsMainView({ onNavigate }: SettingsMainViewProps) {
       view: 'interface',
       labelKey: 'settings.interfaceTitle',
     },
-    ...(isTauri()
+    ...(!managed && isTauri()
       ? [
           {
             view: 'external',
@@ -42,18 +44,22 @@ export function SettingsMainView({ onNavigate }: SettingsMainViewProps) {
           } satisfies NavRow,
         ]
       : []),
-    {
-      view: 'transfer',
-      labelKey: 'settings.transferTitle',
-    },
-    {
-      view: 'ad',
-      labelKey: 'settings.adSettings',
-    },
-    {
-      view: 'groups',
-      labelKey: 'settings.orgGroups',
-    },
+    ...(!managed
+      ? [
+          {
+            view: 'transfer',
+            labelKey: 'settings.transferTitle',
+          } satisfies NavRow,
+          {
+            view: 'ad',
+            labelKey: 'settings.adSettings',
+          } satisfies NavRow,
+          {
+            view: 'groups',
+            labelKey: 'settings.orgGroups',
+          } satisfies NavRow,
+        ]
+      : []),
   ];
 
   const handleOpenDevtools = async () => {
@@ -85,7 +91,7 @@ export function SettingsMainView({ onNavigate }: SettingsMainViewProps) {
         {chevron}
       </button>
 
-      {showDevtools && (
+      {showDevtools && !managed && (
         <button type="button" onClick={() => void handleOpenDevtools()} className={NAV_ITEM_CLASS}>
           <span className="flex items-center gap-2.5 text-foreground">
             <Terminal

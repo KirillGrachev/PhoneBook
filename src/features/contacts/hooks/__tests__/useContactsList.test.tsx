@@ -39,4 +39,15 @@ describe('useContactsList: локальный поиск и пагинация',
     expect(result.current.total).toBe(result.current.contacts.length);
     expect(result.current.contacts.every((contact) => savedIds.includes(contact.id))).toBe(true);
   });
+
+  it('does not load the whole directory without a query or filter', async () => {
+    useAppStore.setState({ testMode: true });
+    const { result } = renderHook(() => useContactsList('global', '', null, [], null), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 3000 });
+    expect(result.current.contacts).toEqual([]);
+    expect(result.current.total).toBe(0);
+  });
 });

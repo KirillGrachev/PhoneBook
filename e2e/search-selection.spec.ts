@@ -19,8 +19,11 @@ test('empty search result closes the previously selected contact', async ({ page
     );
   });
   await page.goto('/');
-  await expect(page.getByText('Volkova Ekaterina Dmitrievna')).toBeVisible();
-  await page.getByText('Volkova Ekaterina Dmitrievna').click();
+  await expect(page.getByText('Start searching')).toBeVisible();
+  const searchbox = page.getByRole('searchbox', { name: 'Global search' });
+  await searchbox.fill('Volkova');
+  await expect(page.getByText('Volkova Ekaterina Dmitrievna').first()).toBeVisible();
+  await page.getByText('Volkova Ekaterina Dmitrievna').first().click();
   await expect(page.getByRole('heading', { name: /Volkova Ekaterina Dmitrievna/ })).toBeVisible();
   await expect(page.getByText('Менеджер по работе с клиентами', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Отдел продаж', { exact: true }).first()).toBeVisible();
@@ -30,7 +33,7 @@ test('empty search result closes the previously selected contact', async ({ page
   await expect(page.getByText(/Volkova Ekaterina Dmitrievna/).last()).toBeVisible();
   await page.getByRole('button', { name: /close/i }).click();
 
-  await page.getByRole('searchbox', { name: 'Global search' }).fill('zzzz_no_such_contact');
+  await searchbox.fill('zzzz_no_such_contact');
   await expect(page.getByText('No matches found')).toBeVisible();
   await expect(page.getByRole('heading', { name: /Volkova Ekaterina Dmitrievna/ })).toHaveCount(0);
 });
