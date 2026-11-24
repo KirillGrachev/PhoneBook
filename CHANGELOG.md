@@ -3,6 +3,22 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.27] - 2026-11-24
+
+### Changed
+
+- Applied the remaining dependency updates: Tauri 2.12.7 / build/codegen/runtime
+  updates and the grouped frontend minor/patch updates.
+- Merged and grouped all Dependabot pull requests; updated the remaining GitHub
+  Actions pins (dependency-review, install-action, cargo-deny, CodeQL) and
+  grouped future Actions updates so CodeQL init/analyze stay in lockstep.
+
+### Internal
+
+- CodeQL alerts: **0 open**; Dependabot: **0 open PRs**; 13 checks green on
+  `main`.
+- Dependency-only release on top of 0.2.26.
+
 ## [0.2.26] - 2026-11-24
 
 ### Fixed
@@ -448,7 +464,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.26...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.27...HEAD
+[0.2.27]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.26...v0.2.27
 [0.2.26]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.25...v0.2.26
 [0.2.25]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.24...v0.2.25
 [0.2.24]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.23...v0.2.24
