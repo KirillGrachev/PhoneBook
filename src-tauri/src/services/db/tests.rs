@@ -1834,3 +1834,31 @@ fn search_load_benchmark() {
     }
     eprintln!("=== done ===");
 }
+
+#[test]
+fn repeated_external_refresh_does_not_accumulate_rows() {
+    let db = sample_db();
+    let records = [
+        external_record("ext-1", "ТЕСТ", "310"),
+        external_record("ext-2", "Тест 1", "311"),
+    ];
+
+    for _ in 0..5 {
+        assert_eq!(
+            db.replace_external_users("Yealink", &records)
+                .expect("replace external"),
+            2
+        );
+    }
+
+    assert_eq!(db.external_count().expect("external count"), 2);
+    assert_eq!(db.count().expect("count"), 5);
+    assert_eq!(table_count(&db, "users"), 5);
+    assert_eq!(table_count(&db, "users_fts"), 5);
+    assert_eq!(table_count(&db, "users_substr"), 5);
+    assert_eq!(
+        table_count(&db, "sync_meta"),
+        3,
+        "two AD sources + external"
+    );
+}
