@@ -32,13 +32,13 @@ const EMPTY_ORG: LdapOrgConfigDto = {
 };
 
 /**
- * ÐÐ°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ¸ Active Directory.
+ * ÃÂÃÂ°Ã‘ÂÃ‘â€šÃ‘â‚¬ÃÂ¾ÃÂ¹ÃÂºÃÂ¸ Active Directory.
  *
- * * Ð½ÐµÑÐºÐ¾Ð»ÑŒÐºÐ¾ Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¹, ÐºÐ°Ð¶Ð´Ð°Ñ ÑÐ¾ ÑÐ²Ð¾Ð¸Ð¼ ÐºÐ¾Ð½Ñ‚Ñ€Ð¾Ð»Ð»ÐµÑ€Ð¾Ð¼, Base DN Ð¸ ÑƒÑ‡Ñ‘Ñ‚ÐºÐ¾Ð¹;
- * * Ð¿Ð°Ñ€Ð¾Ð»ÑŒ ÑƒÑ…Ð¾Ð´Ð¸Ñ‚ Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ð¾Ð¹ ÐºÐ¾Ð¼Ð°Ð½Ð´Ð¾Ð¹ straight Ð² keyring, Ð¼Ð¸Ð½ÑƒÑ ÑÑ‚Ð¾Ñ€ Ð¸ config.json;
- * * Â«ÐŸÑ€Ð¾Ð²ÐµÑ€Ð¸Ñ‚ÑŒ Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸ÐµÂ» â€” Ð´Ð¸Ð°Ð³Ð½Ð¾ÑÑ‚Ð¸ÐºÐ° Ñ‡ÐµÑ€ÐµÐ· Ð±ÑÐºÐµÐ½Ð´ (bind + rootDSE + Ð²Ñ‹Ð±Ð¾Ñ€ÐºÐ°);
- * * Ñ€ÑƒÑ‡Ð½Ð¾Ð¹ Ð·Ð°Ð¿ÑƒÑÐº ÑÐ¸Ð½Ñ…Ñ€Ð¾Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¸ Ð¸ ÑÑ‚Ð°Ñ‚ÑƒÑ Ð¿Ð¾ÑÐ»ÐµÐ´Ð½ÐµÐ¹ Ð¿Ð¾ ÐºÐ°Ð¶Ð´Ð¾Ð¹ Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¸;
- * * Ð² Ð±Ñ€Ð°ÑƒÐ·ÐµÑ€Ðµ (Ð±ÐµÐ· Tauri) Ñ„Ð¾Ñ€Ð¼Ð° ÑÐºÑ€Ñ‹Ñ‚Ð°: AD Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½ Ð²Ð½Ðµ Ð´ÐµÑÐºÑ‚Ð¾Ð¿-Ð¿Ñ€Ð¸Ð»Ð¾Ð¶ÐµÐ½Ð¸Ñ.
+ * * ÃÂ½ÃÂµÃ‘ÂÃÂºÃÂ¾ÃÂ»Ã‘Å’ÃÂºÃÂ¾ ÃÂ¾Ã‘â‚¬ÃÂ³ÃÂ°ÃÂ½ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸ÃÂ¹, ÃÂºÃÂ°ÃÂ¶ÃÂ´ÃÂ°Ã‘Â Ã‘ÂÃÂ¾ Ã‘ÂÃÂ²ÃÂ¾ÃÂ¸ÃÂ¼ ÃÂºÃÂ¾ÃÂ½Ã‘â€šÃ‘â‚¬ÃÂ¾ÃÂ»ÃÂ»ÃÂµÃ‘â‚¬ÃÂ¾ÃÂ¼, Base DN ÃÂ¸ Ã‘Æ’Ã‘â€¡Ã‘â€˜Ã‘â€šÃÂºÃÂ¾ÃÂ¹;
+ * * ÃÂ¿ÃÂ°Ã‘â‚¬ÃÂ¾ÃÂ»Ã‘Å’ Ã‘Æ’Ã‘â€¦ÃÂ¾ÃÂ´ÃÂ¸Ã‘â€š ÃÂ¾Ã‘â€šÃÂ´ÃÂµÃÂ»Ã‘Å’ÃÂ½ÃÂ¾ÃÂ¹ ÃÂºÃÂ¾ÃÂ¼ÃÂ°ÃÂ½ÃÂ´ÃÂ¾ÃÂ¹ straight ÃÂ² keyring, ÃÂ¼ÃÂ¸ÃÂ½Ã‘Æ’Ã‘Â Ã‘ÂÃ‘â€šÃÂ¾Ã‘â‚¬ ÃÂ¸ config.json;
+ * * Ã‚Â«ÃÅ¸Ã‘â‚¬ÃÂ¾ÃÂ²ÃÂµÃ‘â‚¬ÃÂ¸Ã‘â€šÃ‘Å’ ÃÂ¿ÃÂ¾ÃÂ´ÃÂºÃÂ»Ã‘Å½Ã‘â€¡ÃÂµÃÂ½ÃÂ¸ÃÂµÃ‚Â» Ã¢â‚¬â€ ÃÂ´ÃÂ¸ÃÂ°ÃÂ³ÃÂ½ÃÂ¾Ã‘ÂÃ‘â€šÃÂ¸ÃÂºÃÂ° Ã‘â€¡ÃÂµÃ‘â‚¬ÃÂµÃÂ· ÃÂ±Ã‘ÂÃÂºÃÂµÃÂ½ÃÂ´ (bind + rootDSE + ÃÂ²Ã‘â€¹ÃÂ±ÃÂ¾Ã‘â‚¬ÃÂºÃÂ°);
+ * * Ã‘â‚¬Ã‘Æ’Ã‘â€¡ÃÂ½ÃÂ¾ÃÂ¹ ÃÂ·ÃÂ°ÃÂ¿Ã‘Æ’Ã‘ÂÃÂº Ã‘ÂÃÂ¸ÃÂ½Ã‘â€¦Ã‘â‚¬ÃÂ¾ÃÂ½ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸ÃÂ¸ ÃÂ¸ Ã‘ÂÃ‘â€šÃÂ°Ã‘â€šÃ‘Æ’Ã‘Â ÃÂ¿ÃÂ¾Ã‘ÂÃÂ»ÃÂµÃÂ´ÃÂ½ÃÂµÃÂ¹ ÃÂ¿ÃÂ¾ ÃÂºÃÂ°ÃÂ¶ÃÂ´ÃÂ¾ÃÂ¹ ÃÂ¾Ã‘â‚¬ÃÂ³ÃÂ°ÃÂ½ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸ÃÂ¸;
+ * * ÃÂ² ÃÂ±Ã‘â‚¬ÃÂ°Ã‘Æ’ÃÂ·ÃÂµÃ‘â‚¬ÃÂµ (ÃÂ±ÃÂµÃÂ· Tauri) Ã‘â€žÃÂ¾Ã‘â‚¬ÃÂ¼ÃÂ° Ã‘ÂÃÂºÃ‘â‚¬Ã‘â€¹Ã‘â€šÃÂ°: AD ÃÂ½ÃÂµÃÂ´ÃÂ¾Ã‘ÂÃ‘â€šÃ‘Æ’ÃÂ¿ÃÂµÃÂ½ ÃÂ²ÃÂ½ÃÂµ ÃÂ´ÃÂµÃ‘ÂÃÂºÃ‘â€šÃÂ¾ÃÂ¿-ÃÂ¿Ã‘â‚¬ÃÂ¸ÃÂ»ÃÂ¾ÃÂ¶ÃÂµÃÂ½ÃÂ¸Ã‘Â.
  */
 export function SettingsAdView() {
   const { t, i18n } = useTranslation();
@@ -57,7 +57,7 @@ export function SettingsAdView() {
 
   const { running: syncRunning, organizations: syncStates } = useSyncStatus();
 
-  /** Ð’Ð²ÐµÐ´Ñ‘Ð½Ð½Ñ‹Ðµ (ÐµÑ‰Ñ‘ Ð½Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½Ñ‘Ð½Ð½Ñ‹Ðµ) Ð¿Ð°Ñ€Ð¾Ð»Ð¸: Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ñ â†’ Ð¿Ð°Ñ€Ð¾Ð»ÑŒ. */
+  /** Ãâ€™ÃÂ²ÃÂµÃÂ´Ã‘â€˜ÃÂ½ÃÂ½Ã‘â€¹ÃÂµ (ÃÂµÃ‘â€°Ã‘â€˜ ÃÂ½ÃÂµ Ã‘ÂÃÂ¾Ã‘â€¦Ã‘â‚¬ÃÂ°ÃÂ½Ã‘â€˜ÃÂ½ÃÂ½Ã‘â€¹ÃÂµ) ÃÂ¿ÃÂ°Ã‘â‚¬ÃÂ¾ÃÂ»ÃÂ¸: ÃÂ¾Ã‘â‚¬ÃÂ³ÃÂ°ÃÂ½ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸Ã‘Â Ã¢â€ â€™ ÃÂ¿ÃÂ°Ã‘â‚¬ÃÂ¾ÃÂ»Ã‘Å’. */
   const [passwordDrafts, setPasswordDrafts] = useState<Record<string, string>>({});
   const [testingOrg, setTestingOrg] = useState<number | null>(null);
   const [removingOrg, setRemovingOrg] = useState<number | null>(null);
@@ -81,11 +81,17 @@ export function SettingsAdView() {
     const next = configs.filter((_, i) => i !== index);
     setLdapConfigs(next);
     setRemovingOrg(null);
+    // The open card may belong to the removed organization; clear it so the
+    // detail pane does not flash a load error before the next sync refreshes.
+    useAppStore.setState({ selectedId: null });
     if (desktop && removed.organization && removed.hasPassword) {
       try {
         await configApi.setPassword(removed.organization, null);
       } catch (error) {
-        console.warn('[ad-settings] Ð½Ðµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ ÑƒÐ´Ð°Ð»Ð¸Ñ‚ÑŒ ÑÐµÐºÑ€ÐµÑ‚', error);
+        console.warn(
+          '[ad-settings] ÃÂ½ÃÂµ Ã‘Æ’ÃÂ´ÃÂ°ÃÂ»ÃÂ¾Ã‘ÂÃ‘Å’ Ã‘Æ’ÃÂ´ÃÂ°ÃÂ»ÃÂ¸Ã‘â€šÃ‘Å’ Ã‘ÂÃÂµÃÂºÃ‘â‚¬ÃÂµÃ‘â€š',
+          error,
+        );
       }
     }
   };
@@ -138,7 +144,7 @@ export function SettingsAdView() {
         duration: 10_000,
       });
 
-      // ÐŸÐ¾Ð´ÑÐºÐ°Ð·ÐºÐ° rootDSE: ÐµÑÐ»Ð¸ Base DN Ð¿ÑƒÑÑ‚ â€” Ð¿Ñ€ÐµÐ´Ð»Ð°Ð³Ð°ÐµÐ¼ Ð´Ð¾Ð¼ÐµÐ½Ð½Ñ‹Ð¹ ÐºÐ¾Ñ€ÐµÐ½ÑŒ.
+      // ÃÅ¸ÃÂ¾ÃÂ´Ã‘ÂÃÂºÃÂ°ÃÂ·ÃÂºÃÂ° rootDSE: ÃÂµÃ‘ÂÃÂ»ÃÂ¸ Base DN ÃÂ¿Ã‘Æ’Ã‘ÂÃ‘â€š Ã¢â‚¬â€ ÃÂ¿Ã‘â‚¬ÃÂµÃÂ´ÃÂ»ÃÂ°ÃÂ³ÃÂ°ÃÂµÃÂ¼ ÃÂ´ÃÂ¾ÃÂ¼ÃÂµÃÂ½ÃÂ½Ã‘â€¹ÃÂ¹ ÃÂºÃÂ¾Ã‘â‚¬ÃÂµÃÂ½Ã‘Å’.
       if (!config.baseDn.trim() && result.defaultNamingContext) {
         updateOrg(index, { baseDn: result.defaultNamingContext });
         toast.info(t('settings.ad.baseDnAutofilled'), { id: 'ad-base-autofill' });
@@ -188,14 +194,14 @@ export function SettingsAdView() {
     }
   };
 
-  /** ÐŸÑ€ÐµÐ²ÑŒÑŽ Ð´ÑƒÐ±Ð»Ð¸ÐºÐ°Ñ‚Ð¾Ð²: Ð¿ÑƒÑÑ‚Ð¾ â€” Ñ‚Ð¾ÑÑ‚, Ð¸Ð½Ð°Ñ‡Ðµ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ð°ÑŽÑ‰Ð¸Ð¹ Ð´Ð¸Ð°Ð»Ð¾Ð³. */
+  /** ÃÅ¸Ã‘â‚¬ÃÂµÃÂ²Ã‘Å’Ã‘Å½ ÃÂ´Ã‘Æ’ÃÂ±ÃÂ»ÃÂ¸ÃÂºÃÂ°Ã‘â€šÃÂ¾ÃÂ²: ÃÂ¿Ã‘Æ’Ã‘ÂÃ‘â€šÃÂ¾ Ã¢â‚¬â€ Ã‘â€šÃÂ¾Ã‘ÂÃ‘â€š, ÃÂ¸ÃÂ½ÃÂ°Ã‘â€¡ÃÂµ ÃÂ¿ÃÂ¾ÃÂ´Ã‘â€šÃÂ²ÃÂµÃ‘â‚¬ÃÂ¶ÃÂ´ÃÂ°Ã‘Å½Ã‘â€°ÃÂ¸ÃÂ¹ ÃÂ´ÃÂ¸ÃÂ°ÃÂ»ÃÂ¾ÃÂ³. */
   const handleDuplicatesCheck = async () => {
     setDupBusy('preview');
     try {
       const preview = await contactsApi.previewDuplicates();
       devLog('dedup', { preview });
       if (preview.groups === 0) {
-        toast.success(t('settings.ad.duplicatesNone'));
+        toast.success(t('settings.ad.duplicatesNone'), { id: 'dedup-result' });
       } else {
         setDupPreview(preview);
       }
@@ -206,14 +212,17 @@ export function SettingsAdView() {
     }
   };
 
-  /** Ð£Ð±Ð¾Ñ€ÐºÐ° Ð´ÑƒÐ±Ð»Ð¸ÐºÐ°Ñ‚Ð¾Ð² Ñ Ð¸Ð½Ð²Ð°Ð»Ð¸Ð´Ð°Ñ†Ð¸ÐµÐ¹ Ð²Ñ‹Ð´Ð°Ñ‡ ÑÐ¿Ñ€Ð°Ð²Ð¾Ñ‡Ð½Ð¸ÐºÐ°. */
+  /** ÃÂ£ÃÂ±ÃÂ¾Ã‘â‚¬ÃÂºÃÂ° ÃÂ´Ã‘Æ’ÃÂ±ÃÂ»ÃÂ¸ÃÂºÃÂ°Ã‘â€šÃÂ¾ÃÂ² Ã‘Â ÃÂ¸ÃÂ½ÃÂ²ÃÂ°ÃÂ»ÃÂ¸ÃÂ´ÃÂ°Ã‘â€ ÃÂ¸ÃÂµÃÂ¹ ÃÂ²Ã‘â€¹ÃÂ´ÃÂ°Ã‘â€¡ Ã‘ÂÃÂ¿Ã‘â‚¬ÃÂ°ÃÂ²ÃÂ¾Ã‘â€¡ÃÂ½ÃÂ¸ÃÂºÃÂ°. */
   const handleDuplicatesApply = async () => {
     setDupBusy('apply');
     try {
       const removed = await contactsApi.deduplicate();
       devLog('dedup', { removed });
-      toast.success(t('settings.ad.duplicatesDone', { count: removed }));
+      toast.success(t('settings.ad.duplicatesDone', { count: removed }), { id: 'dedup-result' });
       setDupPreview(null);
+      // A selected card may point at a removed duplicate. Clear it before the
+      // next directory render, otherwise the detail pane flashes a load error.
+      useAppStore.setState({ selectedId: null });
       for (const key of ['contacts', 'contact', 'contacts-count', 'organizations'] as const) {
         void queryClient.invalidateQueries({ queryKey: [key] });
       }
@@ -227,7 +236,7 @@ export function SettingsAdView() {
   return (
     <div className="flex flex-col gap-5 w-full h-full relative">
       <div className="flex flex-col gap-6 pb-6">
-        {/* Ð¢ÐµÑÑ‚Ð¾Ð²Ñ‹Ð¹ Ñ€ÐµÐ¶Ð¸Ð¼ â€” Ð´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½ Ð²ÐµÐ·Ð´Ðµ (Ð² Ð±Ñ€Ð°ÑƒÐ·ÐµÑ€Ðµ Ð²ÐºÐ»ÑŽÑ‡Ð°ÐµÑ‚ Ð´ÐµÐ¼Ð¾-Ð´Ð°Ð½Ð½Ñ‹Ðµ) */}
+        {/* ÃÂ¢ÃÂµÃ‘ÂÃ‘â€šÃÂ¾ÃÂ²Ã‘â€¹ÃÂ¹ Ã‘â‚¬ÃÂµÃÂ¶ÃÂ¸ÃÂ¼ Ã¢â‚¬â€ ÃÂ´ÃÂ¾Ã‘ÂÃ‘â€šÃ‘Æ’ÃÂ¿ÃÂµÃÂ½ ÃÂ²ÃÂµÃÂ·ÃÂ´ÃÂµ (ÃÂ² ÃÂ±Ã‘â‚¬ÃÂ°Ã‘Æ’ÃÂ·ÃÂµÃ‘â‚¬ÃÂµ ÃÂ²ÃÂºÃÂ»Ã‘Å½Ã‘â€¡ÃÂ°ÃÂµÃ‘â€š ÃÂ´ÃÂµÃÂ¼ÃÂ¾-ÃÂ´ÃÂ°ÃÂ½ÃÂ½Ã‘â€¹ÃÂµ) */}
         <div className="flex items-center justify-between border border-border bg-surface p-4 rounded-[16px] shadow-sm shrink-0">
           <div className="flex flex-col gap-0.5 pr-4">
             <span className="text-[16px] font-bold text-foreground">{t('testMode')}</span>
@@ -253,7 +262,7 @@ export function SettingsAdView() {
 
         {desktop && (
           <>
-            {/* ÐžÑ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¸ */}
+            {/* ÃÅ¾Ã‘â‚¬ÃÂ³ÃÂ°ÃÂ½ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸ÃÂ¸ */}
             <section className="flex flex-col gap-4" aria-label={t('settings.adSettings')}>
               {configs.map((config, index) => (
                 <SettingsAdOrgCard
