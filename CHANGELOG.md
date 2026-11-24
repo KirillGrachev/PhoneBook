@@ -3,6 +3,32 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.26] - 2026-11-24
+
+### Fixed
+
+- Manager/dedup notifications now use stable toast IDs, so repeated clicks
+  update one toast instead of stacking identical messages.
+- Confirmation dialogs are rendered through a React portal at document level;
+  opening "Find and remove" or an AD removal confirmation no longer scrolls the
+  settings page to the top.
+- Removing the currently open saved contact clears `selectedId` immediately, and
+  AD duplicate/org removal clears it too, so the detail pane does not flash
+  "Could not load contact" until a restart.
+
+### Security
+
+- Updated `cookie` 0.18.2 → 0.18.3 (RUSTSEC-2026-0594) and `url` 2.5.8 → 2.5.9
+  (RUSTSEC-2026-0592), clearing both open CodeQL dependency alerts.
+
+### Internal
+
+- Added a regression test proving repeated external-file refresh replaces rows
+  instead of accumulating them in `users`, `users_fts`, `users_substr` or
+  `sync_meta`.
+- Updated the stale empty-search E2E; frontend tests: **104**, Rust: **144**
+  normal / **147** embedded.
+
 ## [0.2.25] - 2026-11-21
 
 ### Fixed
@@ -422,7 +448,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.25...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.26...HEAD
+[0.2.26]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.25...v0.2.26
 [0.2.25]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.24...v0.2.25
 [0.2.24]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.23...v0.2.24
 [0.2.23]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.22...v0.2.23
