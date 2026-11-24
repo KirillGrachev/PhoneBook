@@ -57,13 +57,20 @@ export function SettingsAdDuplicates({
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
             <div className="relative bg-surface w-full max-w-[420px] rounded-[20px] shadow-2xl border border-border p-6 flex flex-col gap-4 z-10">
               <h3 className="text-[18px] font-bold text-foreground m-0">{t('settings.ad.duplicatesConfirmTitle')}</h3>
-              <p className="text-[14px] text-muted-foreground leading-relaxed m-0">
-                {t('settings.ad.duplicatesConfirmMsg', {
-                  groups: preview.groups,
-                  records: preview.removable,
-                  samples: preview.samples.join(', '),
-                })}
-              </p>
+              <div className="flex flex-col gap-2 text-[14px] leading-relaxed text-muted-foreground">
+                <p className="m-0 font-semibold text-foreground">
+                  {t('settings.ad.duplicatesConfirmGroups', { count: preview.groups })}
+                </p>
+                <p className="m-0">{t('settings.ad.duplicatesConfirmRemovable', { count: preview.removable })}</p>
+                {preview.samples.length > 0 && (
+                  <p className="m-0 text-[13px]">
+                    {t('settings.ad.duplicatesConfirmSamples', {
+                      samples: preview.samples.join(', '),
+                    })}
+                  </p>
+                )}
+                <p className="m-0 text-[13px]">{t('settings.ad.duplicatesConfirmNote')}</p>
+              </div>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
