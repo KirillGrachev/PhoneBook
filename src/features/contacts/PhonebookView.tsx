@@ -211,10 +211,10 @@ export function PhonebookView() {
         if (match) {
           setSelectedId(match.id);
         } else {
-          toast.info(t('managerNotFound'));
+          toast.info(t('managerNotFound'), { id: 'manager-not-found' });
         }
       } catch {
-        toast.error(t('errorLoadContacts'));
+        toast.error(t('errorLoadContacts'), { id: 'manager-lookup-error' });
       }
     },
     [setSelectedId, t],

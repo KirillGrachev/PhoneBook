@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
 interface SettingsAdRemoveDialogProps {
@@ -6,11 +7,15 @@ interface SettingsAdRemoveDialogProps {
   onConfirm: () => void;
 }
 
-/** Подтверждение удаления организации AD. */
+/** Confirmation for removing an AD organization. */
 export function SettingsAdRemoveDialog({ organization, onCancel, onConfirm }: SettingsAdRemoveDialogProps) {
   const { t } = useTranslation();
 
-  return (
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(
     <div
       className="fixed inset-0 top-[32px] z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       role="alertdialog"
@@ -38,6 +43,7 @@ export function SettingsAdRemoveDialog({ organization, onCancel, onConfirm }: Se
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
