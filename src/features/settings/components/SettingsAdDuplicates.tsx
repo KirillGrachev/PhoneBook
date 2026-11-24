@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
 import { Loader2, Trash } from '@/components/icons';
@@ -45,43 +46,46 @@ export function SettingsAdDuplicates({
         </button>
       </section>
 
-      {preview && (
-        <div
-          className="fixed inset-0 top-[32px] z-[100] flex items-center justify-center p-4"
-          role="alertdialog"
-          aria-modal="true"
-        >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-          <div className="relative bg-surface w-full max-w-[420px] rounded-[20px] shadow-2xl border border-border p-6 flex flex-col gap-4 z-10">
-            <h3 className="text-[18px] font-bold text-foreground m-0">{t('settings.ad.duplicatesConfirmTitle')}</h3>
-            <p className="text-[14px] text-muted-foreground leading-relaxed m-0">
-              {t('settings.ad.duplicatesConfirmMsg', {
-                groups: preview.groups,
-                records: preview.removable,
-                samples: preview.samples.join(', '),
-              })}
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-[12px] text-[14px] font-bold text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors outline-none cursor-pointer"
-              >
-                {t('settings.orgGroupsCancel')}
-              </button>
-              <button
-                type="button"
-                onClick={onApply}
-                disabled={busy !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-[12px] bg-primary text-white text-[14px] font-bold hover:bg-primary-hover transition-colors outline-none cursor-pointer disabled:opacity-60"
-              >
-                {busy === 'apply' && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
-                {t('settings.ad.duplicatesApply')}
-              </button>
+      {preview &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 top-[32px] z-[100] flex items-center justify-center p-4"
+            role="alertdialog"
+            aria-modal="true"
+          >
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-surface w-full max-w-[420px] rounded-[20px] shadow-2xl border border-border p-6 flex flex-col gap-4 z-10">
+              <h3 className="text-[18px] font-bold text-foreground m-0">{t('settings.ad.duplicatesConfirmTitle')}</h3>
+              <p className="text-[14px] text-muted-foreground leading-relaxed m-0">
+                {t('settings.ad.duplicatesConfirmMsg', {
+                  groups: preview.groups,
+                  records: preview.removable,
+                  samples: preview.samples.join(', '),
+                })}
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-[12px] text-[14px] font-bold text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors outline-none cursor-pointer"
+                >
+                  {t('settings.orgGroupsCancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={onApply}
+                  disabled={busy !== null}
+                  className="flex items-center gap-2 px-4 py-2 rounded-[12px] bg-primary text-white text-[14px] font-bold hover:bg-primary-hover transition-colors outline-none cursor-pointer disabled:opacity-60"
+                >
+                  {busy === 'apply' && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
+                  {t('settings.ad.duplicatesApply')}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
