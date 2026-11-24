@@ -159,12 +159,19 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
   toggleSavedContact: (id) =>
     set((state) => {
       const ids = new Set(state.savedContactIds);
-      if (ids.has(id)) {
+      const wasSaved = ids.has(id);
+      if (wasSaved) {
         ids.delete(id);
       } else {
         ids.add(id);
       }
-      return { savedContactIds: [...ids] };
+      return {
+        savedContactIds: [...ids],
+        // Removing the open card must clear the selection immediately;
+        // otherwise the detail pane requests a deleted contact and flashes
+        // "Could not load contact" until another tab refreshes the list.
+        selectedId: wasSaved && state.selectedId === id ? null : state.selectedId,
+      };
     }),
 });
 
