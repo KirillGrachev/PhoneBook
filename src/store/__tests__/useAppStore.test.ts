@@ -28,6 +28,17 @@ describe('useAppStore', () => {
     expect(useAppStore.getState().savedContactIds).toEqual(['g3']);
   });
 
+  it('removing the selected saved contact clears the selection immediately', () => {
+    const { toggleSavedContact } = useAppStore.getState();
+    toggleSavedContact('g1');
+    useAppStore.setState({ selectedId: 'g1' });
+
+    toggleSavedContact('g1');
+
+    expect(useAppStore.getState().savedContactIds).toEqual([]);
+    expect(useAppStore.getState().selectedId).toBeNull();
+  });
+
   it('saveOrgGroup создаёт и обновляет группы, removeOrgGroup снимает ссылку вкладки', () => {
     useAppStore.setState({ orgGroups: [], enterpriseGroupId: null });
     const { saveOrgGroup, removeOrgGroup, setEnterpriseGroupId } = useAppStore.getState();
