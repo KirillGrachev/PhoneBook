@@ -6,12 +6,12 @@ interface TextFieldProps extends Omit<ComponentProps<'input'>, 'className'> {
   label: string;
   hint?: ReactNode;
   error?: string | null;
-  /** Дополнительные классы самого input (например, font-mono). */
+  /** Extra classes of the input itself (e.g. font-mono). */
   className?: string;
   containerClassName?: string;
 }
 
-/** Подписанное текстовое поле настроек с единым стилем и подсказкой. */
+/** A labeled settings text field with a unified style and a hint. */
 export function TextField({ label, hint, error, className, containerClassName, id, ...inputProps }: TextFieldProps) {
   const fieldId = id ?? `field-${label.replace(/\s+/g, '-').toLowerCase()}`;
   return (

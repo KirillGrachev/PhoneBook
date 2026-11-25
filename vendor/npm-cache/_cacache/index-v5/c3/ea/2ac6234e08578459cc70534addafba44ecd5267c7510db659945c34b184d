@@ -1,0 +1,2 @@
+
+bc2b480837387e76bcf0c7f400159255ddfe7f66	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/is-glob/-/is-glob-4.0.3.tgz","integrity":"sha512-xelSayHH36ZgE7ZWhli7pW34hNbNl8Ojv5KVmkJD4hBdD3th8Tfk9vYasLM+mXWOZhFkgZfxhLSnrwRr4elSSg==","time":1795604143209,"size":4255,"metadata":{"time":1795604143208,"url":"https://registry.npmjs.org/is-glob/-/is-glob-4.0.3.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

@@ -1,9 +1,9 @@
 fn main() {
-    // Иконки вкомпиливаются в exe-ресурс (tauri-winres) и в бинарник
-    // (tauri::generate_context!: иконка окна и трея), но ни tauri-build, ни
-    // макрос не следят за файлами иконок. Явно объявляем зависимость
-    // build-скрипта от каждого файла: замена логотипа гарантированно
-    // пересобирает ресурсы окна, трея и установщика.
+    // The icons are compiled into the exe resource (tauri-winres) and into the binary
+    // (tauri::generate_context!: the window and tray icon), but neither tauri-build nor
+    // macro does not track icon files. Explicitly declare the dependency
+    // of the build script from every file: replacing the logo is guaranteed
+    // rebuilds the window, tray, and installer resources.
     for icon in [
         "icons/32x32.png",
         "icons/128x128.png",

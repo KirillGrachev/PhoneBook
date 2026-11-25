@@ -1,0 +1,2 @@
+
+6bd5e28b68e0334361c0c72bc0270980b0568d29	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/p-locate/-/p-locate-5.0.0.tgz","integrity":"sha512-LaNjtRWUBY++zB5nE/NwcaoMylSPk+S+ZHNB1TzdbMJMny6dynpAGt7X/tl/QYq3TIeE6nxHppbo2LGymrG5Pw==","time":1795604143571,"size":3151,"metadata":{"time":1795604143570,"url":"https://registry.npmjs.org/p-locate/-/p-locate-5.0.0.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

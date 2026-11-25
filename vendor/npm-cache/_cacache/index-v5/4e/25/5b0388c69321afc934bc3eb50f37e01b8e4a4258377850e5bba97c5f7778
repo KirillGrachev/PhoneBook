@@ -1,0 +1,2 @@
+
+e5e5f9b49e22a5f88d2960adb89d599fa8465683	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/lz-string/-/lz-string-1.5.0.tgz","integrity":"sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==","time":1795604143401,"size":36908,"metadata":{"time":1795604143399,"url":"https://registry.npmjs.org/lz-string/-/lz-string-1.5.0.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

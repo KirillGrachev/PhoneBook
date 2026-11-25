@@ -1,0 +1,2 @@
+
+3d44485d69f9bc27061a901379a0c667fb60aebb	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/deep-is/-/deep-is-0.1.4.tgz","integrity":"sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==","time":1795604143005,"size":3400,"metadata":{"time":1795604143003,"url":"https://registry.npmjs.org/deep-is/-/deep-is-0.1.4.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

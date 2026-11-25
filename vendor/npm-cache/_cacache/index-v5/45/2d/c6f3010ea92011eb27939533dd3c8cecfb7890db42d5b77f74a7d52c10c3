@@ -1,0 +1,2 @@
+
+7b90cb1c7a2709dda89bd4620832367a0dc4f989	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/react/-/react-19.3.1.tgz","integrity":"sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==","time":1795604143761,"size":26394,"metadata":{"time":1795604143711,"url":"https://registry.npmjs.org/react/-/react-19.3.1.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

@@ -1,0 +1,2 @@
+
+e5bd9a188e158f3256888a91d9f31a58bda873a9	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/vite/-/vite-8.3.8.tgz","integrity":"sha512-LzOn3h9rG/0vhLdXrV4yJ4QFA9eEoqCl+Yx+kGJd7aB9w6nfNgVHKSYwLPZUHrz4ZGa+t+kXjV9itvcHDLQouA==","time":1795604144068,"size":592262,"metadata":{"time":1795604144013,"url":"https://registry.npmjs.org/vite/-/vite-8.3.8.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:44 GMT"},"options":{"compress":true}}}

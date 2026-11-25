@@ -1,4 +1,4 @@
-//! Генерация vCard для QR-кода контакта.
+//! vCard generation for a contact QR code.
 
 use crate::services::vcard::{self, VCardInput};
 

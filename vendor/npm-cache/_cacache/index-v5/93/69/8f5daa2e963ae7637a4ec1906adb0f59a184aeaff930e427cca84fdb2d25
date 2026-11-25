@@ -1,0 +1,2 @@
+
+e2db39cbc6c97991fbf579da100a69a7be11da0b	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/esquery/-/esquery-1.7.0.tgz","integrity":"sha512-Ap6G0WQwcU/LHsvLwON1fAQX9Zp0A2Y6Y/cJBl9r/JbW90Zyg4/zbG6zzKa2OTALELarYHmKu0GhpM5EO+7T0g==","time":1795604143089,"size":166185,"metadata":{"time":1795604143086,"url":"https://registry.npmjs.org/esquery/-/esquery-1.7.0.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

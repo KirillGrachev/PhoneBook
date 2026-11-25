@@ -11,19 +11,19 @@ import { personNameForLanguage } from '@/lib/transliteration';
 import { useAppStore } from '@/store/useAppStore';
 import { useContactCount } from '@/hooks/useDirectory';
 
-/** Снимок статуса синхронизации для UI. */
+/** A synchronization status snapshot for the UI. */
 export interface SyncState {
-  /** Идёт ли синхронизация прямо сейчас (live-события + статус бэкенда). */
+  /** Whether synchronization is running right now (live events + backend status). */
   running: boolean;
-  /** Сколько записей загружено в текущем прогоне (для прогресса). */
+  /** How many records are loaded in the current run (for progress). */
   fetched: number;
   organizations: OrgSyncStateDto[];
 }
 
-/** Ключи react-query, инвалидируемые после завершения синхронизации. */
+/** react-query keys invalidated after synchronization completes. */
 const SYNC_TOAST_ID = 'sync-status-toast';
 
-/** Кэши справочника, устаревающие после синхронизации и загрузки внешних файлов. */
+/** Directory caches that become stale after sync and external file loading. */
 export const DIRECTORY_QUERY_KEYS = [
   ['contacts'],
   ['contact'],
@@ -33,11 +33,11 @@ export const DIRECTORY_QUERY_KEYS = [
 ] as const;
 
 /**
- * Сводный статус фоновой синхронизации AD.
+ * Aggregated status of the background AD synchronization.
  *
- * Комбинирует периодический опрос `get_sync_status` с live-событиями
- * канала `directory-sync`: UI реагирует мгновенно, а опрос страхует
- * от пропущенных событий (перезапуск окна и т.п.).
+ * Combines periodic polling of `get_sync_status` with live events
+ * of the `directory-sync` channel: the UI reacts instantly, and polling backs it up
+ * against missed events (window restart, etc.).
  */
 export function useSyncStatus(): SyncState {
   const queryClient = useQueryClient();
@@ -58,9 +58,9 @@ export function useSyncStatus(): SyncState {
     fetched: 0,
   });
 
-  // Первый прогон (кэш пуст) показывает полноэкранный экран синхронизации —
-  // дублировать его тостом снизу не нужно; тосты остаются для фоновых
-  // синхронизаций, когда большого экрана нет.
+  // The first run (empty cache) shows a full-screen synchronization screen —
+  // no need to duplicate it with a bottom toast; toasts remain for background
+  // syncs when there is no large screen.
   const { data: contactCount } = useContactCount();
   const countRef = useRef(contactCount ?? 0);
   countRef.current = contactCount ?? 0;
@@ -89,8 +89,8 @@ export function useSyncStatus(): SyncState {
           }
           break;
         case 'error':
-          // Ошибка синхронизации — тост снизу (единый стиль уведомлений),
-          // детали по организациям остаются в настройках AD.
+          // A synchronization error is a toast at the bottom (a unified notification style),
+          // organization details remain in the AD settings.
           toast.dismiss(SYNC_TOAST_ID);
           toast.error(event.message || t('errorLoadContacts'), {
             id: 'sync-error-toast',
@@ -100,9 +100,9 @@ export function useSyncStatus(): SyncState {
         case 'finished':
           setLive((prev) => ({ ...prev, fetched: event.count ?? prev.fetched }));
           if (toastsEnabledRef.current) {
-            // Название организации приходит из AD по-русски. В английской
-            // локали показываем его по тем же правилам транслитерации, что и
-            // имена контактов, чтобы уведомление не было наполовину русским.
+            // The organization name comes from AD in Russian. In the English
+            // locale we show it using the same transliteration rules as
+            // contact names, so the notification is not half Russian.
             const organization = personNameForLanguage(event.organization ?? '', i18n.language);
             toast.success(t('sync.finished', { count: event.count ?? 0, org: organization }), {
               id: SYNC_TOAST_ID,

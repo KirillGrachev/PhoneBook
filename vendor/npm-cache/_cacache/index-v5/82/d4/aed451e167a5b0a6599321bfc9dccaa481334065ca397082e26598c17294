@@ -1,0 +1,2 @@
+
+80588e64a022aebe485bd93c07b7223749c83aed	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/@humanfs/core/-/core-0.19.2.tgz","integrity":"sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==","time":1795604141882,"size":14260,"metadata":{"time":1795604141880,"url":"https://registry.npmjs.org/@humanfs/core/-/core-0.19.2.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:41 GMT"},"options":{"compress":true}}}

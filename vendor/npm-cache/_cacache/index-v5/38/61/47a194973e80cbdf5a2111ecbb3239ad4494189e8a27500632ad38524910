@@ -1,0 +1,2 @@
+
+53880ef4e85546763215f7fb680a7f3523a362ca	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/rolldown/-/rolldown-1.2.18.tgz","integrity":"sha512-C1uuT3UR60SShuCaPQFAAZyefJCWZlAKB02BV3BuPE2Rs4fevRQltEKoFO2tV5W9/eJhU5RieV6vJj3euulfNQ==","time":1795604143879,"size":205236,"metadata":{"time":1795604143876,"url":"https://registry.npmjs.org/rolldown/-/rolldown-1.2.18.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

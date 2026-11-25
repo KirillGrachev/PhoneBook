@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import FocusLock from 'react-focus-lock';
+import FocusLock from '@/components/ui/FocusLock';
 
 interface ActionConfirmModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface ActionConfirmModalProps {
   onCancel: () => void;
 }
 
-/** Подтверждение внешнего действия (письмо / звонок в TrueConf). */
+/** Confirmation of an external action (email / TrueConf call). */
 export function ActionConfirmModal({ isOpen, type, fullName, email, onConfirm, onCancel }: ActionConfirmModalProps) {
   const { t } = useTranslation();
 
@@ -23,7 +23,7 @@ export function ActionConfirmModal({ isOpen, type, fullName, email, onConfirm, o
   return createPortal(
     <AnimatePresence>
       {isOpen && type && (
-        <FocusLock returnFocus>
+        <FocusLock returnFocus={{ preventScroll: true }} focusOptions={{ preventScroll: true }}>
           <div
             className="fixed inset-0 top-[32px] z-[100] flex items-center justify-center p-4"
             role="alertdialog"

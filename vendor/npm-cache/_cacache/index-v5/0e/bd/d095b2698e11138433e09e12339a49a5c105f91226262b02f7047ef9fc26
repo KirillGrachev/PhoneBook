@@ -1,0 +1,2 @@
+
+1784ee697a43f889cbd948c26223e477044fec9a	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/hashery/-/hashery-1.5.1.tgz","integrity":"sha512-iZyKG96/JwPz1N55vj2Ie2vXbhu440zfUfJvSwEqEbeLluk7NnapfGqa7LH0mOsnDxTF85Mx8/dyR6HfqcbmbQ==","time":1795604143184,"size":67625,"metadata":{"time":1795604143182,"url":"https://registry.npmjs.org/hashery/-/hashery-1.5.1.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

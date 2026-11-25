@@ -1,4 +1,4 @@
-//! Установка соединения и аутентификация (StartTLS/LDAPS, GSSAPI/SSPI).
+//! Connection setup and authentication (StartTLS/LDAPS, GSSAPI/SSPI).
 
 use ldap3::{LdapConnAsync, LdapConnSettings};
 use tokio::task::JoinHandle;
@@ -10,12 +10,12 @@ use super::errors::{auth_error_text, classify_error};
 use super::model::DirectoryCredentials;
 use super::parse::non_empty;
 
-/// LDAP-соединение вместе с задачей драйвера.
+/// LDAP connection together with the driver task.
 ///
-/// `ldap3::drive!` запускает драйвер отдельной задачей и теряет её handle.
-/// После `unbind` такая задача может ещё жить до закрытия сокета сервером и
-/// позже писать `socket shutdown error` в лог. Держим handle сами и
-/// останавливаем драйвер при уничтожении сессии.
+/// `ldap3::drive!` starts the driver as a separate task and loses its handle.
+/// After `unbind`, such a task may still live until the server closes the socket and
+/// later write `socket shutdown error` to the log. We keep the handle ourselves and
+/// stop the driver when the session is destroyed.
 pub(super) struct LdapSession {
     pub(super) ldap: ldap3::Ldap,
     /// URL of the controller that accepted the connection.
@@ -52,14 +52,14 @@ pub(super) async fn connect(
 
         match LdapConnAsync::with_settings(settings, url).await {
             Ok((conn, ldap)) => {
-                // Драйвер соединения должен жить всё время работы с LDAP. В
-                // отличие от `ldap3::drive!`, сохраняем handle, чтобы завершить
-                // задачу вместе с сессией, а не оставлять сокет до таймаута
-                // контроллера домена.
+                // The connection driver must live for the whole time we work with LDAP.
+                // Unlike `ldap3::drive!`, we keep the handle to terminate
+                // the task together with the session, rather than leaving the socket until the
+                // domain controller times out.
                 let driver = tokio::spawn(async move {
                     if let Err(error) = conn.drive().await {
-                        // Штатное закрытие соединения после unbind тоже приходит
-                        // сюда; это не ошибка синхронизации, поэтому debug.
+                        // A normal connection close after unbind also arrives
+                        // here; this is not a sync error, hence debug.
                         debug!(error = %error, "LDAP: драйвер соединения завершён");
                     }
                 });
@@ -93,7 +93,7 @@ fn url_candidates(raw: &str) -> Vec<&str> {
         .collect()
 }
 
-/// Извлекает FQDN хоста из LDAP-URL (нужен для SPN `ldap/<fqdn>` в GSSAPI).
+/// Extracts the host FQDN from an LDAP URL (needed for the SPN `ldap/<fqdn>` in GSSAPI).
 #[cfg(any(windows, test))]
 fn extract_host_fqdn(url: &str) -> String {
     let without_scheme = url.split_once("://").map(|(_, rest)| rest).unwrap_or(url);
@@ -101,11 +101,11 @@ fn extract_host_fqdn(url: &str) -> String {
     host_port.split(':').next().unwrap_or(host_port).to_string()
 }
 
-/// Аутентификация: SASL GSSAPI под текущей сессией Windows (если включена),
-/// иначе простой bind учётной записью, иначе анонимно. Возвращает длительность, мс.
-/// Пароль LDAP — секрет, который нельзя отправлять по `ldap://` без
-/// StartTLS. Анонимный bind и GSSAPI не используют пароль, поэтому их
-/// ограничение не касается; для пароля обязателен `ldaps://` или StartTLS.
+/// Authentication: SASL GSSAPI under the current Windows session (if enabled),
+/// otherwise a simple bind with the account, otherwise anonymously. Returns the duration, ms.
+/// The LDAP password is a secret that must not be sent over `ldap://` without
+/// StartTLS. Anonymous bind and GSSAPI do not use a password, so their
+/// restriction does not apply; for a password, `ldaps://` or StartTLS is required.
 fn validate_transport_security(credentials: &DirectoryCredentials<'_>) -> Result<(), AppError> {
     let has_password = credentials
         .password
@@ -133,7 +133,7 @@ pub(super) async fn bind(
     if credentials.use_integrated_auth {
         #[cfg(windows)]
         {
-            // Kerberos/NTLM-билет текущего вошедшего в систему пользователя (SSPI).
+            // Kerberos/NTLM ticket of the current logged-in system user (SSPI).
             let fqdn = extract_host_fqdn(url);
             debug!(fqdn = %fqdn, "LDAP: интегрированная аутентификация (GSSAPI/SSPI)");
             let result = ldap

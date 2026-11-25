@@ -1,0 +1,2 @@
+
+8179cd8c5516a817fec02ca8de2f63e2709e988b	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/dequal/-/dequal-2.0.3.tgz","integrity":"sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==","time":1795604143003,"size":4286,"metadata":{"time":1795604143001,"url":"https://registry.npmjs.org/dequal/-/dequal-2.0.3.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

@@ -1,0 +1,2 @@
+
+3b398bd33c80d5e0edf4deae87ff0826e3a997b0	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/word-wrap/-/word-wrap-1.2.5.tgz","integrity":"sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==","time":1795604144105,"size":4409,"metadata":{"time":1795604144091,"url":"https://registry.npmjs.org/word-wrap/-/word-wrap-1.2.5.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:44 GMT"},"options":{"compress":true}}}

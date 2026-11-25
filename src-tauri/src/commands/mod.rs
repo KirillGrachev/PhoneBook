@@ -6,15 +6,15 @@ pub mod vcard;
 
 use crate::error::AppError;
 
-/// Выполнить блокирующую работу вне главного потока.
+/// Run blocking work off the main thread.
 ///
-/// В Tauri v2 **синхронные** команды исполняются на главном потоке окна
-/// (цикл событий окна/WebView). Ожидание мьютекса кэша в такой команде
-/// (например, пока фоновая синхронизация держит его в большой транзакции)
-/// замораживает всё окно: не печатает ввод, не тянется за заголовок,
-/// курсор не обновляется. Поэтому все команды, обращающиеся к SQLite,
-/// конфигурации или keyring, обёрнуты в `spawn_blocking`: главный поток
-/// лишь ждёт готовый результат в async-задаче, окно остаётся отзывчивым.
+/// In Tauri v2, **synchronous** commands run on the window's main thread
+/// (the window/WebView event loop). Waiting for the cache mutex in such a command
+/// (e.g. while background sync holds it in a large transaction)
+/// freezes the whole window: it does not print input, cannot be dragged by the title bar,
+/// the cursor is not updated. Therefore all commands accessing SQLite,
+/// configuration or keyring, are wrapped in `spawn_blocking`: the main thread
+/// only waits for the ready result in an async task; the window stays responsive.
 pub(crate) async fn run_blocking<F, T>(job: F) -> Result<T, AppError>
 where
     F: FnOnce() -> Result<T, AppError> + Send + 'static,

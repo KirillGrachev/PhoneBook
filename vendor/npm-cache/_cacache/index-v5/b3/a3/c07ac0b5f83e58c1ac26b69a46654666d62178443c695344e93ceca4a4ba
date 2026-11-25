@@ -1,0 +1,2 @@
+
+18c211824c1fa189a01b47afd87c97beeed41823	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/tapable/-/tapable-2.3.3.tgz","integrity":"sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A==","time":1795604143927,"size":18600,"metadata":{"time":1795604143923,"url":"https://registry.npmjs.org/tapable/-/tapable-2.3.3.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

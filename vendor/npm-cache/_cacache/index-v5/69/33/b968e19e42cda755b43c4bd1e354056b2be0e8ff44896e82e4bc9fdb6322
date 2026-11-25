@@ -1,0 +1,2 @@
+
+4a96e2957dfeab87f8c901b289386ebe1c5c54cb	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/clsx/-/clsx-2.1.1.tgz","integrity":"sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==","time":1795604142964,"size":3936,"metadata":{"time":1795604142957,"url":"https://registry.npmjs.org/clsx/-/clsx-2.1.1.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:42 GMT"},"options":{"compress":true}}}

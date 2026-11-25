@@ -1,19 +1,19 @@
 /**
- * Подписка на события бэкенда с корректной асинхронной отпиской.
+ * Subscription to backend events with correct asynchronous unsubscription.
  *
- * `listen()` возвращает промис функции отписки; наивный код теряет unlisten
- * при быстром unmount (утечка подписок). Здесь промис «догоняется» флагом
- * disposed — отписка гарантирована в любом порядке.
+ * `listen()` returns a promise of an unsubscribe function; naive code loses the unlisten
+ * on a fast unmount (subscription leak). Here the promise is "caught up" with a flag
+ * disposed — unsubscription is guaranteed in any order.
  */
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
 import { isTauri } from './backend';
 import type { SyncEventDto } from './contracts';
 
-/** Имя Tauri-события прогресса синхронизации. */
+/** The name of the Tauri synchronization progress event. */
 export const SYNC_EVENT_NAME = 'directory-sync';
 
-/** Подписка на события синхронизации. Возвращает функцию отписки. */
+/** Subscription to synchronization events. Returns an unsubscribe function. */
 export function onSyncEvent(handler: (event: SyncEventDto) => void): () => void {
   if (!isTauri()) {
     return () => {};
@@ -30,7 +30,7 @@ export function onSyncEvent(handler: (event: SyncEventDto) => void): () => void 
         unlisten = unlistenFn;
       }
     })
-    .catch((error) => console.warn('[events] не удалось подписаться на directory-sync', error));
+    .catch((error) => console.warn('[events] failed to subscribe to directory-sync', error));
 
   return () => {
     disposed = true;

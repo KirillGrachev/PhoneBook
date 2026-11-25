@@ -1,13 +1,13 @@
-//! Файлы обмена настройками: перенос конфигурации между машинами.
+//! Settings exchange files: transferring configuration between machines.
 //!
-//! Группы организаций и вся конфигурация живут в локальном `config.json`
-//! (SQLite-кэш — только восстанавливаемое зеркало AD). Файлы обмена — способ
-//! передать эти настройки на другой ПК: экспорт пишет их в «Документы»,
-//! импорт читает и проверяет формат до применения.
+//! Organization groups and all configuration live in the local `config.json`
+//! (the SQLite cache is only a recoverable mirror of AD). Exchange files are a way
+//! transfer these settings to another PC: export writes them to "Documents",
+//! import reads and validates the format before applying it.
 //!
-//! Форматы самодокументируемые и версионируемые: маркер `format` защищает от
-//! случайного импорта чужого JSON, `version` — от файлов будущего формата.
-//! Секреты (пароли LDAP) не покидают машину ни в одном из форматов.
+//! The formats are self-documenting and versioned: the `format` marker protects against
+//! accidental import of foreign JSON; `version` - against future-format files.
+//! Secrets (LDAP passwords) never leave the machine in any format.
 
 use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -18,35 +18,35 @@ use crate::error::AppError;
 
 use super::model::{AppConfig, OrgGroup};
 
-/// Маркер формата: импорт чужого JSON отклоняется с понятной ошибкой.
+/// Format marker: importing foreign JSON is rejected with a clear error.
 pub const SHARE_FORMAT: &str = "kmaruda-phonebook/org-groups";
-/// Текущая версия формата.
+/// Current format version.
 pub const SHARE_VERSION: u32 = 1;
-/// Имя файла, предлагаемое при экспорте.
+/// File name suggested when exporting.
 pub const SHARE_FILE_NAME: &str = "kmaruda-org-groups.json";
 
-/// Содержимое файла обмена группами организаций.
+/// Contents of the organization group exchange file.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrgGroupsShareFile {
-    /// Маркер формата ([`SHARE_FORMAT`]).
+    /// Format marker ([`SHARE_FORMAT`]).
     pub format: String,
-    /// Версия формата ([`SHARE_VERSION`]).
+    /// Format version ([`SHARE_VERSION`]).
     pub version: u32,
-    /// Момент экспорта (unix-секунды): справочное поле для получателя.
+    /// Export moment (unix seconds): a reference field for the recipient.
     #[serde(default)]
     pub exported_at: Option<i64>,
-    /// Группы организаций (объединённые фильтры).
+    /// Organization groups (union filters).
     pub groups: Vec<OrgGroup>,
-    /// Отметка группы для вкладки «КМАруда» на машине-источнике. Может
-    /// указывать на группу, которой у получателя нет после слияния — тогда
-    /// отметка игнорируется, чужая вкладка не ломается.
+    /// Group mark for the "KMAruda" tab on the source machine. May
+    /// point to a group the recipient does not have after merging - then
+    /// the mark is ignored; someone else's tab is not broken.
     #[serde(default)]
     pub enterprise_group_id: Option<String>,
 }
 
 impl OrgGroupsShareFile {
-    /// Собрать файл обмена из текущей конфигурации.
+    /// Build an exchange file from the current configuration.
     pub fn new(groups: Vec<OrgGroup>, enterprise_group_id: Option<String>) -> Self {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -62,7 +62,7 @@ impl OrgGroupsShareFile {
         .normalized()
     }
 
-    /// Разобрать и проверить содержимое файла обмена.
+    /// Parse and validate the exchange file contents.
     pub fn parse(content: &str) -> Result<Self, AppError> {
         #[derive(Deserialize)]
         struct FormatProbe {
@@ -89,7 +89,7 @@ impl OrgGroupsShareFile {
         Ok(file.normalized())
     }
 
-    /// Проверка формата: маркер, версия, целостность групп.
+    /// Format check: marker, version, group integrity.
     pub fn validate(&self) -> Result<(), AppError> {
         if self.format != SHARE_FORMAT {
             return Err(AppError::Validation(format!(
@@ -127,8 +127,8 @@ impl OrgGroupsShareFile {
         Ok(())
     }
 
-    /// Нормализованный вид: пробелы обрезаны, пустые организации удалены,
-    /// дубли организаций внутри группы схлопнуты.
+    /// Normalized form: whitespace trimmed, empty organizations removed,
+    /// organization duplicates within the group are collapsed.
     pub fn normalized(&self) -> Self {
         let mut clone = self.clone();
         for group in &mut clone.groups {
@@ -145,44 +145,44 @@ impl OrgGroupsShareFile {
         clone
     }
 
-    /// Pretty-JSON для записи в файл обмена.
+    /// Pretty JSON for writing to the exchange file.
     pub fn render(&self) -> Result<String, AppError> {
         serde_json::to_string_pretty(self)
             .map_err(|e| AppError::Internal(format!("сериализация групп: {e}")))
     }
 }
 
-/// Маркер формата файла обмена конфигурацией.
+/// Configuration exchange file format marker.
 pub const CONFIG_SHARE_FORMAT: &str = "kmaruda-phonebook/config";
-/// Текущая версия формата файла обмена конфигурацией.
+/// Current version of the configuration exchange file format.
 pub const CONFIG_SHARE_VERSION: u32 = 1;
-/// Имя файла, предлагаемое при экспорте конфигурации.
+/// File name suggested when exporting configuration.
 pub const CONFIG_SHARE_FILE_NAME: &str = "kmaruda-config.json";
 
-/// Файл обмена конфигурацией: полный перенос настроек на другой ПК
-/// (оформление, подключения AD без секретов, группы, внешний телефонный файл).
+/// Configuration exchange file: full transfer of settings to another PC
+/// (appearance, AD connections without secrets, groups, external phone file).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigShareFile {
-    /// Маркер формата ([`CONFIG_SHARE_FORMAT`]).
+    /// Format marker ([`CONFIG_SHARE_FORMAT`]).
     pub format: String,
-    /// Версия формата ([`CONFIG_SHARE_VERSION`]).
+    /// Format version ([`CONFIG_SHARE_VERSION`]).
     pub version: u32,
-    /// Момент экспорта (unix-секунды): справочное поле для получателя.
+    /// Export moment (unix seconds): a reference field for the recipient.
     #[serde(default)]
     pub exported_at: Option<i64>,
-    /// Имя профиля раскатки (необязательно; для встроенных сборок).
+    /// Rollout profile name (optional; for embedded builds).
     #[serde(default)]
     pub profile: Option<String>,
-    /// Ревизия профиля раскатки (необязательно; для диагностики).
+    /// Rollout profile revision (optional; for diagnostics).
     #[serde(default)]
     pub revision: Option<u32>,
-    /// Конфигурация машины-источника.
+    /// Source machine configuration.
     pub config: AppConfig,
 }
 
 impl ConfigShareFile {
-    /// Собрать файл обмена из текущей конфигурации.
+    /// Build an exchange file from the current configuration.
     pub fn new(config: AppConfig) -> Self {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -198,8 +198,8 @@ impl ConfigShareFile {
         }
     }
 
-    /// Разобрать и проверить содержимое файла обмена: чужой JSON и файлы
-    /// будущих версий отклоняются до применения настроек.
+    /// Parse and validate the exchange file contents: foreign JSON and files
+    /// future versions are rejected before applying settings.
     pub fn parse(content: &str) -> Result<AppConfig, AppError> {
         let file: Self = serde_json::from_str(content).map_err(|e| {
             AppError::Config(format!(
@@ -219,15 +219,15 @@ impl ConfigShareFile {
             )));
         }
         let mut config = file.config;
-        // Флаг «пароль сохранён» машины-источника на этой машине ложён:
-        // секреты хранятся в системном хранилище и не переносятся.
+        // The source machine's "password saved" flag is false on this machine:
+        // secrets are stored in the system store and are not transferred.
         for org in &mut config.ldap_configs {
             org.has_password = false;
         }
         Ok(config)
     }
 
-    /// Pretty-JSON для записи в файл обмена.
+    /// Pretty JSON for writing to the exchange file.
     pub fn render(&self) -> Result<String, AppError> {
         serde_json::to_string_pretty(self)
             .map_err(|e| AppError::Internal(format!("сериализация конфигурации: {e}")))
@@ -256,7 +256,7 @@ mod tests {
         );
         let parsed = OrgGroupsShareFile::parse(&file.render().expect("render")).expect("roundtrip");
         assert_eq!(parsed, file);
-        // Нормализация: пробелы обрезаны, дубль организации схлопнут, пустая удалена.
+        // Normalization: spaces trimmed, an organization duplicate collapsed, an empty one removed.
         assert_eq!(parsed.groups[0].name, "КМАруда");
         assert_eq!(parsed.groups[0].orgs, vec!["КМАруда".to_string()]);
         assert_eq!(parsed.format, SHARE_FORMAT);
@@ -307,6 +307,7 @@ mod tests {
     fn config_share_roundtrip_keeps_settings() {
         let config = AppConfig {
             theme: "dark".to_string(),
+            show_avatars: false,
             external_phonebook_path: Some("C:\\PhoneBook\\yealink.xml".to_string()),
             external_phonebook_paths: vec![
                 "C:\\PhoneBook\\yealink.xml".to_string(),
@@ -331,6 +332,7 @@ mod tests {
             .expect("render");
         let parsed = ConfigShareFile::parse(&rendered).expect("parse");
         assert_eq!(parsed.theme, "dark");
+        assert!(!parsed.show_avatars);
         assert_eq!(
             parsed.external_phonebook_path,
             config.external_phonebook_path
@@ -340,7 +342,7 @@ mod tests {
             config.external_phonebook_paths
         );
         assert!(parsed.external_phonebook_enabled);
-        // Секрет не переносится: флаг пароля сбрасывается.
+        // The secret is not transferred: the password flag is reset.
         assert!(!parsed.ldap_configs[0].has_password);
         assert!(parsed.ldap_configs[0].allow_invalid_tls);
     }

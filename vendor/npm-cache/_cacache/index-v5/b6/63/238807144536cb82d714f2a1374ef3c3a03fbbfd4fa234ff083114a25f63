@@ -1,0 +1,2 @@
+
+fb703ece27f7d96b6ad4d4c6b431833f3f962c58	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz","integrity":"sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==","time":1795604143963,"size":18477,"metadata":{"time":1795604143956,"url":"https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

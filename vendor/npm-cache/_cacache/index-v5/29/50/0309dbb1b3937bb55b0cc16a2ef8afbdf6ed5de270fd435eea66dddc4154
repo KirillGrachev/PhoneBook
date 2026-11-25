@@ -1,0 +1,2 @@
+
+16000fd9dee1f5bc348388c974984d406db13178	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/magicast/-/magicast-0.5.5.tgz","integrity":"sha512-UicdXN8zQ3JHlxVq+28afMXPr1z7WNY6+7EJnzTdQWkTAlMLF5fNCCKxJHBQwGaNGR11581EiQmQzx73+MvszA==","time":1795604143495,"size":80052,"metadata":{"time":1795604143411,"url":"https://registry.npmjs.org/magicast/-/magicast-0.5.5.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

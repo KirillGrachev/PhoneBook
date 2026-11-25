@@ -17,7 +17,7 @@ interface OrgGroupCardProps {
   onDelete: () => void;
 }
 
-/** Карточка сохранённой группы организаций. */
+/** A card of a saved organization group. */
 export function OrgGroupCard({ group, pinned, onTogglePin, onEdit, onDelete }: OrgGroupCardProps) {
   const { t } = useTranslation();
 

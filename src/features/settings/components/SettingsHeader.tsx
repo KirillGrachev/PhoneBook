@@ -9,11 +9,11 @@ interface SettingsHeaderProps {
 }
 
 /**
- * Единая шапка разделов настроек.
+ * A shared header for settings sections.
  *
- * Вынесена в общий компонент, чтобы все разделы (основной, Active Directory,
- * «О программе») выровнены пиксель-в-пиксель: каждый раздел
- * держал свою копию разметки и шапки «ездили» друг относительно друга.
+ * Extracted into a shared component so that all sections (main, Active Directory,
+ * "About") are aligned pixel-for-pixel: each section
+ * kept its own copy of the markup and the headers "rode" relative to each other.
  */
 export function SettingsHeader({ title, onBack }: SettingsHeaderProps) {
   const { t } = useTranslation();

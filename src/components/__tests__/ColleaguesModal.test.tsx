@@ -12,12 +12,12 @@ vi.mock('react-i18next', () => ({
 
 const searchMock = vi.fn();
 
-// Сервис подменяем целиком: модалка ходит за выдачей только через него.
+// Replace the service entirely: the modal fetches results only through it.
 vi.mock('@/services/ContactsService', () => ({
   getContactsService: () => ({ search: (...args: unknown[]) => searchMock(...args) }),
 }));
 
-// Персист конфигурации в тестах не нужен: проверяем модалку, а не мост к Rust.
+// Config persistence is not needed in tests: we check the modal, not the bridge to Rust.
 vi.mock('@/store/configStorage', () => ({
   configStorage: {
     getItem: async () => null,
@@ -61,7 +61,7 @@ describe('ColleaguesModal', () => {
   it('загруженный список сменяет индикатор загрузки, а не подменяет его мгновенно', async () => {
     renderModal();
 
-    // Пока запрос в полёте — индикатор; после ответа прилетают строки.
+    // While the request is in flight — an indicator; after the answer the rows arrive.
     expect(screen.getByText('loading')).toBeTruthy();
     expect(await screen.findByText('Орлова Ольга Павловна')).toBeTruthy();
     expect(screen.queryByText('loading')).toBeNull();

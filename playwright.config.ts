@@ -7,6 +7,10 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:1420',
     trace: 'on-first-retry',
+    launchOptions: {
+      // Sandboxed CI containers often have a tiny /dev/shm and no user namespaces.
+      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+    },
   },
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1',
@@ -15,4 +19,3 @@ export default defineConfig({
     timeout: 120_000,
   },
 });
-

@@ -1,0 +1,2 @@
+
+914aa2b0a5b26ed32e690c1961c1d35607d988c9	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/semver/-/semver-7.8.6.tgz","integrity":"sha512-9lpSSU4Mly3mrtruwLs1eLK6+gzbzqeBFwRNjIjE+9LuDpWdYctrQlQ3ej1Ilgi7gknpsTRnPoLP8DpCHqHIJw==","time":1795604142799,"size":33566,"metadata":{"time":1795604142797,"url":"https://registry.npmjs.org/semver/-/semver-7.8.6.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:42 GMT"},"options":{"compress":true}}}

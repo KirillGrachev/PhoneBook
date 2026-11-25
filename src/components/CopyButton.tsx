@@ -14,7 +14,7 @@ interface CopyButtonProps {
 
 const COPIED_RESET_MS = 2000;
 
-/** Кнопка копирования с галочкой-подтверждением и корректной очисткой таймера. */
+/** A copy button with a confirmation checkmark and correct timer cleanup. */
 export function CopyButton({ text, className, iconClassName, variant = 'light' }: CopyButtonProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);

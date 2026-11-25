@@ -30,11 +30,11 @@ describe('OrganizationFilter', () => {
 
     await user.click(screen.getByRole('button', { name: 'filterByOrg' }));
 
-    // Группа с организациями видна, пустая группа — нет.
+    // A group with organizations is visible, an empty group is not.
     expect(screen.getByRole('menuitem', { name: /КМАруда/ })).toBeTruthy();
     expect(screen.queryByRole('menuitem', { name: /Пустая/ })).toBeNull();
 
-    // Поглощённые организации скрыты, свободная — видна.
+    // Absorbed organizations are hidden, the free one is visible.
     expect(screen.queryByRole('menuitem', { name: 'АО "Комбинат КМАруда"' })).toBeNull();
     expect(screen.queryByRole('menuitem', { name: 'ООО "Рудник Северный"' })).toBeNull();
     expect(screen.getByRole('menuitem', { name: 'АО Глобал Строй' })).toBeTruthy();

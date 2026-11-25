@@ -1,0 +1,2 @@
+
+5f5655a6fd53fcde2ff7c954de168e0108299765	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/lru-cache/-/lru-cache-5.1.1.tgz","integrity":"sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==","time":1795604143389,"size":5824,"metadata":{"time":1795604143386,"url":"https://registry.npmjs.org/lru-cache/-/lru-cache-5.1.1.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

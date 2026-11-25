@@ -1,0 +1,2 @@
+
+39d113030ec3ce3c0472f2e65c445db05a11d8c3	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/ms/-/ms-2.1.3.tgz","integrity":"sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==","time":1795604143518,"size":2967,"metadata":{"time":1795604143515,"url":"https://registry.npmjs.org/ms/-/ms-2.1.3.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

@@ -1,17 +1,17 @@
 import type { LdapOrgConfigDto, OrgGroupDto, OrgGroupsFileDto } from '@/api/contracts';
 
 /**
- * Группы организаций (объединённые фильтры): чистые функции разрешения.
+ * Organization groups (combined filters): pure resolution functions.
  *
- * Семантика (синхронизирована с бэкендом, `services/db/read.rs`):
- * * вкладка «КМАруда» не глобальной версии учитывает союз организаций
- *   группы, отмеченной в настройках; без выбранной группы — пустая выдача,
- *   без подстановки первого AD-подключения;
- * * в глобальной версии группа заменяет в фильтре поглощённые организации
+ * Semantics (synchronized with the backend, `services/db/read.rs`):
+ * * the "KMAruda" tab of the non-global version considers the union of organizations
+ *   the group starred in settings; with no group selected the result is empty,
+ *   without substituting the first AD connection;
+ * * in the global version a group replaces the organizations it absorbs in the filter
  *   ({@link collectGroupedOrgs}).
  */
 
-/** Группа по идентификатору: `null`, если идентификатор пустой или группа удалена. */
+/** Group by identifier: `null` if the identifier is empty or the group is deleted. */
 export function findOrgGroup(groups: OrgGroupDto[], id: string | null | undefined): OrgGroupDto | null {
   if (!id) {
     return null;
@@ -19,7 +19,7 @@ export function findOrgGroup(groups: OrgGroupDto[], id: string | null | undefine
   return groups.find((group) => group.id === id) ?? null;
 }
 
-/** Настройки, которые участвуют в фильтрации справочника. */
+/** Settings that participate in directory filtering. */
 export interface DirectoryScope {
   ldapConfigs: LdapOrgConfigDto[];
   groups: OrgGroupDto[];
@@ -27,8 +27,8 @@ export interface DirectoryScope {
 }
 
 /**
- * В тестовом режиме реальные AD-подключения скрываются, но локальные группы
- * остаются доступны — иначе нельзя проверить выбор группы звездой на демо-данных.
+ * In test mode real AD connections are hidden, but local groups
+ * remain available — otherwise the starred group selection cannot be checked on demo data.
  */
 export function resolveDirectoryScope(
   testMode: boolean,
@@ -43,9 +43,9 @@ export function resolveDirectoryScope(
 }
 
 /**
- * Организации вкладки «КМАруда»: союз организаций группы, отмеченной
- * звездой. Без выбранной группы возвращается пустой массив: вкладка не
- * должна подставлять первое AD-подключение и показывать весь холдинг.
+ * Organizations of the "KMAruda" tab: the union of organizations of the group
+ * with a star. With no group selected an empty array is returned: the tab
+ * must not substitute the first AD connection and show the whole holding.
  */
 export function resolveEnterpriseOrgs(
   _ldapConfigs: LdapOrgConfigDto[],
@@ -55,7 +55,7 @@ export function resolveEnterpriseOrgs(
   return groupOrgNames(findOrgGroup(groups, enterpriseGroupId));
 }
 
-/** Организации группы без пустых значений; `null`-группа → пустой список. */
+/** Group organizations without empty values; a `null` group → an empty list. */
 function groupOrgNames(group: OrgGroupDto | null): string[] {
   if (!group) {
     return [];
@@ -63,7 +63,7 @@ function groupOrgNames(group: OrgGroupDto | null): string[] {
   return group.orgs.map((org) => org.trim()).filter((org) => org !== '');
 }
 
-/** Имя объединённого фильтра предприятия для плейсхолдеров поиска. */
+/** The name of the combined enterprise filter for search placeholders. */
 export function resolveEnterpriseName(
   _ldapConfigs: LdapOrgConfigDto[],
   groups: OrgGroupDto[],
@@ -76,7 +76,7 @@ export function resolveEnterpriseName(
   return null;
 }
 
-/** Организации, поглощённые группами: в глобальной версии их заменяет группа. */
+/** Organizations absorbed by groups: in the global version a group replaces them. */
 export function collectGroupedOrgs(groups: OrgGroupDto[]): Set<string> {
   const grouped = new Set<string>();
   for (const group of groups) {
@@ -90,7 +90,7 @@ export function collectGroupedOrgs(groups: OrgGroupDto[]): Set<string> {
   return grouped;
 }
 
-/** Идентификатор новой группы: UUID среды с фолбэком для сред без `crypto.randomUUID`. */
+/** New group identifier: the environment UUID with a fallback for environments without `crypto.randomUUID`. */
 export function newOrgGroupId(): string {
   const cryptoApi = globalThis.crypto;
   if (cryptoApi && typeof cryptoApi.randomUUID === 'function') {
@@ -99,23 +99,23 @@ export function newOrgGroupId(): string {
   return `org-group-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/* ============================= файл обмена группами ============================= */
+/* ============================= group exchange file ============================= */
 
-/** Маркер формата файла обмена (зеркалит Rust `SHARE_FORMAT`). */
+/** The exchange file format marker (mirrors Rust `SHARE_FORMAT`). */
 export const ORG_GROUPS_SHARE_FORMAT = 'kmaruda-phonebook/org-groups';
-/** Версия формата файла обмена (зеркалит Rust `SHARE_VERSION`). */
+/** Exchange file format version (mirrors Rust `SHARE_VERSION`). */
 export const ORG_GROUPS_SHARE_VERSION = 1;
-/** Маркер полного файла конфигурации (зеркалит Rust `CONFIG_SHARE_FORMAT`). */
+/** The full configuration file marker (mirrors Rust `CONFIG_SHARE_FORMAT`). */
 export const CONFIG_SHARE_FORMAT = 'kmaruda-phonebook/config';
-/** Версия формата полного файла конфигурации. */
+/** Format version of the full configuration file. */
 export const CONFIG_SHARE_VERSION = 1;
-/** Имя файла при экспорте в браузере (демо-режим). */
+/** The file name when exporting in the browser (demo mode). */
 export const ORG_GROUPS_SHARE_FILE_NAME = 'kmaruda-org-groups.json';
 
-/** Ошибка формата файла обмена: текст готов к показу пользователю. */
+/** An exchange file format error: the text is ready to show to the user. */
 export class OrgGroupsFileError extends Error {}
 
-/** Название организации к единому виду: обрезка + схлопывание повторов пробелов. */
+/** Organization name to a canonical form: trimming + collapsing repeated spaces. */
 export function normalizeOrgName(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
 }
@@ -130,9 +130,9 @@ function normalizeGroup(group: OrgGroupDto): OrgGroupDto | null {
 }
 
 /**
- * Проверить произвольный разобранный JSON как файл обмена группами.
- * В десктопе первой линией валидации является Rust (`parse_org_groups_file`);
- * здесь — защита демо-режима и defence-in-depth.
+ * Validate an arbitrary parsed JSON as a group exchange file.
+ * In the desktop the first line of validation is Rust (`parse_org_groups_file`);
+ * here — protection of demo mode and defence-in-depth.
  */
 export function validateOrgGroupsFile(value: unknown): OrgGroupsFileDto {
   if (!value || typeof value !== 'object') {
@@ -208,7 +208,7 @@ export function validateOrgGroupsFile(value: unknown): OrgGroupsFileDto {
   };
 }
 
-/** Собрать файл обмена из текущего состояния (экспорт). */
+/** Build an exchange file from the current state (export). */
 export function buildOrgGroupsFile(groups: OrgGroupDto[], enterpriseGroupId: string | null): OrgGroupsFileDto {
   return {
     format: ORG_GROUPS_SHARE_FORMAT,
@@ -219,20 +219,20 @@ export function buildOrgGroupsFile(groups: OrgGroupDto[], enterpriseGroupId: str
   };
 }
 
-/** Результат слияния импортированных групп с локальными. */
+/** The result of merging imported groups with local ones. */
 export interface MergedOrgGroups {
   groups: OrgGroupDto[];
   enterpriseGroupId: string | null;
 }
 
 /**
- * Слить файл обмена с локальными группами.
+ * Merge the exchange file with local groups.
  *
- * Соответствие: сначала по идентификатору, затем по названию (регистр
- * не важен). Совпавшая группа заменяется импортированным составом, но
- * сохраняет локальный идентификатор (на него могут ссылаться локальные
- * отметки); новые группы добавляются. Отметка вкладки «КМАруда» из файла
- * применяется, только если группа с этим идентификатором есть в результате.
+ * Matching: first by identifier, then by name (case
+ * does not matter). A matched group is replaced by the imported composition, but
+ * keeps the local identifier (local groups may reference it via the enterprise tab
+ * mark); new groups are added. The "KMAruda" tab mark from the file
+ * is applied only if a group with this identifier is present in the result.
  */
 export function mergeOrgGroups(
   local: OrgGroupDto[],
@@ -240,7 +240,7 @@ export function mergeOrgGroups(
   currentEnterpriseGroupId: string | null,
 ): MergedOrgGroups {
   const groups = local.map((group) => ({ ...group, orgs: [...group.orgs] }));
-  // Куда переехал идентификатор группы из файла: сам себе или локальный id совпавшей.
+  // Where the group identifier from the file moved: to itself or to the local id of a match.
   const importedToResultId = new Map<string, string>();
 
   for (const raw of file.groups) {
