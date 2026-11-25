@@ -3,6 +3,20 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.31] - 2026-11-25
+
+### Fixed
+
+- Translated the final Cyrillic comment block in the NSIS installer hooks; the
+  source comment audit is now clean.
+
+## [0.2.30] - 2026-11-25
+
+### Fixed
+
+- Decoded double-encoded UTF-8 text across the app, tests and docs and completed
+  the English source-comment migration.
+
 ## [0.2.28] - 2026-11-24
 
 ### Changed
@@ -472,7 +486,10 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.28...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.31...HEAD
+[0.2.31]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.30...v0.2.31
+[0.2.30]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.29...v0.2.30
+[0.2.29]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.28...v0.2.29
 [0.2.28]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.27...v0.2.28
 [0.2.27]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.26...v0.2.27
 [0.2.26]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.25...v0.2.26
