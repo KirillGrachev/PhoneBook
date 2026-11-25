@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { MailWarning } from '@/components/icons';
-import FocusLock, { AutoFocusInside } from 'react-focus-lock';
+import FocusLock, { AutoFocusInside } from '@/components/ui/FocusLock';
 import { useTranslation } from 'react-i18next';
 
 import { Switch } from '@/components/ui/Switch';
@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/Switch';
 interface EmailPromptModalProps {
   isOpen: boolean;
   fullName: string;
-  /** Уже сохранённая подмена (если есть) — предварительное значение. */
+  /** An already saved override (if any) — the initial value. */
   initialEmail?: string;
   onCancel: () => void;
   onSubmit: (email: string, remember: boolean) => void;
@@ -19,9 +19,9 @@ interface EmailPromptModalProps {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /**
- * Диалог ввода почты для контактов без атрибута mail в AD.
- * Позволяет написать письмо и (опционально) сохранить адрес как локальную
- * подмену — софт остаётся рабочим даже при неполных данных каталога.
+ * Email input dialog for contacts without a mail attribute in AD.
+ * Allows writing an email and (optionally) saving the address as a local
+ * override — the software stays working even with incomplete directory data.
  */
 export function EmailPromptModal({ isOpen, fullName, initialEmail, onCancel, onSubmit }: EmailPromptModalProps) {
   const { t } = useTranslation();
@@ -66,7 +66,7 @@ export function EmailPromptModal({ isOpen, fullName, initialEmail, onCancel, onS
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <FocusLock returnFocus>
+        <FocusLock returnFocus={{ preventScroll: true }} focusOptions={{ preventScroll: true }}>
           <div
             className="fixed inset-0 top-[32px] z-[100] flex items-center justify-center p-4"
             role="alertdialog"

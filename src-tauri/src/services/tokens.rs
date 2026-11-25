@@ -1,18 +1,18 @@
-//! Формирование поисковых токенов и FTS-запросов.
+//! Building search tokens and FTS queries.
 //!
-//! Модуль содержит только чистые функции — он полностью покрыт unit-тестами
-//! и не зависит от Tauri/базы данных.
+//! The module contains only pure functions - it is fully covered by unit tests
+//! and does not depend on Tauri/the database.
 //!
-//! Особенности предметной области:
-//! * Пользователи часто набирают русские имена, забыв переключить раскладку
-//!   («ьшлукщы» вместо «директор»), поэтому каждый токен запроса раскладывается
-//!   на три варианта: исходный, QWERTY→ЙЦУКЕН и ЙЦУКЕН→QWERTY.
-//! * Телефоны ищутся по «хвостам» номеров (последние 4 и 7 цифр):
-//!   внутренний номер спрашивают коротким хвостом, а не полным числом.
-//! * SQLite `lower()`/`NOCASE` не работают с кириллицей, поэтому ключ
-//!   сортировки (`sort_key`) вычисляется на стороне Rust.
+//! Domain specifics:
+//! * Users often type Russian names while forgetting to switch the keyboard layout
+//!   ("'shluktshy" instead of "direktor"), so each query token is expanded
+//!   into three variants: original, QWERTY->Russian, and Russian->QWERTY.
+//! * Phones are searched by number "tails" (last 4 and 7 digits):
+//!   the internal number is requested by its short tail, not the full number.
+//! * SQLite `lower()`/`NOCASE` do not work with Cyrillic, so the key
+//!   sort key (`sort_key`) is computed on the Rust side.
 
-/// Соответствие QWERTY → ЙЦУКЕН (раскладка ПК).
+/// QWERTY -> JCUKEN mapping (PC layout).
 const EN_TO_RU: [(&str, &str); 33] = [
     ("q", "й"),
     ("w", "ц"),
@@ -67,35 +67,35 @@ fn map_layout(input: &str, en_to_ru: bool) -> String {
         .collect()
 }
 
-/// Перевод строки в русскую раскладку: `ivanov` → `штфмпд`.
+/// Convert a string to the Russian layout: `ivanov` -> `shtfmpd`.
 pub fn to_ru_layout(input: &str) -> String {
     map_layout(input, true)
 }
 
-/// Перевод строки в английскую раскладку: `иванов` → `bdfyjd`.
+/// Convert a string to the English layout: `ivanov` -> `bdfyjd`.
 pub fn to_en_layout(input: &str) -> String {
     map_layout(input, false)
 }
 
-/// Нормализация пробелов: обрезка + схлопывание повторов
-/// («ООО  КМАруда» → «ООО КМАруда»).
+/// Whitespace normalization: trimming + collapsing repeats
+/// ("OOO  KMAruda" -> "OOO KMAruda").
 pub fn collapse_spaces(value: &str) -> String {
     value.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Ключ дедупликации организации: нормализованные пробелы + нижний регистр.
-/// Вычисляется в Rust, потому что SQLite `lower()` не знает кириллицу.
+/// Organization deduplication key: normalized whitespace + lowercase.
+/// Computed in Rust because SQLite `lower()` does not know Cyrillic.
 pub fn company_key(value: &str) -> String {
     collapse_spaces(value).to_lowercase()
 }
 
-/// Ключ сортировки: unicode-lowercase (кириллица включительно).
+/// Sort key: unicode-lowercase (including Cyrillic).
 pub fn sort_key(display_name: &str) -> String {
     display_name.to_lowercase()
 }
 
-/// Токены инициалов: «Иванов Иван Иванович» → `["иии", "ии"]`.
-/// Одиночные инициалы отбрасываются — иначе FTS-индекс тонет в мусоре.
+/// Initial tokens: "Ivanov Ivan Ivanovich" -> `["iii", "ii"]`.
+/// Single initials are discarded - otherwise the FTS index drowns in garbage.
 pub fn initials_tokens(display_name: &str) -> Vec<String> {
     let initials: String = display_name
         .split_whitespace()
@@ -117,7 +117,7 @@ pub fn initials_tokens(display_name: &str) -> Vec<String> {
     tokens
 }
 
-/// Токены e-mail: адрес целиком, локальная часть, домен, домен без TLD.
+/// Email tokens: the whole address, local part, domain, domain without TLD.
 pub fn email_tokens(email: &str) -> Vec<String> {
     let email = email.trim().to_lowercase();
     if email.is_empty() {
@@ -127,8 +127,8 @@ pub fn email_tokens(email: &str) -> Vec<String> {
     if let Some((user, domain)) = email.split_once('@') {
         if !user.is_empty() {
             tokens.push(user.to_string());
-            // unicode61 может считать «_»/«-» частью токена; добавляем
-            // части явно, чтобы запрос «grachev_ke@…» находил адрес.
+            // unicode61 may consider "_"/"-" part of a token; we add
+            // parts explicitly, so the query "grachev_ke@..." finds the address.
             for part in user.split(['_', '-', '+', '.']) {
                 if !part.is_empty() {
                     tokens.push(part.to_string());
@@ -149,7 +149,7 @@ pub fn email_tokens(email: &str) -> Vec<String> {
     tokens
 }
 
-/// Токены телефонов: строка цифр целиком, последние 4 и последние 7 цифр.
+/// Phone tokens: the whole digit string, the last 4 and the last 7 digits.
 pub fn phone_tokens(phones: &[Option<&str>]) -> Vec<String> {
     let mut tokens = Vec::new();
     for phone in phones.iter().flatten() {
@@ -170,19 +170,19 @@ pub fn phone_tokens(phones: &[Option<&str>]) -> Vec<String> {
     tokens
 }
 
-/// Строка FTS5 MATCH-запроса: каждое слово — префиксное совпадение
-/// по исходному и транспонированным раскладкам, слова соединяются через AND.
+/// FTS5 MATCH query string: each word is a prefix match
+/// by the original and transposed layouts; words are joined with AND.
 ///
-/// Возвращает `None`, если в запросе нет ни одного значимого слова.
+/// Returns `None` if the query has no meaningful words.
 pub fn build_fts_query(query: &str) -> Option<String> {
     const MAX_WORDS: usize = 8;
 
     let mut clauses: Vec<String> = Vec::new();
     for word in query.split_whitespace().take(MAX_WORDS) {
-        // E-mail — не один FTS-токен: unicode61 режет адрес по «@», «.»,
-        // «_», «-» и «+». Разбиваем его на части и требуем их все (клаузы
-        // соединяются через AND), иначе «grachev_ke» (без @) или
-        // «grachev_ke@…» склеивались в один токен и не находили email.
+        // E-mail is not a single FTS token: unicode61 splits the address by "@", ".",
+        // "_", "-" and "+". We split it into parts and require them all (clauses
+        // joined with AND); otherwise "grachev_ke" (without @) or
+        // "grachev_ke@…" would be glued into one token and would not find the email.
         let parts: Vec<&str> = word
             .split(['@', '.', '_', '-', '+'])
             .filter(|part| !part.is_empty())
@@ -203,7 +203,7 @@ pub fn build_fts_query(query: &str) -> Option<String> {
     }
 }
 
-/// Добавляет AND-клаузу для одного слова запроса с учётом раскладок.
+/// Adds an AND clause for one query word, considering keyboard layouts.
 fn push_fts_clause(clauses: &mut Vec<String>, word: &str) {
     let normalize = |value: &str| -> String {
         value
@@ -213,10 +213,10 @@ fn push_fts_clause(clauses: &mut Vec<String>, word: &str) {
             .collect()
     };
 
-    // Раскладочные варианты строятся ДО отбрасывания пунктуации:
-    // запятая на русской раскладке — это «б», точка — «ю», и пользователь,
-    // набирающий `,j,f`, ищет «боба», а не «оа». После перевода берём
-    // только буквы и цифры — в FTS-токенах пунктуации не место.
+    // Layout variants are built BEFORE dropping punctuation:
+    // a comma on the Russian layout is "b", a dot is "yu", and the user,
+    // typing `,j,f`, searches for "boba", not "oa". After conversion we take
+    // only letters and digits - punctuation has no place in FTS tokens.
     let mut variants: Vec<String> = Vec::new();
     for candidate in [word, &to_ru_layout(word), &to_en_layout(word)] {
         let candidate = normalize(candidate);
@@ -228,7 +228,7 @@ fn push_fts_clause(clauses: &mut Vec<String>, word: &str) {
         return;
     }
 
-    // Токены содержат только буквы/цифры, поэтому кавычки FTS5 безопасны.
+    // Tokens contain only letters/digits, so FTS5 quoting is safe.
     let ors = variants
         .iter()
         .map(|v| format!("\"{v}\"*"))
@@ -243,10 +243,10 @@ mod tests {
 
     #[test]
     fn transliterates_both_ways() {
-        // i→ш v→м a→ф n→т o→щ v→м
+        // i->sh v->m a->f n->t o->shch v->m
         assert_eq!(to_ru_layout("ivanov"), "шмфтщм");
         assert_eq!(to_en_layout(&to_ru_layout("petrov")), "petrov");
-        // Символы вне раскладки сохраняются.
+        // Characters outside the layout are preserved.
         assert_eq!(to_ru_layout("123"), "123");
     }
 
@@ -254,7 +254,7 @@ mod tests {
     fn builds_initials() {
         assert_eq!(initials_tokens("Иванов Иван Иванович"), vec!["ии", "иии"]);
         assert_eq!(initials_tokens("Смирнова Анна"), vec!["са"]);
-        // Одиночное слово — значимых инициалов нет.
+        // A single word — no meaningful initials.
         assert!(initials_tokens("Иванов").is_empty());
     }
 
@@ -292,26 +292,26 @@ mod tests {
 
     #[test]
     fn fts_query_strips_special_characters() {
-        // Кавычки и операторы FTS5 не должны проникать в запрос.
+        // Quotes and FTS5 operators must not penetrate the query.
         let q = build_fts_query("\"abc\" OR x:y").expect("query");
         assert!(!q.contains(":"));
-        // Все кавычки — только парные обрамления токенов.
+        // All quotes are only paired token wrappers.
         assert_eq!(q.matches('"').count() % 2, 0);
     }
 
     #[test]
     fn fts_query_splits_email_into_searchable_tokens() {
-        // Адрес целиком не является одним FTS-токеном: unicode61 режет его
-        // по «@» и «.». Поэтому запрос должен требовать все части адреса,
-        // иначе «ivanov@kmaruda.ru» схлопывался в «ivanovkmarudaru» и не
-        // находил ни email-колонку, ни токены.
+        // The whole address is not a single FTS token: unicode61 splits it
+        // at "@" and ".". Therefore the query must require all parts of the address,
+        // otherwise "ivanov@kmaruda.ru" would collapse into "ivanovkmarudaru" and
+        // would find neither the email column nor the tokens.
         let q = build_fts_query("Ivanov@KMAruda.RU").expect("email query");
         assert!(q.contains("\"ivanov\"*"), "{q}");
         assert!(q.contains("\"kmaruda\"*"), "{q}");
         assert!(q.contains("\"ru\"*"), "{q}");
         assert!(!q.contains("ivanovkmarudaru"), "{q}");
 
-        // Подчёркивание в локальной части — тоже разделитель unicode61.
+        // An underscore in the local part is also a unicode61 separator.
         let q = build_fts_query("Grachev_ke@metholding.com").expect("underscore email");
         assert!(q.contains("\"grachev\"*"), "{q}");
         assert!(q.contains("\"ke\"*"), "{q}");
@@ -321,7 +321,7 @@ mod tests {
 
     #[test]
     fn fts_query_splits_email_local_part_without_at() {
-        // Пользователь часто вводит только начало адреса, без «@».
+        // The user often types only the beginning of an address, without "@".
         let q = build_fts_query("grachev_ke").expect("email local part");
         assert!(q.contains("\"grachev\"*"), "{q}");
         assert!(q.contains("\"ke\"*"), "{q}");

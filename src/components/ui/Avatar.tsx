@@ -1,9 +1,17 @@
+import { useEffect, useState } from 'react';
+
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store/useAppStore';
 
 interface AvatarProps {
   fullName: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  /**
+   * Optional photo (a `data:` URL from the AD `thumbnailPhoto` attribute).
+   * When absent or failed to load, a letter initial on a gradient is shown.
+   */
+  photoUrl?: string | null;
 }
 
 const SIZE_STYLES = {
@@ -13,14 +21,26 @@ const SIZE_STYLES = {
 } as const;
 
 /**
- * Буквенный аватар контакта: инициал на градиенте.
+ * Contact avatar: the AD photo when available and avatars are enabled,
+ * otherwise a letter initial.
  *
- * Фотографии из AD (`thumbnailPhoto`) сознательно не используются: атрибут
- * есть далеко не у всех сотрудников, раздувает кэш и даёт неоднородный вид
- * списка, тогда как инициалы одинаково читаемы для любой записи.
+ * The photo is fetched lazily for the open card only (see `useContactPhoto`),
+ * so list rows stay lightweight and uniform. A broken or missing image falls
+ * back to the initial, which reads the same for every record. The user can
+ * disable photos entirely in interface settings; the letter fallback is then
+ * used for every contact.
  */
-export function Avatar({ fullName, size = 'md', className }: AvatarProps) {
+export function Avatar({ fullName, size = 'md', className, photoUrl }: AvatarProps) {
+  const showAvatars = useAppStore((state) => state.showAvatars);
   const initial = fullName.trim().charAt(0).toUpperCase() || '?';
+  const [failed, setFailed] = useState(false);
+
+  // Reset the error flag when the photo changes (e.g. navigating between cards).
+  useEffect(() => {
+    setFailed(false);
+  }, [photoUrl]);
+
+  const showPhoto = showAvatars && Boolean(photoUrl) && !failed;
 
   return (
     <div
@@ -33,7 +53,18 @@ export function Avatar({ fullName, size = 'md', className }: AvatarProps) {
         className,
       )}
     >
-      <span aria-hidden>{initial}</span>
+      {showPhoto ? (
+        <img
+          src={photoUrl ?? undefined}
+          alt=""
+          aria-hidden
+          draggable={false}
+          onError={() => setFailed(true)}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : (
+        <span aria-hidden>{initial}</span>
+      )}
     </div>
   );
 }

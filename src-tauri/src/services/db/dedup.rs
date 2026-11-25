@@ -1,19 +1,19 @@
-//! Уборка дубликатов учётных записей в кэше.
+//! Cleanup of duplicate accounts in the cache.
 //!
-//! Дубликаты возникают, когда один сотрудник присутствует в нескольких
-//! источниках синхронизации (разные AD-подключения холдинга) или в каталоге
-//! есть вторая учётка того же человека: `object_guid` у них разные, поэтому
-//! обычный replace по источнику их не схлопывает.
+//! Duplicates arise when one employee is present in several
+//! sync sources (different AD connections of the holding) or when the catalog
+//! has a second account of the same person: their `object_guid` values differ, so
+//! a normal replace by source does not collapse them.
 //!
-//! Правило дубликата (согласовано с владельцем продукта): совпадает
-//! нормализованное отображаемое имя И совпадает хотя бы один контактный
-//! ключ (e-mail, цифры мобильного, цифры внутреннего номера, логин).
-//! Кластеры внутри одного имени строятся union-find по пересечению
-//! контактных ключей: цепочки «A совпал с B, B с C» склеиваются.
+//! Duplicate rule (agreed with the product owner): matches
+//! normalized display name AND at least one contact
+//! key (email, mobile digits, internal number digits, login).
+//! Clusters within one name are built with union-find by intersection of
+//! contact keys: chains "A matched B, B matched C" are merged.
 //!
-//! Оставляемая запись — самая «заполненная» (больше непустых полей),
-//! при равенстве — с пейджером (TrueConf ID), затем с меньшим GUID:
-//! детерминированный выбор без ручных подтверждений по каждой паре.
+//! The kept record is the most "filled" one (more non-empty fields),
+//! on a tie - by pager (TrueConf ID), then by the smaller GUID:
+//! deterministic choice without manual confirmations for each pair.
 
 use rusqlite::Connection;
 use serde::Serialize;
@@ -22,31 +22,39 @@ use crate::error::AppError;
 
 use super::Db;
 
-/// Кластер дубликатов: кого оставляем и кого убираем.
+/// How many removable record names the preview returns. The dialog shows all
+/// of them when there are at most seven records, otherwise it lists the first
+/// six and collapses the rest into a counter.
+const PREVIEW_NAME_LIMIT: usize = 7;
+
+/// Duplicate cluster: who we keep and who we remove.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DuplicateGroup {
-    /// Отображаемое имя кластера.
+    /// Cluster display name.
     pub display_name: String,
-    /// GUID оставляемой записи.
+    /// GUID of the kept record.
     pub keep_guid: String,
-    /// GUID убираемых записей.
+    /// GUIDs of the removed records.
     pub remove_guids: Vec<String>,
+    /// Display names of the removed records (whitespace normalized).
+    pub remove_names: Vec<String>,
 }
 
-/// Сводка для превью в настройках: числа и примеры имён.
+/// Summary for the settings preview: numbers and the names of records that
+/// will actually be deleted.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DuplicatesPreview {
-    /// Сколько кластеров дубликатов найдено.
+    /// How many duplicate clusters were found.
     pub groups: usize,
-    /// Сколько записей будет удалено суммарно.
+    /// How many records will be deleted in total.
     pub removable: usize,
-    /// Имена первых кластеров (для подтверждающего диалога).
-    pub samples: Vec<String>,
+    /// Names of the first removable records (for the confirmation dialog).
+    pub removable_names: Vec<String>,
 }
 
-/// Сырая строка для поиска дубликатов.
+/// Raw row for duplicate search.
 struct RawRow {
     object_guid: String,
     display_name: String,
@@ -55,19 +63,19 @@ struct RawRow {
     has_pager: bool,
 }
 
-/// Нормализация имени: нижний регистр, схлопнутые пробелы.
+/// Name normalization: lowercase, collapsed whitespace.
 fn name_key(value: &str) -> String {
     crate::services::tokens::collapse_spaces(value).to_lowercase()
 }
 
-/// Цифры телефона: сравнение независимо от форматирования.
+/// Phone digits: comparison regardless of formatting.
 fn digits(value: &str) -> String {
     value.chars().filter(|c| c.is_ascii_digit()).collect()
 }
 
 impl Db {
-    /// Кластеры дубликатов текущего кэша (пусто — убирать нечего).
-    /// Вне модуля не нужен: наружу отдаётся сводка [`DuplicatesPreview`].
+    /// Duplicate clusters of the current cache (empty - nothing to remove).
+    /// Not needed outside the module: the [`DuplicatesPreview`] summary is exposed.
     pub(crate) fn find_duplicates(&self) -> Result<Vec<DuplicateGroup>, AppError> {
         let conn = self.lock();
         let rows = Self::duplicate_rows(&conn)?;
@@ -75,25 +83,25 @@ impl Db {
         Ok(cluster_duplicates(rows))
     }
 
-    /// Сводка для превью в настройках.
+    /// Summary for the settings preview.
     pub fn duplicates_preview(&self) -> Result<DuplicatesPreview, AppError> {
         let groups = self.find_duplicates()?;
         let removable = groups.iter().map(|g| g.remove_guids.len()).sum();
-        let samples = groups
+        let removable_names = groups
             .iter()
-            .take(5)
-            .map(|g| g.display_name.clone())
+            .flat_map(|g| g.remove_names.iter().cloned())
+            .take(PREVIEW_NAME_LIMIT)
             .collect();
         Ok(DuplicatesPreview {
             groups: groups.len(),
             removable,
-            samples,
+            removable_names,
         })
     }
 
-    /// Убрать дубликаты: удалить убираемые записи, почистить индексы и
-    /// осиротевшие справочники, пересохранить контейнер. Возвращает число
-    /// удалённых записей.
+    /// Remove duplicates: delete the removable records, clean the indexes and
+    /// orphaned lookups, and resave the container. Returns the number of
+    /// deleted records.
     pub fn deduplicate(&self) -> Result<usize, AppError> {
         let groups = self.find_duplicates()?;
         let guids: Vec<String> = groups.iter().flat_map(|g| g.remove_guids.clone()).collect();
@@ -126,9 +134,9 @@ impl Db {
         Ok(removed)
     }
 
-    /// Строки для кластеризации дубликатов. Записи внешних телефонных
-    /// файлов не участвуют: их идентификаторы синтетические, а «дубль»
-    /// с сотрудником AD — легитимное дополнение номера, не мусор.
+    /// Rows for duplicate clustering. External phone
+    /// files do not participate: their identifiers are synthetic, and a "duplicate"
+    /// with an AD employee - a legitimate number complement, not junk.
     fn duplicate_rows(conn: &Connection) -> Result<Vec<RawRow>, AppError> {
         let mut stmt = conn.prepare(
             "SELECT users.object_guid, users.display_name, users.email, users.ip_phone, \
@@ -196,8 +204,8 @@ impl Db {
     }
 }
 
-/// Кластеризация: внутри одного нормализованного имени склеиваем записи
-/// с пересекающимися контактными ключами (union-find).
+/// Clustering: within one normalized name we merge records
+/// with intersecting contact keys (union-find).
 fn cluster_duplicates(rows: Vec<RawRow>) -> Vec<DuplicateGroup> {
     use std::collections::HashMap;
 
@@ -248,14 +256,20 @@ fn cluster_duplicates(rows: Vec<RawRow>) -> Vec<DuplicateGroup> {
                     .then(row_a.object_guid.cmp(&row_b.object_guid))
             });
             let keep = indices[members[0]];
-            let remove_guids = members[1..]
+            let removed = &members[1..];
+            let remove_guids = removed
                 .iter()
                 .map(|i| rows[indices[*i]].object_guid.clone())
+                .collect();
+            let remove_names = removed
+                .iter()
+                .map(|i| crate::services::tokens::collapse_spaces(&rows[indices[*i]].display_name))
                 .collect();
             groups.push(DuplicateGroup {
                 display_name: rows[keep].display_name.clone(),
                 keep_guid: rows[keep].object_guid.clone(),
                 remove_guids,
+                remove_names,
             });
         }
     }
@@ -290,6 +304,7 @@ mod tests {
             pager: None,
             usn_changed: None,
             tokens: String::new(),
+            photo: None,
         }
     }
 
@@ -299,18 +314,18 @@ mod tests {
         let mut a = record("g1", "Иванов Иван");
         a.email = Some("ivanov@kmaruda.ru".into());
         a.ip_phone = Some("1234".into());
-        let mut b = record("g2", "Иванов  Иван"); // пробелы не спасают
-        b.email = Some("IVANOV@kmaruda.ru".into()); // регистр не спасает
+        let mut b = record("g2", "Иванов  Иван"); // whitespace does not help
+        b.email = Some("IVANOV@kmaruda.ru".into()); // case does not help
         b.phone_mobile = Some("999 111 22 33".into());
         db.replace_org_users("Орг", &[a, b]).expect("sync");
 
         let preview = db.duplicates_preview().expect("preview");
         assert_eq!(preview.groups, 1);
         assert_eq!(preview.removable, 1);
-        assert_eq!(preview.samples, vec!["Иванов Иван".to_string()]);
+        assert_eq!(preview.removable_names, vec!["Иванов Иван".to_string()]);
 
-        // Оставляемая — с большим заполнением (у g1 email + ip, у g2 email + mobile:
-        // счёт равный, далее сравнивается GUID: g1 меньше).
+        // The kept one is the one with more filling (g1 has email + ip, g2 has email + mobile:
+        // scores are equal, then GUID is compared: g1 is smaller).
         let groups = db.find_duplicates().expect("groups");
         assert_eq!(groups[0].keep_guid, "g1");
         assert_eq!(groups[0].remove_guids, vec!["g2".to_string()]);
@@ -344,11 +359,34 @@ mod tests {
         b.ip_phone = Some("1111".into());
         b.phone_mobile = Some("9991112233".into());
         let mut c = record("g3", "Петров Пётр");
-        c.phone_mobile = Some("999-111-22-33".into()); // те же цифры, другой формат
+        c.phone_mobile = Some("999-111-22-33".into()); // same digits, different format
         db.replace_org_users("Орг", &[a, b, c]).expect("sync");
 
         let groups = db.find_duplicates().expect("groups");
         assert_eq!(groups.len(), 1, "цепочка g1-g2-g3 — один кластер");
         assert_eq!(groups[0].remove_guids.len(), 2);
+    }
+
+    #[test]
+    fn preview_lists_removable_names_up_to_limit() {
+        let db = Db::open_in_memory().expect("db");
+        let mut users = Vec::new();
+        for i in 0..8 {
+            let name = format!("User {i}");
+            let mut keep = record(&format!("k{i}"), &name);
+            keep.email = Some(format!("u{i}@example.com"));
+            let mut removed = record(&format!("r{i}"), &name);
+            removed.email = Some(format!("u{i}@example.com"));
+            users.push(keep);
+            users.push(removed);
+        }
+        db.replace_org_users("Org", &users).expect("sync");
+
+        let preview = db.duplicates_preview().expect("preview");
+        assert_eq!(preview.groups, 8);
+        assert_eq!(preview.removable, 8);
+        assert_eq!(preview.removable_names.len(), PREVIEW_NAME_LIMIT);
+        assert_eq!(preview.removable_names[0], "User 0");
+        assert_eq!(preview.removable_names[PREVIEW_NAME_LIMIT - 1], "User 6");
     }
 }

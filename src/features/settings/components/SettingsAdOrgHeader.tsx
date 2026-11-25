@@ -7,7 +7,7 @@ interface SettingsAdOrgHeaderProps {
   onRemove: () => void;
 }
 
-/** Заголовок карточки организации с кнопкой удаления. */
+/** Organization card header with a remove button. */
 export function SettingsAdOrgHeader({ organization, index, onRemove }: SettingsAdOrgHeaderProps) {
   const { t } = useTranslation();
 

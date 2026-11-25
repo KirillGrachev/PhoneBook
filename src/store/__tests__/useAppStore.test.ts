@@ -20,7 +20,7 @@ describe('useAppStore', () => {
     toggleSavedContact('g2');
     expect(useAppStore.getState().savedContactIds).toEqual([]);
 
-    // Повторное добавление того же id не создаёт дубликат.
+    // Re-adding the same id does not create a duplicate.
     toggleSavedContact('g3');
     toggleSavedContact('g3');
     expect(useAppStore.getState().savedContactIds).toEqual([]);
@@ -28,15 +28,26 @@ describe('useAppStore', () => {
     expect(useAppStore.getState().savedContactIds).toEqual(['g3']);
   });
 
-  it('removing the selected saved contact clears the selection immediately', () => {
+  it('removing the selected saved contact clears the selection in My contacts', () => {
     const { toggleSavedContact } = useAppStore.getState();
     toggleSavedContact('g1');
-    useAppStore.setState({ selectedId: 'g1' });
+    useAppStore.setState({ selectedId: 'g1', activeTab: 'local' });
 
     toggleSavedContact('g1');
 
     expect(useAppStore.getState().savedContactIds).toEqual([]);
     expect(useAppStore.getState().selectedId).toBeNull();
+  });
+
+  it('removing a favorite on a search tab keeps the contact card open', () => {
+    const { toggleSavedContact } = useAppStore.getState();
+    toggleSavedContact('g1');
+    useAppStore.setState({ selectedId: 'g1', activeTab: 'global' });
+
+    toggleSavedContact('g1');
+
+    expect(useAppStore.getState().savedContactIds).toEqual([]);
+    expect(useAppStore.getState().selectedId).toBe('g1');
   });
 
   it('saveOrgGroup создаёт и обновляет группы, removeOrgGroup снимает ссылку вкладки', () => {
@@ -55,7 +66,7 @@ describe('useAppStore', () => {
     removeOrgGroup('g1');
     const state = useAppStore.getState();
     expect(state.orgGroups.map((group) => group.id)).toEqual(['g2']);
-    // Ссылка вкладки предприятия не должна указывать на удалённую группу.
+    // The enterprise tab reference must not point to a deleted group.
     expect(state.enterpriseGroupId).toBeNull();
     useAppStore.setState({ orgGroups: [], enterpriseGroupId: null });
   });

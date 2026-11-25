@@ -25,7 +25,7 @@ interface TabSelectorProps {
 
 const TAB_ORDER: TabType[] = ['kmaruda', 'global', 'local'];
 
-/** Переключатель вкладок: предприятие / холдинг / мои контакты. */
+/** Tab switcher: enterprise / holding / my contacts. */
 export function TabSelector({ activeTab, onTabChange, globalMode }: TabSelectorProps) {
   const { t } = useTranslation();
 
@@ -51,7 +51,7 @@ export function TabSelector({ activeTab, onTabChange, globalMode }: TabSelectorP
           className={tabVariants({ active: activeTab === tab })}
           onClick={() => onTabChange(tab)}
           onKeyDown={(event) => {
-            // Стрелки переключают вкладки (паттерн WAI-ARIA tabs).
+            // Arrow keys switch tabs (WAI-ARIA tabs pattern).
             if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
               return;
             }

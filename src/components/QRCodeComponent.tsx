@@ -1,7 +1,7 @@
 import type { ComponentType, CSSProperties } from 'react';
 import * as QRCodeNS from 'react-qr-code';
 
-/** Публичные пропсы QR-кода (зеркало типов react-qr-code). */
+/** Public QR code props (a mirror of the react-qr-code types). */
 export interface QRCodeProps {
   value: string;
   size?: number;
@@ -17,13 +17,13 @@ interface MaybeModule {
   QRCode?: unknown;
 }
 
-/** Имя служебного тега React (знак доллара дважды + «typeof») собираем динамически. */
+/** The name of the React service tag (two dollar signs + "typeof") is assembled dynamically. */
 const DOLLAR = String.fromCharCode(36);
 const REACT_TYPE_TAG = DOLLAR + DOLLAR + 'typeof';
 
 /**
- * Валидный тип элемента React: функция-компонент/класс ИЛИ спец-объект
- * (forwardRef/memo — объект с тегом React и функцией render).
+ * A valid React element type: a function component/class OR a special object
+ * (forwardRef/memo — an object with a React tag and a render function).
  */
 function isComponentType(value: unknown): value is ComponentType<QRCodeProps> {
   if (typeof value === 'function') {
@@ -37,14 +37,14 @@ function isComponentType(value: unknown): value is ComponentType<QRCodeProps> {
 }
 
 /**
- * Разворачивает компонент сквозь CJS/ESM-интероп.
+ * Unwraps the component through CJS/ESM interop.
  *
- * react-qr-code публикуется только в CJS (exports.default + exports.QRCode,
- * сам компонент — forwardRef-объект). Разные бандлеры (rolldown-vite в dev,
- * rollup в build, vitest) отдают в default то компонент, то объект модуля —
- * наивный импорт ломал lazy-рендер («Element type is invalid»).
- * Здесь разрешение явное: спускаемся по .default/.QRCode до первого
- * валидного типа элемента.
+ * react-qr-code is published only as CJS (exports.default + exports.QRCode,
+ * the component itself is a forwardRef object). Different bundlers (rolldown-vite in dev,
+ * rollup in build, vitest) put either the component or the module object into default —
+ * naive import broke lazy rendering ("Element type is invalid").
+ * Here the resolution is explicit: we descend through .default/.QRCode to the first
+ * of a valid element type.
  */
 function unwrapComponent(module: unknown): ComponentType<QRCodeProps> | undefined {
   let current: unknown = module;
@@ -70,7 +70,7 @@ if (!resolved) {
   throw new Error('react-qr-code: не удалось разрешить компонент (несовместимый интероп модуля)');
 }
 
-/** Гарантированно валидный компонент (после проверки выше). */
+/** A guaranteed valid component (after the check above). */
 const QRCode: ComponentType<QRCodeProps> = resolved;
 
 export default QRCode;

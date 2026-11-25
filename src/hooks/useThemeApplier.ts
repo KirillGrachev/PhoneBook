@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-/** Применяет тему (class `dark` на <html>) с плавным переходом. */
+/** Applies the theme (the `dark` class on <html>) with a smooth transition. */
 export function useThemeApplier(theme: string): void {
   useEffect(() => {
     const root = document.documentElement;
@@ -12,7 +12,7 @@ export function useThemeApplier(theme: string): void {
 
     const timeout = setTimeout(() => root.classList.remove('theme-transitioning'), 500);
 
-    // В системной теме реагируем на смену предпочтений ОС без перезапуска.
+    // In the system theme we react to OS preference changes without a restart.
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const onSystemThemeChange = (event: MediaQueryListEvent) => {
       if (theme === 'system') {

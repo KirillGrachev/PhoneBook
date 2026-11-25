@@ -12,7 +12,7 @@ interface SettingsAdTlsFieldsProps {
   onChange: (patch: Partial<LdapOrgConfigDto>) => void;
 }
 
-/** StartTLS и отключение проверки сертификата. */
+/** StartTLS and disabling certificate verification. */
 export function SettingsAdTlsFields({ config, onChange }: SettingsAdTlsFieldsProps) {
   const { t } = useTranslation();
   const ldaps = urlScheme(config.ldapUrl) === 'ldaps';

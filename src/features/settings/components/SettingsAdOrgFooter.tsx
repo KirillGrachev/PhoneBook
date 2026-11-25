@@ -12,7 +12,7 @@ interface SettingsAdOrgFooterProps {
   onTest: () => void;
 }
 
-/** Кнопка проверки подключения и статус последней синхронизации. */
+/** The connection test button and the last-sync status. */
 export function SettingsAdOrgFooter({
   organization,
   testing,

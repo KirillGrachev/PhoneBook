@@ -1,4 +1,4 @@
-//! Операции записи: полная замена кэша источника и мета синхронизации.
+//! Write operations: full replacement of a source cache and sync metadata.
 
 use std::collections::{HashMap, HashSet};
 
@@ -11,9 +11,9 @@ use super::model::{OrgSyncMeta, UserRecord};
 use super::{unix_now, Db};
 
 impl Db {
-    /// Полностью заменяет кэш источника AD: upsert полученных записей,
-    /// удаление исчезнувших, чистка справочников и обновление `sync_meta` —
-    /// в одной транзакции.
+    /// Fully replaces the AD source cache: upsert of received records,
+    /// deletion of disappeared records, lookup cleanup, and `sync_meta` update -
+    /// in one transaction.
     pub fn replace_org_users(
         &self,
         source_org: &str,
@@ -28,20 +28,20 @@ impl Db {
             insert_users(&tx, source_id, users, now)?;
             delete_vanished(&tx, source_id)?;
             cleanup_orphans(&tx)?;
-            // Полная перестройка кэша меняет распределение данных: обновляем
-            // статистику планировщика после большой синхронизации.
+            // A full cache rebuild changes the data distribution: we update
+            // scheduler statistics after a large sync.
             tx.execute_batch("PRAGMA optimize;")?;
             upsert_sync_meta(&tx, source_id, users.len(), max_usn(users), true)?;
         }
         tx.commit()?;
         drop(conn);
-        // Кэш изменён — контейнер на диске должен остаться актуальным.
+        // The cache changed — the container on disk must stay current.
         self.flush()?;
         Ok(users.len())
     }
 
-    /// Применяет дельту `uSNChanged` без удаления исчезнувших: удаления
-    /// приходят только полной выборкой (периодической или ручной).
+    /// Applies the `uSNChanged` delta without removing disappeared records: deletions
+    /// arrive only via a full selection (periodic or manual).
     pub fn merge_org_users(
         &self,
         source_org: &str,
@@ -68,10 +68,10 @@ impl Db {
         Ok(total)
     }
 
-    /// Полностью заменяет кэш внешнего телефонного файла
-    /// ([`crate::services::external`]): те же шаги, что и у источника AD,
-    /// плюс удаление записей прежнего внешнего источника (заголовок файла
-    /// переименован, файл заменён на другой) — в одной транзакции.
+    /// Fully replaces the external phone file cache
+    /// ([`crate::services::external`]): the same steps as for an AD source,
+    /// plus deletion of the previous external source's records (the file header
+    /// renamed, the file was replaced with another) - in one transaction.
     #[cfg(test)]
     pub fn replace_external_users(
         &self,
@@ -132,9 +132,9 @@ impl Db {
         Ok(total)
     }
 
-    /// Убирает из кэша все записи внешних телефонных файлов (опция выключена
-    /// или путь не задан). Возвращает число записей, исчезнувших из выдачи.
-    /// Мета синхронизации уходит каскадом вместе с источниками.
+    /// Removes all external phone file records from the cache (the option is off
+    /// or the path is unset). Returns the number of records that disappeared from results.
+    /// Sync metadata is cascaded away together with sources.
     pub fn clear_external_users(&self) -> Result<usize, AppError> {
         self.invalidate_search_cache();
         let mut conn = self.lock();
@@ -159,8 +159,8 @@ impl Db {
 
     pub fn set_sync_error(&self, organization: &str, message: &str) -> Result<(), AppError> {
         let conn = self.lock();
-        // Источник создаётся даже при неудачной первой синхронизации —
-        // ошибка должна быть видна в настройках.
+        // The source is created even on a failed first sync —
+        // the error must be visible in settings.
         let source_id = upsert_source(&conn, organization, source_kind::AD)?;
         conn.execute(
             "INSERT INTO sync_meta (source_id, last_sync_at, last_count, last_error)
@@ -200,12 +200,12 @@ impl Db {
     }
 }
 
-/// Вставляет записи источника вместе с поисковыми индексами (FTS и
-/// триграммный). Неизменённые по `uSNChanged` записи не перезаписываются:
-/// полная LDAP-выборка не должна каждый раз перестраивать весь FTS.
+/// Inserts source records together with search indexes (FTS and
+/// trigram). Records unchanged by `uSNChanged` are not rewritten:
+/// a full LDAP selection must not rebuild the whole FTS every time.
 ///
-/// Справочные значения разрешаются в id один раз на уникальное значение:
-/// тысячи сотрудников одного отдела не долбят базу.
+/// Lookup values are resolved to ids once per unique value:
+/// thousands of employees in one department do not hammer the database.
 fn insert_users(
     tx: &Transaction<'_>,
     source_id: i64,
@@ -219,9 +219,9 @@ fn insert_users(
          DELETE FROM changed_guids;",
     )?;
 
-    // Какие записи реально изменились с прошлой синхронизации. uSNChanged
-    // монотонен в пределах домена; при первом синхронизации/для внешних
-    // файлов (None) считаем изменёнными все записи.
+    // Which records actually changed since the last sync. uSNChanged
+    // monotonic within the domain; on the first sync/for external
+    // files (None) we consider all records changed.
     let existing: HashMap<String, Option<i64>> = {
         let mut stmt =
             tx.prepare("SELECT object_guid, usn_changed FROM users WHERE source_id = ?1")?;
@@ -245,17 +245,17 @@ fn insert_users(
             sam_account_name, first_name, last_name, middle_name,
             display_name, sort_key, title, email,
             ip_phone, phone_external, phone_mobile, pager, manager, manager_guid,
-            usn_changed, updated_at
-         ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21)",
+            usn_changed, updated_at, photo
+         ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22)",
     )?;
     let mut insert_seen =
         tx.prepare("INSERT OR IGNORE INTO seen_guids (object_guid) VALUES (?1)")?;
     let mut insert_changed =
         tx.prepare("INSERT OR IGNORE INTO changed_guids (object_guid) VALUES (?1)")?;
-    // object_guid в FTS5-таблицах UNINDEXED: удаление по одному guid — это
-    // полный скан индекса на каждую запись (O(n²) на большой синхронизации).
-    // Собираем батч в seen_guids, а изменённые — в changed_guids: индексы
-    // чинятся одним проходом и только для реально изменившихся записей.
+    // object_guid in FTS5 tables is UNINDEXED: deleting by a single guid is
+    // a full index scan for every record (O(n^2) on a large sync).
+    // Collect the batch into seen_guids and changed records into changed_guids: indexes are
+    // fixed in one pass and only for records that actually changed.
     for user in users {
         insert_seen.execute(rusqlite::params![user.object_guid])?;
         if changed.contains(user.object_guid.as_str()) {
@@ -319,6 +319,7 @@ fn insert_users(
             user.manager_guid,
             user.usn_changed,
             now,
+            user.photo,
         ])?;
         let (hay, phones) = substr_columns(user);
         insert_substr.execute(rusqlite::params![user.object_guid, hay, phones])?;
@@ -335,7 +336,7 @@ fn insert_users(
     Ok(())
 }
 
-/// Удаляет сотрудников, исчезнувших из каталога этого источника.
+/// Deletes employees that disappeared from this source's catalog.
 fn delete_vanished(tx: &Transaction<'_>, source_id: i64) -> Result<(), AppError> {
     tx.execute(
         "DELETE FROM users WHERE source_id = ?1 AND object_guid NOT IN (SELECT object_guid FROM seen_guids)",
@@ -344,9 +345,9 @@ fn delete_vanished(tx: &Transaction<'_>, source_id: i64) -> Result<(), AppError>
     Ok(())
 }
 
-/// Чистка осиротевших строк поисковых индексов и значений справочников,
-/// на которые больше никто не ссылается (отдел расформирован, организация
-/// исчезла из AD, внешний файл отключён).
+/// Cleanup of orphaned search index rows and lookup values,
+/// that no one references anymore (the department was disbanded, the organization
+/// disappeared from AD, the external file is disabled).
 fn cleanup_orphans(tx: &Transaction<'_>) -> Result<(), AppError> {
     tx.execute(
         "DELETE FROM users_fts WHERE object_guid NOT IN (SELECT object_guid FROM users)",
@@ -367,8 +368,8 @@ fn cleanup_orphans(tx: &Transaction<'_>) -> Result<(), AppError> {
     Ok(())
 }
 
-/// Мета успешной синхронизации источника: время и число полученных записей,
-/// прежняя ошибка сбрасывается.
+/// Successful source sync metadata: time and number of received records,
+/// the previous error is reset.
 fn max_usn(users: &[UserRecord]) -> Option<i64> {
     users.iter().filter_map(|user| user.usn_changed).max()
 }
@@ -397,9 +398,9 @@ fn upsert_sync_meta(
     Ok(())
 }
 
-/// Колонки триграммного индекса: hay — текстовые поля в нижнем регистре
-/// (Unicode-фолдинг на стороне Rust), phones — только цифры телефонов,
-/// чтобы хвосты находились независимо от форматирования.
+/// Trigram index columns: hay - text fields in lowercase
+/// (Unicode folding on the Rust side); phones - only phone digits,
+/// so tails are found regardless of formatting.
 fn substr_columns(user: &UserRecord) -> (String, String) {
     let hay = [
         user.display_name.as_str(),

@@ -6,13 +6,13 @@ import { isTauri } from '@/api/backend';
 import { systemApi } from '@/api/directory';
 
 /**
- * Интеграция с десктоп-окружением:
- * * показывает окно после старта (до этого оно скрыто, чтобы не мелькать
- *   белым квадратом до отрисовки splash-экрана);
- * * синхронизирует тексты меню трея с текущей локалью.
+ * Integration with the desktop environment:
+ * * shows the window after startup (until then it is hidden so it does not flash
+ * a white square until the splash screen is drawn);
+ * * keeps the tray menu texts in sync with the current locale.
  *
- * Глобальная горячая клавиша (Ctrl+Shift+Space) регистрируется на стороне
- * Rust — JS для этого больше не нужен.
+ * The global hotkey (Ctrl+Shift+Space) is registered on the Rust side;
+ * JS is no longer needed for this.
  */
 export function useDesktopEnvironment(): void {
   const { t, i18n } = useTranslation();
@@ -30,14 +30,14 @@ export function useDesktopEnvironment(): void {
         await window.show();
         await window.setFocus();
       } catch (error) {
-        console.warn('[desktop] не удалось показать окно', error);
+        console.warn('[desktop] failed to show window', error);
       }
       try {
         if (!cancelled) {
           await systemApi.updateTrayMenu(t('tray.open'), t('tray.quit'));
         }
       } catch (error) {
-        console.warn('[desktop] не удалось обновить меню трея', error);
+        console.warn('[desktop] failed to update tray menu', error);
       }
     };
 

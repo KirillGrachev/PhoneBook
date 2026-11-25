@@ -22,7 +22,7 @@ import i18n from '@/lib/i18n';
 import { flushConfigSave } from '@/store/configStorage';
 import { useAppStore } from '@/store/useAppStore';
 
-/** Корневой компонент: провайдеры, гидрация, splash и роутинг. */
+/** The root component: providers, hydration, splash and routing. */
 export default function App() {
   useDesktopEnvironment();
 
@@ -38,13 +38,13 @@ export default function App() {
 
   useThemeApplier(theme);
 
-  // Язык документа для скринридеров и правил переносов следует за UI.
+  // Document language for screen readers and hyphenation rules follows the UI.
   useEffect(() => {
     document.documentElement.lang = language || 'en';
   }, [language]);
 
-  // Закрытие окна: сначала дожидаемся debounce-сохранения конфигурации,
-  // иначе последний переключённый тумблер мог потеряться.
+  // Window close: first we wait for the debounced config save,
+  // otherwise the last toggled switch could be lost.
   useEffect(() => {
     if (!isTauri()) {
       return;
@@ -63,12 +63,12 @@ export default function App() {
     return () => unlisten?.();
   }, []);
 
-  // Отключаем CSS/Motion-анимации глобально, если пользователь их выключил.
+  // We disable CSS/Motion animations globally if the user turned them off.
   useEffect(() => {
     document.body.classList.toggle('disable-animations', !animationsEnabled);
   }, [animationsEnabled]);
 
-  // Гидрация persisted-стора (в десктопе — чтение config.json через IPC).
+  // Hydration of the persisted store (in the desktop — reading config.json over IPC).
   useEffect(() => {
     const persist = useAppStore.persist;
     if (persist.hasHydrated()) {
@@ -79,14 +79,14 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  // Язык интерфейса следует за сохранённой настройкой (после гидрации и при изменениях).
+  // UI language follows the saved setting (after hydration and on changes).
   useEffect(() => {
     if (isHydrated && language) {
       void i18n.changeLanguage(language);
     }
   }, [isHydrated, language]);
 
-  // Splash показываем минимум до гидрации + короткий fade.
+  // The splash is shown at least until hydration + a short fade.
   useEffect(() => {
     if (!isHydrated) {
       return;
@@ -96,9 +96,9 @@ export default function App() {
   }, [isHydrated]);
 
   return (
-    // reducedMotion привязан к переключателю приложения, а не к ОС
-    // («user» обесценивал тумблер: при системном «отключить анимации»
-    // он не влиял ни на что): явный выбор пользователя важнее системного.
+    // reducedMotion is tied to the app toggle, not to the OS
+    // ("user" disabled the toggle: with the system "disable animations"
+    // it did not affect anything): the user's explicit choice takes priority over the system one.
     <MotionConfig
       transition={animationsEnabled ? undefined : { duration: 0 }}
       reducedMotion={animationsEnabled ? 'user' : 'always'}
@@ -152,9 +152,9 @@ export default function App() {
 }
 
 /**
- * Полноэкранный прогресс только для ПЕРВОЙ синхронизации (кэш пуст).
- * Фоновые синхронизации не блокируют работу: поиск идёт по локальной базе,
- * а статус виден в чипе шапки (SyncStatusChip).
+ * Full-screen progress only for the FIRST sync (the cache is empty).
+ * Background syncs do not block work: search runs against the local database,
+ * and the status is visible in the header chip (SyncStatusChip).
  */
 function FirstRunOverlay() {
   const { t } = useTranslation();

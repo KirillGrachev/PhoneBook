@@ -22,7 +22,7 @@ interface OrgGroupEditorProps {
   onSubmit: () => void;
 }
 
-/** Редактор создания/переименования группы организаций. */
+/** Editor for creating/renaming an organization group. */
 export function OrgGroupEditor({
   editor,
   availableOrgs,
@@ -58,8 +58,8 @@ export function OrgGroupEditor({
                   key={org}
                   type="button"
                   onClick={() => onToggleOrg(org)}
-                  // Выделение — цветом плашки и текста + галочкой: без смены
-                  // начертания, чтобы текст не «двигался» при отметке.
+                  // Selection is by the badge and text color + a checkmark: without changing
+                  // typeface weight, so the text does not "move" when marked.
                   className={cn(ORG_ROW_CLASS, checked && 'bg-primary/10 text-primary')}
                   aria-pressed={checked}
                 >

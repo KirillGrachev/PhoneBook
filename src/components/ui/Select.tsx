@@ -4,7 +4,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 import { cn } from '@/lib/utils';
 
-/** Опция универсального селекта. */
+/** An option of the universal select. */
 export interface SelectOption<T> {
   value: T;
   label: string;
@@ -16,17 +16,17 @@ interface SelectProps<T> {
   onChange: (value: T) => void;
   ariaLabel: string;
   className?: string;
-  /** Сторона, с которой открывается список. По умолчанию Radix выбирает сам. */
+  /** The side from which the list opens. By default Radix chooses itself. */
   side?: 'top' | 'bottom';
-  /** Не переворачивать список, если снизу мало места. */
+  /** Do not flip the list if there is little space below. */
   avoidCollisions?: boolean;
-  /** Отступ от края окна, чтобы список не прилипал/не обрезался. */
+  /** Indent from the window edge so the list does not stick/get clipped. */
   collisionPadding?: number;
 }
 
 /**
- * Стилизованный выпадающий список в общем дизайне приложения
- * (вместо нативного <select>, чей системный dropdown выбивается из стиля).
+ * A styled dropdown in the shared app design
+ * (instead of a native <select>, whose system dropdown breaks the style).
  */
 export function Select<T>({
   value,

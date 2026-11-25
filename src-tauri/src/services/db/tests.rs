@@ -1,4 +1,4 @@
-//! Unit-тесты кэша: поиск, фильтры, синхронизация, справочники, схема.
+//! Cache unit tests: search, filters, sync, lookups, schema.
 
 use super::*;
 
@@ -25,6 +25,7 @@ fn record(guid: &str, org: &str, display: &str, department: &str, phone_tail: &s
         pager: None,
         usn_changed: Some(1),
         tokens,
+        photo: None,
     }
 }
 
@@ -46,7 +47,7 @@ fn sample_db() -> Db {
     db
 }
 
-/// Число строк в таблице — для проверок дедупликации справочников.
+/// Number of rows in the table - for lookup deduplication checks.
 fn table_count(db: &Db, table: &str) -> i64 {
     let guard = db.conn_for_tests().lock().expect("lock");
     guard
@@ -116,8 +117,8 @@ fn searches_by_name_prefix() {
 #[test]
 fn searches_by_full_email() {
     let db = sample_db();
-    // Адрес целиком: FTS-токенизатор режет его на части, запрос должен
-    // требовать все части, а не искать один склеенный токен.
+    // The whole address: the FTS tokenizer splits it into parts, the query must
+    // require all parts, rather than searching for one glued token.
     let found = db
         .search(SearchParams {
             query: Some("g1@kmaruda.ru".into()),
@@ -154,7 +155,7 @@ fn searches_by_phone_tail_ignoring_formatting() {
 #[test]
 fn searches_with_wrong_keyboard_layout() {
     let db = sample_db();
-    // «gtnhjd» — «петров», набранное в английской раскладке.
+    // "gtnhjd" — "petrov" typed on the English layout.
     let found = db
         .search(SearchParams {
             query: Some("gtnhjd".into()),
@@ -171,7 +172,7 @@ fn searches_with_wrong_keyboard_layout() {
 #[test]
 fn substring_match_works_via_trigram_index() {
     let db = sample_db();
-    // «хгал» — подстрока в середине слова «Бухгалтерия», FTS-префикс её не берёт.
+    // "gal" is a substring in the middle of "Bukhgalteriya", the FTS prefix does not take it.
     let found = db
         .search(SearchParams {
             query: Some("хгал".into()),
@@ -186,8 +187,8 @@ fn substring_match_works_via_trigram_index() {
 #[test]
 fn trigram_substring_search_is_case_insensitive() {
     let db = sample_db();
-    // Запрос в верхнем регистре находит строчное значение: hay хранится
-    // в lower, запрос нормализуется так же.
+    // An upper-case query finds a lower-case value: hay is stored
+    // in lower; the query is normalized the same way.
     let upper = db
         .search(SearchParams {
             query: Some("БУХГ".into()),
@@ -200,9 +201,9 @@ fn trigram_substring_search_is_case_insensitive() {
 #[test]
 fn null_fts_guid_does_not_break_complement_count() {
     let db = sample_db();
-    // Защита от трёхзначной логики NOT IN: строка FTS с NULL-guid не должна
-    // обнулять дополнительную выдачу (object_guid в рабочей базе всегда есть,
-    // но защита дешёвая и фиксирует контракт).
+    // Protection against NOT IN three-valued logic: an FTS row with a NULL guid must not
+    // clear the extra results (object_guid is always present in the working database,
+    // but the guard is cheap and pins the contract).
     {
         let conn = db.conn_for_tests().lock().expect("lock");
         conn.execute(
@@ -224,7 +225,7 @@ fn null_fts_guid_does_not_break_complement_count() {
 #[test]
 fn short_substring_still_found_via_like() {
     let db = sample_db();
-    // Два символа: триграммам недоступно, работает LIKE-фолбэк.
+    // Two characters: unavailable to trigrams, the LIKE fallback works.
     let found = db
         .search(SearchParams {
             query: Some("ух".into()),
@@ -263,7 +264,7 @@ fn filters_by_organization_and_department() {
 #[test]
 fn source_org_filter_includes_accounts_without_company() {
     let db = sample_db();
-    // Сервисная учётка из AD «КМАруды» без атрибута company.
+    // Service account from the "KMAruda" AD without the company attribute.
     let mut svc = record("g4", "КМАруда", "svc-backup", "IT отдел", "44");
     svc.company = None;
     db.replace_org_users(
@@ -276,7 +277,7 @@ fn source_org_filter_includes_accounts_without_company() {
     )
     .expect("resync");
 
-    // Фильтр по атрибуту AD company сервисную учётку не включает.
+    // The AD company attribute filter excludes the service account.
     let by_company = db
         .search(SearchParams {
             organization: Some("КМАруда".into()),
@@ -287,7 +288,7 @@ fn source_org_filter_includes_accounts_without_company() {
     assert_eq!(by_company.len(), 2);
     assert!(!by_company.iter().any(|e| e.object_guid == "g4"));
 
-    // Фильтр по источнику синхронизации включает (вкладка «Предприятие»).
+    // The sync source filter includes it (the "Enterprise" tab).
     let by_source = db
         .search(SearchParams {
             source_org: Some("КМАруда".into()),
@@ -302,7 +303,7 @@ fn source_org_filter_includes_accounts_without_company() {
         "чужая организация не попадает в выдачу"
     );
 
-    // Список организаций для фильтра не содержит пустых имён.
+    // The organization list for the filter contains no empty names.
     let orgs = db.list_organizations().expect("orgs");
     assert!(orgs.iter().all(|o| !o.trim().is_empty()));
 }
@@ -334,14 +335,14 @@ fn by_ids_selection() {
         .expect("ids")
         .items;
     assert_eq!(picked.len(), 2);
-    // Сортировка по алфавиту, а не по порядку id.
+    // Sort alphabetically, not by id order.
     assert_eq!(picked[0].object_guid, "g1");
 }
 
 #[test]
 fn resync_removes_stale_rows_of_that_org_only() {
     let db = sample_db();
-    // Повторная синхронизация КМАруды: Иванов «уволен».
+    // Re-sync of KMAruda: Ivanov is "fired".
     db.replace_org_users(
         "КМАруда",
         &[record(
@@ -359,7 +360,7 @@ fn resync_removes_stale_rows_of_that_org_only() {
     assert!(db.get_by_id("g3").is_ok(), "другая организация не тронута");
     assert_eq!(db.count().expect("count"), 2);
 
-    // FTS не должен возвращать «призраков».
+    // FTS must not return "ghosts".
     let ghosts = db
         .search(SearchParams {
             query: Some("иванов".into()),
@@ -516,7 +517,7 @@ fn reader_without_schema_falls_back_to_main_connection() {
         key: [0u8; 32],
         search_generation: Arc::new(AtomicU64::new(0)),
         search_cache: Arc::new(Mutex::new(SearchCache::default())),
-        // Пустая БД без схемы ведёт себя как сломанный shared-cache reader.
+        // An empty DB without a schema behaves like a broken shared-cache reader.
         readers: Arc::new(Mutex::new(vec![
             Connection::open_in_memory().expect("empty reader")
         ])),
@@ -577,8 +578,8 @@ fn organizations_are_distinct_and_sorted() {
 #[test]
 fn like_wildcards_do_not_leak_into_pattern() {
     let db = sample_db();
-    // Символы LIKE/FTS в запросе игнорируются (санитизация), а не работают
-    // как wildcards: одиночный «%» равносилен пустому запросу (просмотру).
+    // LIKE/FTS characters in the query are ignored (sanitized), rather than acting
+    // as wildcards: a single "%" is equivalent to an empty query (browse).
     let wildcard = db
         .search(SearchParams {
             query: Some("%".into()),
@@ -588,7 +589,7 @@ fn like_wildcards_do_not_leak_into_pattern() {
     let browse = db.search(SearchParams::default()).expect("browse");
     assert_eq!(wildcard.total, browse.total);
 
-    // Пунктуация внутри слова не мешает поиску: «Иван_ов» ищет как «Иванов».
+    // Punctuation inside a word does not hinder search: "Ivan_ov" searches as "Ivanov".
     let underscore = db
         .search(SearchParams {
             query: Some("Иван_ов".into()),
@@ -601,7 +602,7 @@ fn like_wildcards_do_not_leak_into_pattern() {
 #[test]
 fn lookups_store_repeated_values_once() {
     let db = sample_db();
-    // 3 сотрудника, 2 организации, 3 отдела, один кабинет на всех.
+    // 3 employees, 2 organizations, 3 departments, one office for all.
     assert_eq!(table_count(&db, "users"), 3);
     assert_eq!(table_count(&db, "sources"), 2, "КМАруда и Глобал Строй");
     assert_eq!(table_count(&db, "orgs"), 2);
@@ -616,8 +617,8 @@ fn lookups_store_repeated_values_once() {
 #[test]
 fn unchanged_usn_skips_index_rewrite_but_changed_usn_updates() {
     let db = sample_db();
-    // Тот же uSNChanged: запись считается неизменённой, даже если в тестовом
-    // объекте поменяли поле (в AD такое невозможно без роста uSNChanged).
+    // Same uSNChanged: the record is considered unchanged, even if the test
+    // object changed a field (impossible in AD without uSNChanged increasing).
     let mut same = record("g1", "КМАруда", "Иванов Иван Иванович", "IT отдел", "11");
     same.display_name = "Подмена без uSNChanged".into();
     db.replace_org_users("КМАруда", &[same]).expect("same usn");
@@ -632,7 +633,7 @@ fn unchanged_usn_skips_index_rewrite_but_changed_usn_updates() {
         Some("Иванов Иван Иванович")
     );
 
-    // Новый uSNChanged — запись переиндексируется.
+    // A new uSNChanged — the record is reindexed.
     let mut changed = record("g1", "КМАруда", "Иванов Иван Иванович", "IT отдел", "11");
     changed.display_name = "Иванов Иван Обновлённый".into();
     changed.usn_changed = Some(2);
@@ -650,11 +651,11 @@ fn unchanged_usn_skips_index_rewrite_but_changed_usn_updates() {
 #[test]
 fn stale_sync_prunes_unused_lookups() {
     let db = sample_db();
-    // Петров переведён в «Кадры» без кабинета, Иванов уволен:
-    // «IT отдел» и «Бухгалтерия» больше никому не нужны.
+    // Petrov is transferred to "HR" without an office, Ivanov is fired:
+    // "IT department" and "Accounting" are no longer needed by anyone.
     let mut moved = record("g2", "КМАруда", "Петров Пётр Петрович", "Кадры", "22");
     moved.office = None;
-    moved.usn_changed = Some(2); // AD поднял uSNChanged при переводе
+    moved.usn_changed = Some(2); // AD raised uSNChanged on transfer
     db.replace_org_users("КМАруда", &[moved]).expect("resync");
 
     let guard = db.conn_for_tests().lock().expect("lock");
@@ -667,9 +668,9 @@ fn stale_sync_prunes_unused_lookups() {
         .filter_map(Result::ok)
         .collect();
     assert_eq!(names, vec!["Кадры".to_string()]);
-    // «Каб. 101» по-прежнему нужен Смирновой из другой организации.
+    // "Office 101" is still needed by Smirnova from another organization.
     drop(stmt);
-    // Мьютекс соединения нерентерабелен: освобождаем до обращения к table_count.
+    // The connection mutex is not reentrant: we release it before accessing table_count.
     drop(guard);
     assert_eq!(table_count(&db, "locations"), 1);
 }
@@ -692,7 +693,7 @@ fn foreign_keys_are_enforced() {
 #[test]
 fn organizations_deduplicate_case_and_spaces() {
     let db = sample_db();
-    // Варианты написания организации: регистр и лишние пробелы.
+    // Organization spelling variants: case and extra spaces.
     let mut first = record("d1", "Тест", "Один Иванов", "Отдел", "31");
     first.company = Some("ТЕСТ".into());
     let mut second = record("d2", "Тест", "Два Иванов", "Отдел", "32");
@@ -763,9 +764,9 @@ fn latin_names_sort_after_cyrillic() {
 
 #[test]
 fn organization_filter_resolves_settings_name_to_company() {
-    // Имя из настроек AD («КМАруда») отличается от атрибута company
-    // («АО Комбинат КМАруда»): фильтр предприятия должен найти единственный
-    // содержащий его справочник, а не отдать весь источник синхронизации.
+    // The name from AD settings ("KMAruda") differs from the company attribute
+    // ("AO Kombinat KMAruda"): the enterprise filter must find the single
+    // the lookup containing it, rather than returning the whole sync source.
     let db = Db::open_in_memory().expect("in-memory db");
     db.replace_org_users(
         "КМАруда",
@@ -793,9 +794,9 @@ fn organization_filter_resolves_settings_name_to_company() {
 
 #[test]
 fn organization_filter_falls_back_to_source_when_company_unknown() {
-    // Имя из настроек не встречается ни в одном company: пара
-    // organization+source_org с тем же именем деградирует до фильтра по
-    // источнику; строгий organization-фильтр без дубля остаётся строгим.
+    // The name from settings occurs in no company: the pair
+    // organization+source_org with the same name degrades to a filter by
+    // source; a strict organization filter without a duplicate stays strict.
     let db = Db::open_in_memory().expect("in-memory db");
     db.replace_org_users(
         "КМАруда",
@@ -826,8 +827,8 @@ fn organization_filter_falls_back_to_source_when_company_unknown() {
 
 #[test]
 fn encrypted_container_full_lifecycle() {
-    // Полный цикл зашифрованного кэша: память → контейнер на диске →
-    // память, на реальной схеме (справочники + FTS5 + триггеры).
+    // The full encrypted cache cycle: memory → a container on disk →
+    // memory, on the real schema (lookups + FTS5 + triggers).
     let dir = std::env::temp_dir().join(format!("kmpb-lifecycle-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
     let path = dir.join("phonebook.db");
@@ -835,7 +836,7 @@ fn encrypted_container_full_lifecycle() {
 
     let key = encryption::generate_key().expect("key");
 
-    // 1. Наполняем in-memory базу через обычный путь синхронизации.
+    // 1. Fill the in-memory database through the normal synchronization path.
     let db = Db::open_in_memory().expect("open");
     db.replace_org_users(
         "КМАруда",
@@ -847,14 +848,14 @@ fn encrypted_container_full_lifecycle() {
         encryption::serialize(&mut conn).expect("serialize")
     };
 
-    // 2. На диске — только контейнер: ни SQLite-заголовка, ни данных.
+    // 2. On disk there is only the container: neither a SQLite header nor data.
     encryption::save(&path, &key, &image).expect("save");
     let raw = std::fs::read(&path).expect("read");
     assert!(raw.starts_with(b"KMPBENC1"));
     assert!(!raw.windows(16).any(|w| w == b"SQLite format 3\0"));
     assert!(!String::from_utf8_lossy(&raw).contains("Смирнов"));
 
-    // 3. Загрузка с тем же ключом восстанавливает базу целиком.
+    // 3. Loading with the same key restores the database entirely.
     let restored = match encryption::load(&path, &key).expect("load") {
         encryption::LoadOutcome::Bytes(bytes) => bytes,
         other => panic!("unexpected outcome: {other:?}"),
@@ -871,7 +872,7 @@ fn encrypted_container_full_lifecycle() {
     };
     assert_eq!(db2.count().expect("count"), 1);
 
-    // Полнотекстовый поиск пережил serialize/deserialize.
+    // Full-text search survived serialize/deserialize.
     let page = db2
         .search(SearchParams {
             query: Some("Смир".into()),
@@ -881,7 +882,7 @@ fn encrypted_container_full_lifecycle() {
     assert_eq!(page.total, 1);
     assert_eq!(page.items[0].display_name.as_deref(), Some("Смирнов Иван"));
 
-    // 4. Запись во восстановленной базе сама обновляет контейнер (flush).
+    // 4. A write in the restored database itself updates the container (flush).
     db2.replace_org_users(
         "КМАруда",
         &[
@@ -978,8 +979,8 @@ fn corrupt_or_truncated_container_is_rejected() {
 
 #[test]
 fn multi_org_filter_unions_companies() {
-    // Группа фильтров: союз организаций учитывает учётки каждой из них,
-    // а не только первой (вкладка «КМАруда» не глобальной версии).
+    // A filter group: the union of organizations considers the accounts of each,
+    // not only the first one (the "KMAruda" tab in the non-global version).
     let db = sample_db();
     let union = db
         .search(SearchParams {
@@ -1001,8 +1002,8 @@ fn multi_org_filter_unions_companies() {
 
 #[test]
 fn multi_org_filter_resolves_variant_names() {
-    // Имена группы могут отличаться от атрибута company (имя из настроек,
-    // кавычки юридического лица): каждое разрешается в свой справочник.
+    // Group names may differ from the company attribute (a name from settings,
+    // legal entity quotes): each resolves to its own lookup.
     let db = Db::open_in_memory().expect("in-memory db");
     db.replace_org_users(
         "КМАруда",
@@ -1028,7 +1029,7 @@ fn multi_org_filter_resolves_variant_names() {
         .expect("search");
     assert_eq!(found.total, 3);
 
-    // Дедупликация: оба имени группы указывают на один справочник.
+    // Deduplication: both group names point to the same lookup.
     let dup = db
         .search(SearchParams {
             organizations: Some(vec![
@@ -1043,8 +1044,8 @@ fn multi_org_filter_resolves_variant_names() {
 
 #[test]
 fn multi_org_filter_without_resolution_matches_nothing() {
-    // Строгая группа (без маркера source_org), чьи организации исчезли из
-    // AD: выдача пуста, а не «весь холдинг».
+    // A strict group (without the source_org marker) whose organizations disappeared from
+    // AD: the result is empty, not "the whole holding".
     let db = sample_db();
     let found = db
         .search(SearchParams {
@@ -1057,8 +1058,8 @@ fn multi_org_filter_without_resolution_matches_nothing() {
 
 #[test]
 fn multi_org_filter_falls_back_to_source_when_pair_given() {
-    // Вкладка предприятия передаёт source_org маркером: ни одно имя группы
-    // не найдено в company → фолбэк на источник синхронизации.
+    // The enterprise tab passes source_org as a marker: no group name
+    // not found in company -> fall back to the sync source.
     let db = Db::open_in_memory().expect("in-memory db");
     db.replace_org_users(
         "КМАруда",
@@ -1078,8 +1079,8 @@ fn multi_org_filter_falls_back_to_source_when_pair_given() {
         .expect("search");
     assert_eq!(fallback.total, 2);
 
-    // Частичное разрешение: учитываются только найденные организации,
-    // фолбэк не подмешивает весь источник.
+    // Partial resolution: only the organizations found are considered,
+    // the fallback does not mix in the whole source.
     let partial = db
         .search(SearchParams {
             organizations: Some(vec!["Комбинат Рудный".into(), "Тоже нет".into()]),
@@ -1121,7 +1122,7 @@ fn schema_version_mismatch_recreates_cache() {
         .expect("count");
     assert_eq!(sources, 0, "кэш пересоздан с нуля: зеркало восстановимо");
 
-    // Повторный вызов на актуальной версии — no-op, данные не трогает.
+    // A repeated call on the current version is a no-op, it does not touch data.
     conn.execute("INSERT INTO sources (name) VALUES ('КМАруда')", [])
         .expect("row");
     ensure_schema(&conn).expect("ensure again");
@@ -1135,9 +1136,9 @@ fn schema_version_mismatch_recreates_cache() {
 fn mixed_schema_structure_self_heals() {
     use super::schema::{ensure_schema, SCHEMA_VERSION};
 
-    // База «смешанной» сборки: штамп версии актуальный, но в `sources`
-    // нет колонки `kind` — ровно та картина, при которой синхронизация
-    // внешнего файла падает на «no such column: kind».
+    // A "mixed" build database: the version stamp is current, but in `sources`
+    // no `kind` column - exactly the situation in which sync
+    // external file fails with "no such column: kind".
     let conn = Connection::open_in_memory().expect("conn");
     Db::apply_pragmas(&conn).expect("pragmas");
     ensure_schema(&conn).expect("ensure");
@@ -1158,7 +1159,7 @@ fn mixed_schema_structure_self_heals() {
         .expect("version");
     assert_eq!(version, SCHEMA_VERSION, "штамп версии не менялся");
 
-    // Самопроверка структуры замечает подмену и пересоздаёт кэш.
+    // The structure self-check detects substitution and recreates the cache.
     ensure_schema(&conn).expect("self-heal");
     conn.prepare("SELECT kind FROM sources LIMIT 0")
         .expect("колонка kind вернулась");
@@ -1176,9 +1177,9 @@ fn mixed_schema_structure_self_heals() {
 fn missing_pager_column_self_heals() {
     use super::schema::ensure_schema;
 
-    // Реальный случай со старой базой: `user_version` уже 5, но колонки
-    // `pager` (TrueConf ID) нет. Раньше это обнаруживалось только после
-    // удаления БД вручную; структурный зонд должен пересоздать кэш сам.
+    // A real case with an old database: `user_version` is already 5, but the columns
+    // `pager` (TrueConf ID) is absent. Previously this was discovered only after
+    // manual DB deletion; the structural probe must recreate the cache itself.
     let conn = Connection::open_in_memory().expect("conn");
     Db::apply_pragmas(&conn).expect("pragmas");
     ensure_schema(&conn).expect("ensure");
@@ -1199,8 +1200,8 @@ fn missing_pager_column_self_heals() {
 #[test]
 fn punctuation_in_query_does_not_break_search() {
     let db = sample_db();
-    // Запятая и пунктуация санитизируются: «Смирнов, Иван» ищет то же,
-    // что «Смирнов Иван», а не превращается в триграммную фразу с запятой.
+    // Comma and punctuation are sanitized: "Smirnov, Ivan" searches the same,
+    // that "Smirnov Ivan", rather than turning into a trigram phrase with a comma.
     let with_comma = db
         .search(SearchParams {
             query: Some("Иванов, Иван".into()),
@@ -1220,7 +1221,7 @@ fn punctuation_in_query_does_not_break_search() {
 #[test]
 fn punctuation_only_query_falls_back_to_browse() {
     let db = sample_db();
-    // Одна запятая — не запрос: выдача равна просмотру без поиска.
+    // One comma is not a query: the result equals browsing without search.
     let comma = db
         .search(SearchParams {
             query: Some(",".into()),
@@ -1234,12 +1235,12 @@ fn punctuation_only_query_falls_back_to_browse() {
 #[test]
 fn layout_variants_include_punctuation_mapping() {
     let db = sample_db();
-    // `,j,f` на русской раскладке — это «боба»: раскладочный вариант
-    // строится до отбрасывания пунктуации, запятая воспринимается как «б».
+    // `,j,f` on the Russian layout is "boba": a layout variant
+    // built before punctuation is discarded; a comma is treated as "b".
     let expr = crate::services::tokens::build_fts_query(",j,f").expect("expr");
     assert!(expr.contains("боба"), "вариант с запятой как «б»: {expr}");
 
-    // Одиночная запятая равносильна поиску на «б».
+    // A single comma is equivalent to searching for "b".
     let comma = db
         .search(SearchParams {
             query: Some(",".into()),
@@ -1258,8 +1259,8 @@ fn layout_variants_include_punctuation_mapping() {
 #[test]
 fn comma_and_dot_reach_layout_letters() {
     let db = sample_db();
-    // Запятая на русской раскладке — это «б»: находится «Бухгалтерия»,
-    // хотя санитизация для триграмм/LIKE пунктуацию отбрасывает.
+    // A comma on the Russian layout is "b": "Bukhgalteriya" is found,
+    // although sanitization for trigrams/LIKE discards punctuation.
     let comma = db
         .search(SearchParams {
             query: Some(",".into()),
@@ -1272,7 +1273,7 @@ fn comma_and_dot_reach_layout_letters() {
         .iter()
         .any(|e| e.department.as_deref() == Some("Бухгалтерия")));
 
-    // Точка — это «ю»: отдельная база с таким именем.
+    // A dot is "yu": a separate database with this name.
     let db2 = Db::open_in_memory().expect("db");
     db2.replace_org_users(
         "КМАруда",
@@ -1326,7 +1327,7 @@ fn offset_pages_are_disjoint_and_stable() {
 fn mixed_fts_and_trigram_pages_are_exact() {
     let db = Db::open_in_memory().expect("in-memory db");
     let mut records = Vec::new();
-    // 5 совпадений по префиксу FTS: «Иванов» — отдельный токен.
+    // 5 matches by FTS prefix: "Ivanov" is a separate token.
     for i in 0..5 {
         records.push(record(
             &format!("fts-{i}"),
@@ -1336,7 +1337,7 @@ fn mixed_fts_and_trigram_pages_are_exact() {
             "11",
         ));
     }
-    // 5 совпадений только по триграмме: «иван» — подстрока «Поливанов».
+    // 5 matches by trigram only: "ivan" is a substring of "Polivanov".
     for i in 0..5 {
         records.push(record(
             &format!("sub-{i}"),
@@ -1411,7 +1412,7 @@ fn office_filter_finds_people_in_same_office() {
     db.replace_org_users("КМАруда", &[first, second, third])
         .expect("sync");
 
-    // Клик по кабинету: точный фильтр отдаёт только соседей по кабинету.
+    // Clicking an office: an exact filter returns only office neighbors.
     let roommates = db
         .search(SearchParams {
             office: Some("Каб. 401".into()),
@@ -1427,7 +1428,7 @@ fn office_filter_finds_people_in_same_office() {
     guids.sort_unstable();
     assert_eq!(guids, vec!["g1", "g2"]);
 
-    // Пустая строка кабинета фильтром не считается (как отдел/должность).
+    // An empty office string is not considered a filter (like department/title).
     let unfiltered = db
         .search(SearchParams {
             office: Some("   ".into()),
@@ -1456,7 +1457,7 @@ fn manager_guid_roundtrips_to_employee() {
     assert_eq!(employee.manager_guid.as_deref(), Some("g0"));
 }
 
-/// Запись внешнего телефонного файла: минимум полей, номер обязателен.
+/// External phone file record: minimal fields; the number is required.
 fn external_record(guid: &str, display: &str, phone: &str) -> UserRecord {
     let tokens = crate::services::tokens::initials_tokens(display).join(" ");
     UserRecord {
@@ -1480,6 +1481,7 @@ fn external_record(guid: &str, display: &str, phone: &str) -> UserRecord {
         pager: None,
         usn_changed: None,
         tokens,
+        photo: None,
     }
 }
 
@@ -1497,7 +1499,7 @@ fn external_source_replaces_renames_and_clears() {
         .expect("replace external");
     assert_eq!(replaced, 2);
 
-    // Источник виден в фильтре организаций, записи ищутся по номеру.
+    // The source is visible in the organization filter, records are searched by number.
     let orgs = db.list_organizations().expect("orgs");
     assert!(orgs.contains(&"Yealink".to_string()));
     let page = db
@@ -1509,8 +1511,8 @@ fn external_source_replaces_renames_and_clears() {
     assert_eq!(page.total, 1);
     assert_eq!(page.items[0].display_name.as_deref(), Some("ТЕСТ"));
 
-    // Переименование источника (заголовок файла изменён) убирает старый кэш:
-    // организация внешней записи совпадает с именем источника, как в бою.
+    // Renaming the source (the file header changed) removes the old cache:
+    // the external record's organization matches the source name, as in live mode.
     let mut renamed = external_record("ext-3", "Тест 2", "312");
     renamed.company = Some("Yealink v2".into());
     db.replace_external_users("Yealink v2", &[renamed])
@@ -1518,10 +1520,10 @@ fn external_source_replaces_renames_and_clears() {
     let orgs = db.list_organizations().expect("orgs");
     assert!(!orgs.contains(&"Yealink".to_string()));
     assert!(orgs.contains(&"Yealink v2".to_string()));
-    // Записи AD не задеты: 3 сотрудника + 1 внешняя.
+    // AD records are untouched: 3 employees + 1 external.
     assert_eq!(db.count().expect("count"), 4);
 
-    // Отключение опции вычищает внешний кэш целиком, мета уходит каскадом.
+    // Disabling the option clears the external cache entirely, the meta goes by cascade.
     let cleared = db.clear_external_users().expect("clear");
     assert_eq!(cleared, 1);
     assert_eq!(db.count().expect("count"), 3);
@@ -1550,7 +1552,7 @@ fn source_kind_distinguishes_ad_and_external() {
 #[test]
 fn external_records_are_excluded_from_duplicate_clusters() {
     let db = sample_db();
-    // Полный «двойник» сотрудника AD из внешнего файла: то же имя и телефон.
+    // A full "twin" of an AD employee from the external file: the same name and phone.
     let mut twin = external_record("ext-twin", "Иванов Иван Иванович", "5611");
     twin.company = Some("КМАруда".into());
     twin.department = Some("IT отдел".into());
@@ -1561,20 +1563,20 @@ fn external_records_are_excluded_from_duplicate_clusters() {
     assert_eq!(
         preview.groups, 0,
         "внешний файл не должен участвовать в уборке дубликатов: {:?}",
-        preview.samples
+        preview.removable_names
     );
 }
 
-/// Нагрузочный замер поиска: 50k контактов, p50/p95/p99 по типовым запросам
-/// и конкурентная нагрузка 1/2/4/8 потоков.
+/// Search load benchmark: 50k contacts, p50/p95/p99 for typical queries
+/// and concurrent load with 1/2/4/8 threads.
 ///
-/// Запуск вручную (в обычном `cargo test` не выполняется):
+/// Manual run (not executed in a normal `cargo test`):
 ///
 /// ```text
 /// cargo test --manifest-path src-tauri/Cargo.toml search_load_benchmark -- --ignored --nocapture
 /// ```
 ///
-/// Размер базы и число итераций можно переопределить:
+/// The database size and iteration count can be overridden:
 /// `PB_BENCH_ROWS=100000 PB_BENCH_ITERS=200`.
 #[test]
 #[ignore = "manual load benchmark"]
@@ -1629,7 +1631,7 @@ fn search_load_benchmark() {
         let department = DEPARTMENTS[(i / 7) % DEPARTMENTS.len()];
         let title = TITLES[(i / 11) % TITLES.len()];
         let display_name = format!("{surname} {name} {i:05}");
-        // Каждая 25-я учётка — «пустая»: проверяем hide_empty под нагрузкой.
+        // Every 25th account is "empty": we check hide_empty under load.
         let blank = i.is_multiple_of(25);
         let email = (!blank).then(|| format!("user{i}@kmaruda.ru"));
         let ip_phone = (!blank).then(|| format!("56{:04}", i % 10_000));
@@ -1668,6 +1670,7 @@ fn search_load_benchmark() {
             pager: Some(format!("tc-{i}")),
             usn_changed: Some(i as i64),
             tokens: tokens.join(" "),
+            photo: None,
         }
     }
 

@@ -1,20 +1,20 @@
 /**
- * DTO-контракты Rust-бэкенда.
+ * DTO contracts of the Rust backend.
  *
- * Типы зеркалят serde-структуры (`rename_all = "camelCase"`) из
- * `src-tauri/src/services/*`. Любое изменение контракта на бэкенде
- * должно сопровождаться правкой здесь — это единственная точка правды.
+ * The types mirror the serde structures (`rename_all = "camelCase"`) from
+ * `src-tauri/src/services/*`. Any contract change on the backend
+ * must be accompanied by an edit here — this is the single source of truth.
  */
 
-/** Тема оформления (бэкенд нормализует к одному из трёх значений). */
+/** The appearance theme (the backend normalizes to one of three values). */
 export type ThemeName = 'light' | 'dark' | 'system';
 
-/** Язык интерфейса (бэкенд нормализует к ru/en). */
+/** The interface language (the backend normalizes to ru/en). */
 export type LanguageCode = 'ru' | 'en';
 
 export interface EmployeeDto {
   objectGuid: string;
-  /** Организация-источник синхронизации (из настроек AD). */
+  /** The synchronization source organization (from AD settings). */
   sourceOrg: string;
   samAccountName: string | null;
   firstName: string | null;
@@ -30,15 +30,15 @@ export interface EmployeeDto {
   phoneExternal: string | null;
   phoneMobile: string | null;
   manager: string | null;
-  /** GUID руководителя для клика по карточке (если руководитель в выборке). */
+  /** Manager GUID for clicking the card (if the manager is in the sample). */
   managerGuid?: string | null;
-  /** TrueConf ID сотрудника: значение AD-атрибута `pager`. */
+  /** Employee TrueConf ID: the value of the AD `pager` attribute. */
   pager: string | null;
   usnChanged: number | null;
   updatedAt: number | null;
 }
 
-/** DTO конфигурации подключения организации (camelCase-контракт бэкенда). */
+/** DTO of an organization connection config (the backend camelCase contract). */
 export interface LdapOrgConfigDto {
   organization: string;
   ldapUrl: string;
@@ -47,11 +47,11 @@ export interface LdapOrgConfigDto {
   useStartTls: boolean;
   allowInvalidTls: boolean;
   useIntegratedAuth: boolean;
-  /** Пароль хранится в системном keyring; флаг говорит «секрет сохранён». */
+  /** The password is stored in the system keyring; the flag says "the secret is saved". */
   hasPassword: boolean;
 }
 
-/** Организация в запросе на сохранение конфигурации (без секрета). */
+/** An organization in a config save request (without the secret). */
 export interface LdapOrgInput {
   organization: string;
   ldapUrl: string;
@@ -62,7 +62,7 @@ export interface LdapOrgInput {
   useIntegratedAuth: boolean;
 }
 
-/** Группа организаций: объединённые фильтры с одним названием (camelCase-контракт бэкенда). */
+/** Organization group: combined filters under one name (the backend camelCase contract). */
 export interface OrgGroupDto {
   id: string;
   name: string;
@@ -70,9 +70,9 @@ export interface OrgGroupDto {
 }
 
 /**
- * Файл обмена группами организаций: перенос настроек между машинами.
- * Зеркалит Rust-структуру `OrgGroupsShareFile` (`services/config/share.rs`):
- * маркер `format` и `version` проверяются на бэкенде до применения.
+ * Organization group exchange file: transferring settings between machines.
+ * Mirrors the Rust structure `OrgGroupsShareFile` (`services/config/share.rs`):
+ * the `format` marker and `version` are checked on the backend before applying.
  */
 export interface OrgGroupsFileDto {
   format: string;
@@ -82,7 +82,7 @@ export interface OrgGroupsFileDto {
   enterpriseGroupId: string | null;
 }
 
-/** DTO корневого конфига приложения на стороне бэкенда. */
+/** DTO of the root app config on the backend side. */
 export interface AppConfigDto {
   theme: string;
   language: string;
@@ -91,13 +91,15 @@ export interface AppConfigDto {
   ldapConfigs: LdapOrgConfigDto[];
   testMode: boolean;
   animationsEnabled: boolean;
+  /** Show contact photos as avatars; when false, letter initials are used. */
+  showAvatars: boolean;
   syncIntervalHours: number;
   ldapConnectTimeoutSecs: number;
   ldapOperationTimeoutSecs: number;
   hideEmptyContacts: boolean;
   emailOverrides: Record<string, string>;
   orgGroups: OrgGroupDto[];
-  /** Группа для вкладки «КМАруда» (не глобальная версия). */
+  /** The group for the "KMAruda" tab (non-global version). */
   enterpriseGroupId: string | null;
   /** Legacy single path, kept for config compatibility. */
   externalPhonebookPath: string | null;
@@ -116,7 +118,7 @@ export interface AppConfigDto {
   managedRevision: number | null;
 }
 
-/** Запрос сохранения конфига; секрет передаётся отдельным каналом. */
+/** A config save request; the secret is passed through a separate channel. */
 export interface SaveConfigRequest {
   theme: string;
   language: string;
@@ -125,13 +127,14 @@ export interface SaveConfigRequest {
   ldapConfigs: LdapOrgInput[];
   testMode: boolean;
   animationsEnabled: boolean;
+  showAvatars: boolean;
   syncIntervalHours: number;
   ldapConnectTimeoutSecs: number;
   ldapOperationTimeoutSecs: number;
   hideEmptyContacts: boolean;
   emailOverrides: Record<string, string>;
   orgGroups: OrgGroupDto[];
-  /** Группа для вкладки «КМАруда»; `null` — наследуемое поведение. */
+  /** The group for the "KMAruda" tab; `null` — inherited behavior. */
   enterpriseGroupId: string | null;
   externalPhonebookPath: string | null;
   externalPhonebookPaths: string[];
@@ -141,9 +144,9 @@ export interface SaveConfigRequest {
 }
 
 /**
- * Итог загрузки внешнего телефонного файла (тег `state` в serde-энумерации
- * [`ExternalRefresh`]): `loaded` — файл в кэше, `cleared` — кэш очищен
- * (записей больше нет), `disabled` — опция выключена.
+ * The result of loading an external phone file (the `state` tag in the serde enumeration
+ * [`ExternalRefresh`]): `loaded` — the file is cached, `cleared` — the cache is cleared
+ * (no more records), `disabled` — the option is turned off.
  */
 export interface ExternalSourceDto {
   organization: string;
@@ -157,13 +160,13 @@ export interface ExternalRefreshDto {
   sources?: ExternalSourceDto[];
 }
 
-/** Результат диагностики подключения к каталогу (генерируется из Rust). */
+/** The result of diagnosing a directory connection (generated from Rust). */
 export type { ConnectionTestDto } from './contracts.generated';
 
-/** Фазы live-события синхронизации. */
+/** The phases of a live synchronization event. */
 export type SyncEventState = 'started' | 'progress' | 'finished' | 'error' | 'runFinished';
 
-/** Событие канала `directory-sync` (serde tag = "state"). */
+/** An event of the `directory-sync` channel (serde tag = "state"). */
 export interface SyncEventDto {
   state: SyncEventState;
   organization?: string;
@@ -174,7 +177,7 @@ export interface SyncEventDto {
   message?: string;
 }
 
-/** Состояние прогона синхронизации одной организации. */
+/** The synchronization run state of a single organization. */
 export interface OrgSyncStateDto {
   organization: string;
   running: boolean;
@@ -183,48 +186,49 @@ export interface OrgSyncStateDto {
   lastError: string | null;
 }
 
-/** Совокупный статус синхронизации: персистентная мета + live-фазы. */
+/** Aggregate synchronization status: persistent meta + live phases. */
 export interface SyncStatusDto {
   running: boolean;
   organizations: OrgSyncStateDto[];
 }
 
-/** Страница выдачи: контакты + точное общее число совпадений. */
+/** A result page: contacts + the exact total number of matches. */
 export interface SearchPageDto {
   items: EmployeeDto[];
   total: number;
 }
 
-/** Параметры поиска и фильтров (контракт команды `search_contacts`). */
+/** Search and filter parameters (the `search_contacts` command contract). */
 export interface SearchParamsDto {
   query?: string | null;
   organization?: string | null;
-  /** Союз организаций (группа фильтров): вкладка предприятия / группа глобальной версии. */
+  /** The union of organizations (a filter group): the enterprise tab / a global-version group. */
   organizations?: string[] | null;
-  /** Фильтр по организации-источнику синхронизации (вкладка «Предприятие»). */
+  /** A filter by the synchronization source organization (the "Enterprise" tab). */
   sourceOrg?: string | null;
   department?: string | null;
-  /** Фильтр по должности (клик по должности в карточке). */
+  /** A job title filter (clicking a title in the card). */
   title?: string | null;
-  /** Фильтр по кабинету (клик по кабинету в карточке). */
+  /** An office filter (clicking an office in the card). */
   office?: string | null;
   ids?: string[] | null;
   limit?: number | null;
-  /** Смещение порции выдачи (порционная загрузка списком). */
+  /** The result batch offset (paginated list loading). */
   offset?: number | null;
   hideEmpty?: boolean | null;
-  /** Монотонный номер запроса: бэкенд отбрасывает устаревшие. */
+  /** Monotonic request number: the backend discards stale ones. */
   requestId?: number | null;
 }
 
-/** Превью дубликатов учётных записей в кэше (camelCase-контракт бэкенда). */
+/** A preview of duplicate accounts in the cache (the backend camelCase contract). */
 export interface DuplicatesPreviewDto {
   groups: number;
   removable: number;
-  samples: string[];
+  /** Names of the first records that will actually be deleted. */
+  removableNames: string[];
 }
 
-/** Данные контакта для генерации vCard на бэкенде. */
+/** Contact data for generating a vCard on the backend. */
 export interface VCardInputDto {
   id?: string | null;
   fullName: string;
@@ -234,12 +238,12 @@ export interface VCardInputDto {
   mobilePhone?: string | null;
   ipPhone?: string | null;
   phoneExternal?: string | null;
-  /** Режим предприятия (вкладка «КМАруда» не глобальной версии). */
+  /** Enterprise mode (the "KMAruda" tab of the non-global version). */
   preferExternalPhone?: boolean;
   email?: string | null;
 }
 
-/** Стабильные коды ошибок бэкенда (зеркало `AppError::code()`). */
+/** Stable backend error codes (a mirror of `AppError::code()`). */
 export const ERROR_CODES = [
   'CONFIG_ERROR',
   'VALIDATION',
@@ -254,5 +258,5 @@ export const ERROR_CODES = [
   'NOT_RUNNING_IN_DESKTOP',
 ] as const;
 
-/** Код ошибки IPC — элемент [`ERROR_CODES`]. */
+/** IPC error code — an element of [`ERROR_CODES`]. */
 export type ErrorCode = (typeof ERROR_CODES)[number];

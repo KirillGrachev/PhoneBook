@@ -18,7 +18,7 @@ vi.mock('@/api/directory', () => ({
   },
 }));
 
-// Персист конфигурации в тестах не нужен: проверяем разметку экрана, а не мост к Rust.
+// Config persistence is not needed in tests: we check the screen markup, not the bridge to Rust.
 vi.mock('@/store/configStorage', () => ({
   configStorage: {
     getItem: async () => null,
@@ -45,8 +45,8 @@ describe('SettingsTransferView', () => {
   it('раздел не дублирует заголовок страницы внутри содержимого', () => {
     renderView();
 
-    // Название экрана рендерит только общая шапка SettingsHeader;
-    // внутри раздела повторного заголовка быть не должно.
+    // The screen title is rendered only by the shared SettingsHeader;
+    // there must be no repeated header within a section.
     expect(screen.queryAllByText('settings.transferTitle')).toHaveLength(0);
   });
 

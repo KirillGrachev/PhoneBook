@@ -19,13 +19,13 @@ import { ACTION_BUTTON_CLASS } from './settingsStyles';
 const TRANSFER_ACTION_CLASS = cn(ACTION_BUTTON_CLASS, 'h-11 flex-1 min-w-[180px] justify-center px-4 text-[15px]');
 
 /**
- * Страница «Перенос конфигурации»: файл обмена настройками между ПК.
- * Отдельный экран, чтобы главный раздел настроек не превращался
- * в прокручиваемую страницу со всеми группами подряд.
+ * The "Config transfer" page: an exchange file for settings between PCs.
+ * A separate screen so the main settings section does not turn into
+ * a scrollable page with all groups in a row.
  *
- * Заголовок экрана рендерится общей шапкой SettingsHeader, поэтому
- * внутри раздела своего заголовка нет — повторять название страницы
- * вторым рядком означало бы дублировать уже сказанное.
+ * The screen title is rendered by the shared SettingsHeader, so
+ * there is no own header inside the section — repeating the page title
+ * as a second line would mean duplicating what is already said.
  */
 export function SettingsTransferView() {
   const { t } = useTranslation();
@@ -33,7 +33,7 @@ export function SettingsTransferView() {
   const [transferBusy, setTransferBusy] = useState<'export' | 'import' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /** Кэши справочника устаревают после импорта конфигурации. */
+  /** Directory caches become stale after a config import. */
   const invalidateDirectory = () => {
     for (const key of DIRECTORY_QUERY_KEYS) {
       void queryClient.invalidateQueries({ queryKey: [...key] });
@@ -43,7 +43,7 @@ export function SettingsTransferView() {
   const handleExportConfig = async () => {
     setTransferBusy('export');
     try {
-      // Дебаунс сохранения сбрасываем: в файл должны попасть последние правки.
+      // We reset the save debounce: the latest edits must land in the file.
       flushConfigSave();
       if (isTauri()) {
         const path = await configApi.exportConfigFile();
@@ -58,6 +58,7 @@ export function SettingsTransferView() {
           ldapConfigs: state.ldapConfigs,
           testMode: state.testMode,
           animationsEnabled: state.animationsEnabled,
+          showAvatars: state.showAvatars,
           syncIntervalHours: state.syncIntervalHours,
           ldapConnectTimeoutSecs: state.ldapConnectTimeoutSecs,
           ldapOperationTimeoutSecs: state.ldapOperationTimeoutSecs,

@@ -1,29 +1,30 @@
-//! Константы схемы: версия, DDL и набор колонок выборок.
+//! Schema constants: version, DDL, and the selection column set.
 //!
-//! Комментарии к колонкам — часть поставки: структуру базы читают
-//! не только запросы, но и люди.
+//! Column comments are part of the delivery: the database structure is read
+//! not only queries, but people.
 
 use rusqlite::Connection;
 use tracing::warn;
 
 use crate::error::AppError;
 
-/// Версия схемы кэша (`PRAGMA user_version`).
+/// Cache schema version (`PRAGMA user_version`).
 ///
-/// v2: триграммный индекс `users_substr` для поиска подстрок без полного
-/// LIKE-скана таблицы; v3: `users.manager_guid` — кликабельный руководитель
-/// (карточка открывается по GUID без поиска по имени); v4: `sources.kind` —
-/// источник «external» для записей внешнего телефонного файла (Yealink
-/// IPPhoneBook), загружаемых в справочник наравне с сотрудниками AD;
-/// v5: `sync_meta.last_usn`/`last_full_sync_at` — дельта-синхронизация.
-/// Кэш — восстанавливаемое зеркало AD, поэтому смена версии просто
-/// пересоздаёт его ([`ensure_schema`]).
-pub(super) const SCHEMA_VERSION: i64 = 5;
+/// v2: trigram index `users_substr` for substring search without a full
+/// LIKE table scan; v3: `users.manager_guid` - clickable supervisor
+/// (the card opens by GUID without a name search); v4: `sources.kind` -
+/// the "external" source for external phone file records (Yealink
+/// IPPhoneBook), loaded into the lookup equally with AD employees;
+/// v5: `sync_meta.last_usn`/`last_full_sync_at` - delta sync.
+/// v6: `users.photo` - avatar from AD `thumbnailPhoto` (BLOB, fetched on demand).
+/// The cache is a recoverable mirror of AD, so a version change simply
+/// recreates it ([`ensure_schema`]).
+pub(super) const SCHEMA_VERSION: i64 = 6;
 
-/// Колонки выборки сотрудника — порядок строго соответствует
-/// [`row_to_employee`]. Значения справочников берутся через JOIN:
-/// `sources.name` — источник синхронизации, `departments.name` —
-/// подразделение, `orgs.name` — организация, `locations.name` — кабинет.
+/// Employee selection columns - the order strictly matches
+/// [`row_to_employee`]. Lookup values are fetched via JOIN:
+/// `sources.name` - sync source, `departments.name` -
+/// department, `orgs.name` - organization, `locations.name` - office.
 pub(super) const EMPLOYEE_COLUMNS: &str =
     "users.object_guid, sources.name, users.sam_account_name, \
      users.first_name, users.last_name, users.middle_name, users.display_name, users.title, \
@@ -31,70 +32,71 @@ pub(super) const EMPLOYEE_COLUMNS: &str =
      users.phone_external, users.phone_mobile, users.manager, users.usn_changed, \
      users.updated_at, users.pager, users.manager_guid";
 
-/// Общая часть всех выборок: присоединение источника и справочников к `users`.
+/// Common part of all selections: joining the source and lookups to `users`.
 ///
-/// `JOIN sources` — источник есть у пользователя всегда; справочники
-/// присоединены через `LEFT JOIN` — организация/подразделение/кабинет могут
-/// быть не заполнены. Все соединения «один к одному или нулю», строки не
-/// дублируются, поэтому `COUNT(*)` с теми же JOIN даёт точное число.
+/// `JOIN sources` - a user always has a source; lookups are
+/// joined via `LEFT JOIN` - organization/department/office may
+/// be unfilled. All relationships are "one-to-one-or-zero"; rows are not
+/// duplicated, so `COUNT(*)` with the same JOINs gives the exact number.
 pub(super) const LOOKUP_JOINS: &str = " JOIN sources ON sources.id = users.source_id \
      LEFT JOIN orgs ON orgs.id = users.org_id \
      LEFT JOIN departments ON departments.id = users.department_id \
      LEFT JOIN locations ON locations.id = users.location_id";
-/// Актуальная схема. Комментарии к колонкам — часть поставки:
-/// структуру базы читают не только запросы, но и люди.
+/// Current schema. Column comments are part of the delivery:
+/// the database structure is read not only by queries, but by people.
 pub(super) const CREATE_SCHEMA: &str = "
--- Источник синхронизации: подключение к AD из настроек приложения
--- или внешний телефонный файл (kind = 'external').
+-- Sync source: AD connection from application settings
+-- or an external phone file (kind = 'external').
 CREATE TABLE IF NOT EXISTS sources (
     id   INTEGER PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
-    kind TEXT NOT NULL DEFAULT 'ad'   -- 'ad' — подключение AD, 'external' — файл телефонной книги
+    kind TEXT NOT NULL DEFAULT 'ad'   -- 'ad' - AD connection, 'external' - phone book file
 );
 
--- Организации (AD `company`): одна строка на группу вариантов написания.
+-- Organizations (AD `company`): one row per group of spelling variants.
 CREATE TABLE IF NOT EXISTS orgs (
     id       INTEGER PRIMARY KEY,
-    name     TEXT NOT NULL,             -- отображаемый вариант имени
-    name_key TEXT NOT NULL UNIQUE       -- нормализованный ключ: нижний регистр, без лишних пробелов
+    name     TEXT NOT NULL,             -- display name variant
+    name_key TEXT NOT NULL UNIQUE       -- normalized key: lowercase, no extra whitespace
 );
 
--- Подразделения (AD `department`).
+-- Departments (AD `department`).
 CREATE TABLE IF NOT EXISTS departments (
     id   INTEGER PRIMARY KEY,
     name TEXT NOT NULL UNIQUE
 );
 
--- Кабинеты/адреса (AD `physicalDeliveryOfficeName`).
+-- Offices/addresses (AD `physicalDeliveryOfficeName`).
 CREATE TABLE IF NOT EXISTS locations (
     id   INTEGER PRIMARY KEY,
     name TEXT NOT NULL UNIQUE
 );
 
--- Сотрудники. Повторяющиеся значения вынесены в справочники (FK),
--- текст хранится один раз; каскады поддерживают кэш согласованным.
+-- Employees. Repeated values are moved to lookups (FK);
+-- text is stored once; cascades keep the cache consistent.
 CREATE TABLE IF NOT EXISTS users (
-    object_guid      TEXT PRIMARY KEY,  -- AD objectGUID, неизменяемый
+    object_guid      TEXT PRIMARY KEY,  -- AD objectGUID, immutable
     source_id        INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
     org_id           INTEGER REFERENCES orgs(id) ON DELETE SET NULL,
     department_id    INTEGER REFERENCES departments(id) ON DELETE SET NULL,
     location_id      INTEGER REFERENCES locations(id) ON DELETE SET NULL,
-    sam_account_name TEXT,              -- учётная запись (AD sAMAccountName)
+    sam_account_name TEXT,              -- account (AD sAMAccountName)
     first_name       TEXT,
     last_name        TEXT,
     middle_name      TEXT,
-    display_name     TEXT NOT NULL,     -- отображаемое имя (AD displayName / CN)
-    sort_key         TEXT NOT NULL,     -- имя в нижнем регистре: сортировка с учётом кириллицы
-    title            TEXT,              -- должность (AD title)
+    display_name     TEXT NOT NULL,     -- display name (AD displayName / CN)
+    sort_key         TEXT NOT NULL,     -- lowercase name: sorting that accounts for Cyrillic
+    title            TEXT,              -- job title (AD title)
     email            TEXT,              -- AD mail
-    ip_phone         TEXT,              -- внутренний номер IP-телефонии (AD ipPhone)
-    phone_external   TEXT,              -- внешний/городской номер
-    phone_mobile     TEXT,              -- мобильный (AD mobile)
+    ip_phone         TEXT,              -- internal IP telephony number (AD ipPhone)
+    phone_external   TEXT,              -- external/landline number
+    phone_mobile     TEXT,              -- mobile (AD mobile)
     pager            TEXT,              -- TrueConf ID (AD pager)
-    manager          TEXT,              -- имя руководителя (разрешается из DN при синхронизации)
-    manager_guid     TEXT,              -- GUID руководителя: карточка открывается кликом без поиска по имени
-    usn_changed      INTEGER,           -- AD uSNChanged: пропуск неизменённых записей при переиндексации
-    updated_at       INTEGER NOT NULL   -- время обновления записи, unix-секунды
+    manager          TEXT,              -- supervisor name (resolved from DN during sync)
+    manager_guid     TEXT,              -- supervisor GUID: the card opens on click without a name search
+    usn_changed      INTEGER,           -- AD uSNChanged: skip unchanged records during reindexing
+    updated_at       INTEGER NOT NULL,  -- record update time, unix seconds
+    photo            BLOB               -- avatar (AD thumbnailPhoto); NULL - letter avatar
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_source     ON users(source_id);
@@ -102,9 +104,9 @@ CREATE INDEX IF NOT EXISTS idx_users_org        ON users(org_id);
 CREATE INDEX IF NOT EXISTS idx_users_department ON users(department_id);
 CREATE INDEX IF NOT EXISTS idx_users_sort_key   ON users(sort_key);
 
--- Поисковый индекс FTS5. Денормализация здесь осознанная: индекс
--- пересоздаётся при каждой синхронизации организации и не участвует
--- в хранении справочных значений.
+-- FTS5 search index. Denormalization here is intentional: the index
+-- is rebuilt on every organization sync and does not participate
+-- in storing lookup values.
 CREATE VIRTUAL TABLE IF NOT EXISTS users_fts USING fts5(
     object_guid UNINDEXED,
     display_name,
@@ -116,11 +118,11 @@ CREATE VIRTUAL TABLE IF NOT EXISTS users_fts USING fts5(
     tokenize = 'unicode61'
 );
 
--- Триграммный индекс для поиска подстрок («бухг» → «Бухгалтерия», хвосты
--- телефонов в любом форматировании) без LIKE-скана по всем строкам.
--- Значения хранятся приведёнными: hay — в нижнем регистре (Unicode-фолдинг
--- делает Rust, SQLite lower() не знает кириллицу), phones — только цифры;
--- триграммы case_sensitive, поэтому запрос приходит уже нормализованным.
+-- Trigram index for substring search ('bukhg' -> 'Bukhgalteriya', phone
+-- tails in any formatting) without a LIKE scan over all rows.
+-- Values are stored normalized: hay - lowercase (Unicode folding
+-- is done by Rust; SQLite lower() does not know Cyrillic), phones - digits only;
+-- trigrams are case_sensitive, so the query arrives already normalized.
 CREATE VIRTUAL TABLE IF NOT EXISTS users_substr USING fts5(
     object_guid UNINDEXED,
     hay,
@@ -128,31 +130,32 @@ CREATE VIRTUAL TABLE IF NOT EXISTS users_substr USING fts5(
     tokenize = 'trigram case_sensitive 1'
 );
 
--- Мета последней синхронизации каждого источника.
+-- Metadata of each source's last sync.
 CREATE TABLE IF NOT EXISTS sync_meta (
     source_id         INTEGER PRIMARY KEY REFERENCES sources(id) ON DELETE CASCADE,
     last_sync_at      INTEGER,
     last_count        INTEGER,
     last_error        TEXT,
-    -- uSNChanged, до которого кэш гарантированно применён (для дельты).
+    -- uSNChanged up to which the cache is guaranteed applied (for delta).
     last_usn          INTEGER,
-    -- Когда последний раз выполнялась полная выборка (для удалений).
+    -- When the last full selection was performed (for deletions).
     last_full_sync_at INTEGER
 );
 ";
 
-/// Структурная самопроверка схемы: ключевые колонки актуальной версии.
+/// Structural schema self-check: key columns of the current version.
 ///
-/// Один штамп `PRAGMA user_version` — не гарантия: базу могла создать
-/// «смешанная» сборка, у которой номер версии уже актуальный, а отдельные
-/// таблицы — ещё старые (частично применённые обновления, ручные правки).
-/// Каждый зонд — пустой `SELECT`: при отсутствии колонки он падает на этапе
-/// подготовки запроса, а на здоровой схеме не стоит ничего.
+/// A single `PRAGMA user_version` stamp is not a guarantee: the database could have been created
+/// "mixed" build whose version number is already current, while individual
+/// tables - still old (partially applied updates, manual edits).
+/// Each probe is an empty `SELECT`: if a column is missing it fails at the stage
+/// query preparation, and costs nothing on a healthy schema.
 const STRUCTURE_PROBES: &[&str] = &[
     "SELECT last_usn FROM sync_meta LIMIT 0", // v5 delta sync
     "SELECT last_full_sync_at FROM sync_meta LIMIT 0",
     "SELECT kind FROM sources LIMIT 0", // v4 external sources
     "SELECT manager_guid FROM users LIMIT 0", // v3 manager link
+    "SELECT photo FROM users LIMIT 0",  // v6 avatar blob
     "SELECT pager FROM users LIMIT 0",  // TrueConf ID
     "SELECT usn_changed FROM users LIMIT 0", // delta bookkeeping
     "SELECT updated_at FROM users LIMIT 0",
@@ -162,21 +165,21 @@ const STRUCTURE_PROBES: &[&str] = &[
     "SELECT tokens FROM users_fts LIMIT 0", // full-text index
 ];
 
-/// Соответствует ли структура таблиц актуальной версии схемы.
+/// Whether the table structure matches the current schema version.
 fn structure_matches(conn: &Connection) -> bool {
     STRUCTURE_PROBES
         .iter()
         .all(|probe| conn.prepare(probe).is_ok())
 }
 
-/// Привести схему кэша к актуальной версии.
+/// Bring the cache schema to the current version.
 ///
-/// Кэш — полностью восстанавливаемое зеркало Active Directory (избранное и
-/// настройки живут в `config.json`, пароли — в системном хранилище), поэтому
-/// переносы данных между версиями схемы не нужны: при несовпадении штампа
-/// `PRAGMA user_version` **или** провале структурной самопроверки
-/// ([`STRUCTURE_PROBES`]) таблицы кэша пересоздаются с нуля, а содержимое
-/// восстановит ближайшая синхронизация. Совпадение версии и структуры — no-op.
+/// The cache is a fully recoverable mirror of Active Directory (starred contacts and
+/// settings live in `config.json`, passwords in the system store), therefore
+/// data migrations between schema versions are not needed: on a mismatch of
+/// `PRAGMA user_version` **or** a structural self-check failure
+/// ([`STRUCTURE_PROBES`]) the cache tables are recreated from scratch, and the contents
+/// are restored by the nearest sync. A version and structure match is a no-op.
 pub(super) fn ensure_schema(conn: &Connection) -> Result<(), AppError> {
     let version: i64 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
     let structure_ok = version == SCHEMA_VERSION && structure_matches(conn);
@@ -208,9 +211,9 @@ pub(super) fn ensure_schema(conn: &Connection) -> Result<(), AppError> {
          DROP TABLE IF EXISTS sources;",
     )?;
     conn.execute_batch(CREATE_SCHEMA)?;
-    // Самопроверка после пересоздания: если ключевых колонок всё ещё нет,
-    // значит устарел сам `CREATE_SCHEMA` в сборке — сообщаем явно, вместо
-    // того чтобы синхронизация позже падала на «no such column».
+    // Self-check after recreation: if the key columns are still missing,
+    // means `CREATE_SCHEMA` itself is outdated in the build - report it explicitly, instead
+    // so that sync does not later fail with "no such column".
     if !structure_matches(conn) {
         return Err(AppError::Db(
             "самопроверка схемы после пересоздания не прошла".to_string(),

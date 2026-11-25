@@ -12,17 +12,17 @@ import { useAppStore } from '@/store/useAppStore';
 
 import '@/index.css';
 
-// Дебаунс-сохранение конфигурации (400 мс) должно успеть при закрытии:
-// сбрасываем отложенный хвост на beforeunload (best-effort: IPC асинхронный,
-// но закрытие пользовательского окна обычно переживает эту гонку).
+// Debounced config saving (400 ms) must make it in time on close:
+// reset the pending tail on beforeunload (best-effort: IPC is asynchronous,
+// but closing the user window usually survives this race).
 window.addEventListener('beforeunload', () => {
   void flushConfigSave();
 });
 
-// Язык из сохранённой конфигурации — ещё до первого рендера.
+// Language from the saved configuration - even before the first render.
 void i18n.changeLanguage(useAppStore.getState().language);
 
-// Axe-core: аудит доступности только в dev.
+// Axe-core: accessibility audit only in dev.
 if (import.meta.env.DEV) {
   void Promise.all([import('@axe-core/react'), import('react'), import('react-dom')]).then(([axe, React, ReactDOM]) => {
     axe.default(React.default ?? React, ReactDOM, 1000);
@@ -35,8 +35,8 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: 60_000,
       /**
-       * Ошибки бэкенда детерминированы (конфигурация/доступность AD) —
-       * автоматические повторы только мешают; неизвестные ошибки ретраим.
+       * Backend errors are deterministic (configuration/AD availability) —
+       * automatic retries only get in the way; unknown errors are retried.
        */
       retry: (failureCount, error) => (error instanceof ApiError ? false : failureCount < 2),
     },

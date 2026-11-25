@@ -49,5 +49,23 @@ describe('useContactsList: локальный поиск и пагинация',
     await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 3000 });
     expect(result.current.contacts).toEqual([]);
     expect(result.current.total).toBe(0);
+    expect(result.current.isSearchPending).toBe(false);
+  });
+
+  it('flags the search as pending until the current input settles', async () => {
+    useAppStore.setState({ testMode: true });
+    const { result, rerender } = renderHook(({ search }) => useContactsList('global', search, null, [], null), {
+      wrapper: makeWrapper(),
+      initialProps: { search: '' },
+    });
+
+    // A fresh term is pending immediately: the debounce has not fired yet, so
+    // the UI must keep the "Start searching" hint rather than flash "No matches".
+    rerender({ search: 'Иванов' });
+    expect(result.current.isSearchPending).toBe(true);
+
+    // Once the query for the term settles, pending clears regardless of result.
+    await waitFor(() => expect(result.current.isSearchPending).toBe(false), { timeout: 3000 });
+    expect(result.current.isLoading).toBe(false);
   });
 });

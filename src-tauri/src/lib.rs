@@ -1,8 +1,8 @@
-//! Сборка Tauri-приложения: плагины, состояние, трей, горячие клавиши,
-//! фоновая синхронизация и реестр IPC-команд.
+//! Tauri application assembly: plugins, state, tray, hotkeys,
+//! background sync and the IPC command registry.
 //!
-//! `main.rs` намеренно тонкий — вся композиция здесь, в библиотеке `app_lib`,
-//! чтобы её можно было переиспользовать в мобильных точках входа и тестах.
+//! `main.rs` is intentionally thin - all composition is here, in the `app_lib` library,
+//! so it can be reused in mobile entry points and tests.
 
 mod commands;
 mod error;
@@ -22,9 +22,9 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 
 use state::AppState;
 
-/// Идентификатор трей-иконки (на него опирается `update_tray_menu`).
+/// Tray icon identifier (`update_tray_menu` relies on it).
 pub const TRAY_ID: &str = "main-tray";
-/// Метка главного окна из `tauri.conf.json`.
+/// Main window label from `tauri.conf.json`.
 const MAIN_WINDOW: &str = "main";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -38,9 +38,9 @@ pub fn run() {
         uninstaller::run();
     }
 
-    // Без WebView2 Runtime окно создать нечем: процесс жил бы только в трее.
-    // Проверяем рантайм до инициализации Tauri и говорим с пользователем
-    // нативным диалогом; отключение проверки — KMPB_SKIP_WEBVIEW_CHECK=1.
+    // Without the WebView2 Runtime there is nothing to create a window with: the process would live only in the tray.
+    // We check the runtime before Tauri initialization and talk to the user
+    // native dialog; disable the check with KMPB_SKIP_WEBVIEW_CHECK=1.
     #[cfg(target_os = "windows")]
     if std::env::var_os("KMPB_SKIP_WEBVIEW_CHECK").is_none()
         && !services::webview_prereq::webview2_runtime_installed()
@@ -50,15 +50,15 @@ pub fn run() {
     }
 
     tauri::Builder::default()
-        // Должен регистрироваться первым (требование плагина на Windows).
+        // Must be registered first (a plugin requirement on Windows).
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             info!("запуск второго экземпляра — активирую существующее окно");
             show_main_window(app);
         }))
         .plugin(
             tauri_plugin_window_state::Builder::default()
-                // Видимость намеренно не восстанавливаем: окно показывает
-                // фронтенд после гидрации (и страховочный таймер ниже).
+                // Visibility is intentionally not restored: the window is shown by
+                // the frontend after hydration (and the safety timer below).
                 .with_state_flags(
                     tauri_plugin_window_state::StateFlags::SIZE
                         | tauri_plugin_window_state::StateFlags::POSITION
@@ -66,7 +66,7 @@ pub fn run() {
                 )
                 .build(),
         )
-        // Нативные диалоги файлов: выбор XML телефонной книги из настроек.
+        // Native file dialogs: selecting a phone book XML from settings.
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -96,25 +96,25 @@ pub fn run() {
             init_tray(app)?;
             register_shortcuts(app);
 
-            // Фоновый планировщик синхронизации AD.
+            // Background AD sync scheduler.
             let state = app.state::<AppState>();
             state.sync.clone().spawn_scheduler(app.handle().clone());
 
-            // Window-state мог восстановить некорректный (крошечный) размер
-            // окна после аварийного запуска — возвращаем разумный размер.
+            // Window-state might have restored an incorrect (tiny) size
+            // window after a crash - return a reasonable size.
             sanitize_main_window_size(app);
 
-            // Продукт — приложение, а не сайт: отключаем веб-поведения WebView
-            // (автозаполнение «сохранённых сведений», зум, свайпы, браузерные
-            // хоткеи, статус-бар и стандартное контекстное меню).
+            // The product is an app, not a website: we disable WebView web behaviors
+            // (autofill of "saved details", zoom, swipes, browser
+            // hotkeys, status bar, and the standard context menu).
             harden_main_webview(app);
 
-            // Иконка окна/таскбара — встроенный бренд-файл, независимо от
-            // exe-ресурса и кэша иконок Windows.
+            // The window/taskbar icon is a built-in brand file, regardless
+            // of the exe resource and the Windows icon cache.
             set_main_window_icon(app);
 
-            // Страховка: если фронтенд не показал окно сам (сбой JS),
-            // показываем его принудительно, чтобы приложение не «пропало».
+            // Safety net: if the frontend did not show the window itself (JS failure),
+            // show it forcibly so the application does not "disappear".
             spawn_window_failsafe(app.handle().clone());
 
             Ok(())
@@ -132,6 +132,7 @@ pub fn run() {
             commands::config::test_ldap_connection,
             commands::contacts::search_contacts,
             commands::contacts::get_contact,
+            commands::contacts::get_contact_photo,
             commands::contacts::list_organizations,
             commands::contacts::count_contacts,
             commands::contacts::preview_duplicate_contacts,
@@ -152,8 +153,8 @@ pub fn run() {
         });
 }
 
-/// WorkerGuard файлового логгера должен жить весь процесс: при его drop
-/// неблокирующий writer может потерять хвост очереди.
+/// The file logger's WorkerGuard must live for the whole process: on its drop
+/// a non-blocking writer may lose the queue tail.
 static LOG_GUARD: OnceLock<tracing_appender::non_blocking::WorkerGuard> = OnceLock::new();
 
 fn init_tracing(app: &AppHandle) {
@@ -163,8 +164,8 @@ fn init_tracing(app: &AppHandle) {
         "info"
     };
 
-    // В release у GUI нет консоли (windows_subsystem = "windows"), поэтому
-    // файл — единственный способ получить диагностику с машины пользователя.
+    // In release the GUI has no console (windows_subsystem = "windows"), so the log
+    // file is the only way to get diagnostics from the user's machine.
     let log_dir = app
         .path()
         .app_log_dir()
@@ -222,7 +223,7 @@ fn init_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn register_shortcuts(app: &tauri::App) {
-    // Ctrl+Shift+Space — показать/спрятать окно (как в исходном продукте).
+    // Ctrl+Shift+Space — show/hide the window (as in the original product).
     if let Err(e) = app
         .global_shortcut()
         .register("CommandOrControl+Shift+Space")
@@ -231,18 +232,18 @@ fn register_shortcuts(app: &tauri::App) {
     }
 }
 
-/// Минимально допустимый размер главного окна после восстановления состояния.
+/// Minimum allowed main window size after state restoration.
 const MIN_SANITY_WIDTH: u32 = 640;
 const MIN_SANITY_HEIGHT: u32 = 480;
 
-/// Если плагин window-state восстановил вырожденный размер окна
-/// (случается после аварийных запусков), ставим дефолтный размер и центрируем.
+/// If the window-state plugin restored a degenerate window size
+/// (happens after crashes), set the default size and center it.
 fn sanitize_main_window_size(app: &tauri::App) {
     use tauri::Manager;
     let Some(window) = app.get_webview_window(MAIN_WINDOW) else {
         return;
     };
-    // Окно всегда без системной рамки: управление — только наш TitleBar.
+    // The window is always without a system frame: control is only our TitleBar.
     let _ = window.set_decorations(false);
 
     if let Ok(size) = window.inner_size() {
@@ -261,24 +262,24 @@ fn sanitize_main_window_size(app: &tauri::App) {
     }
 }
 
-/// Продукт — приложение, а не сайт: на Windows отключаем встроенные
-/// веб-поведения WebView2, которым не место в десктоп-справочнике:
-/// * автозаполнение форм и паролей («Сохранённые сведения» поверх полей);
-/// * зум Ctrl+колесо и pinch-zoom — интерфейс свёрстан в фиксированных размерах;
-/// * браузерные акселераторы (Ctrl+P, Ctrl+S, Ctrl+F и т.п.) и свайп-навигация
-///   «назад/вперёд»: в приложении одна страница, история WebView не нужна;
-/// * статус-бар ссылок и стандартное контекстное меню браузера;
-/// * DevTools — только в debug-сборках (команда `open_devtools` и так закрыта
-///   `debug_assertions`, здесь закрывается и сам интерфейс F12).
+/// The product is an application, not a website: on Windows we disable built-in
+/// WebView2 web behavior that has no place in a desktop directory:
+/// * form and password autofill ("Saved info" over fields);
+/// * Ctrl+wheel zoom and pinch-zoom - the UI is laid out in fixed sizes;
+/// * browser accelerators (Ctrl+P, Ctrl+S, Ctrl+F, etc.) and swipe navigation
+///   "back/forward": the application has one page, WebView history is not needed;
+/// * the link status bar and the standard browser context menu;
+/// * DevTools - only in debug builds (the `open_devtools` command is already closed under
+///   `debug_assertions`; here the F12 UI itself is also closed).
 ///
-/// Настройки применяются через COM-интерфейсы WebView2 (`ICoreWebView2SettingsN`):
-/// Tauri не выносит их в `tauri.conf.json`, а интерфейсы добавлялись в SDK
-/// постепенно, поэтому каждый блок приводится к своему интерфейсу: на старых
-/// средах отсутствующий интерфейс просто пропускается, не роняя запуск.
+/// Settings are applied through WebView2 COM interfaces (`ICoreWebView2SettingsN`):
+/// Tauri does not expose them in `tauri.conf.json`, and the interfaces were added to the SDK
+/// gradually, so each block is cast to its own interface: on older
+/// environments the missing interface is simply skipped without crashing startup.
 #[cfg(target_os = "windows")]
 fn harden_main_webview(app: &tauri::App) {
-    // Интерфейсы WebView2 живут в биндингах webview2-com (их же использует
-    // wry/tauri): в crate `windows` расширенных настроек WebView2 нет.
+    // The WebView2 interfaces live in the webview2-com bindings (the same ones used by
+    // wry/tauri): the `windows` crate has no extended WebView2 settings.
     use webview2_com::Microsoft::Web::WebView2::Win32::{
         ICoreWebView2Settings3, ICoreWebView2Settings4, ICoreWebView2Settings5,
         ICoreWebView2Settings6,
@@ -290,11 +291,11 @@ fn harden_main_webview(app: &tauri::App) {
         return;
     };
     let result = window.with_webview(|webview| {
-        // SAFETY: замыкание выполняется на главном потоке, пока WebView жив;
-        // controller/CoreWebView2/Settings возвращают валидные COM-объекты,
-        // вызовы только выставляют настройки интерфейса и не освобождают
-        // указатели. Приведения к Settings3..6 — проверенные QueryInterface,
-        // каждый результат проверяется перед использованием.
+        // SAFETY: the closure runs on the main thread while the WebView is alive;
+        // controller/CoreWebView2/Settings return valid COM objects,
+        // calls only set UI settings and do not release
+        // pointers. Casts to Settings3..6 are checked QueryInterface calls,
+        // each result is checked before use.
         unsafe {
             let Ok(core) = webview.controller().CoreWebView2() else {
                 return;
@@ -327,21 +328,21 @@ fn harden_main_webview(app: &tauri::App) {
     }
 }
 
-/// На других платформах WebView-надстройки нет: no-op для единообразия вызова.
+/// On other platforms there is no WebView add-on: a no-op for call uniformity.
 #[cfg(not(target_os = "windows"))]
 fn harden_main_webview(_app: &tauri::App) {}
 
-/// Иконка окна и кнопки таскбара — из бренд-файла, встроенного в бинарник
-/// (`include_bytes!`): runtime-установка не зависит ни от свежести
-/// exe-ресурса, ни от кэша иконок Windows, ни от ярлыка, которым запущено
-/// приложение. Ошибка здесь не фатальна: останутся ресурсы exe.
+/// Window and taskbar button icon - from the brand file embedded in the binary
+/// (`include_bytes!`): runtime installation does not depend on the freshness
+/// the exe resource, nor the Windows icon cache, nor the shortcut used to launch
+/// application. An error here is not fatal: the exe resources remain.
 fn set_main_window_icon(app: &tauri::App) {
     let Some(window) = app.get_webview_window(MAIN_WINDOW) else {
         warn!("главное окно не найдено — иконка не установлена");
         return;
     };
-    // PNG распаковывается в RGBA на старте: tauri::image::Image принимает
-    // только сырые пиксели.
+    // PNG is unpacked into RGBA at startup: tauri::image::Image accepts
+    // only raw pixels.
     let Ok(decoded) = image::load_from_memory(include_bytes!("../icons/icon.png")) else {
         warn!("встроенная иконка окна не читается");
         return;

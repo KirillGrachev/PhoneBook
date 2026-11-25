@@ -117,7 +117,7 @@ interface AppIconProps {
   size?: number | string;
 }
 
-/** Иконка из нового набора: цвет наследуется от текста через currentColor. */
+/** An icon from the new set: the color is inherited from the text via currentColor. */
 export function AppIcon({ name, className, label, size }: AppIconProps) {
   const style = {
     WebkitMaskImage: `url("${ICONS[name]}")`,

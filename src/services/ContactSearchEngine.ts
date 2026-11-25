@@ -1,11 +1,11 @@
 import type { Contact } from '@/types';
 
 /**
- * Клиентский поисковый движок для демо-режима (браузер / тестовый режим).
+ * A client-side search engine for demo mode (browser / test mode).
  *
- * В десктоп-режиме поиск выполняется на бэкенде (SQLite FTS5 с тем же
- * набором приёмов: инициалы, «хвосты» телефонов, смена раскладки), поэтому
- * движок нужен только для локальных моков и покрыт unit-тестами.
+ * In desktop mode the search runs on the backend (SQLite FTS5 with the same
+ * set of techniques: initials, phone "tails", keyboard-layout switching), so
+ * the engine is only needed for local mocks and is covered by unit tests.
  */
 export class ContactSearchEngine {
   private static readonly EN_TO_RU: Record<string, string> = {
@@ -94,13 +94,13 @@ export class ContactSearchEngine {
       return true;
     }
 
-    // Поиск по цифровым «хвостам» номеров.
+    // Search by digital number "tails".
     const queryDigits = query.replace(/\D/g, '');
     if (queryDigits.length >= 2 && phoneDigits.includes(queryDigits)) {
       return true;
     }
 
-    // Поиск по инициалам: «иии» → «Иванов Иван Иванович».
+    // Search by initials: "iii" → "Ivanov Ivan Ivanovich".
     const nameParts = contact.fullName
       .toLowerCase()
       .split(/[\s-]+/)

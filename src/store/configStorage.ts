@@ -1,15 +1,15 @@
 /**
- * Мост zustand-persist ↔ Rust-конфигурация (`config.json` + keyring).
+ * The zustand-persist ↔ Rust configuration bridge (`config.json` + keyring).
  *
- * Особенности:
- * * запись на бэкенд дебounced-ится (400 мс) — быстрые переключения
- *   тумблеров не спамят IPC и disk I/O;
- * * пароли LDAP через этот мост НЕ ходят: `ldapConfigs` содержат только
- *   флаг `hasPassword`, секрет устанавливается отдельной командой
- *   `set_ldap_password` из экрана настроек AD;
- * * ответ `save_config` (нормализованный бэкендом конфиг) сверяется
- *   с текущим состоянием и применяется только при расхождении —
- *   это разрывает потенциальный цикл persist → setState → persist.
+ * Notes:
+ * * writes to the backend are debounced (400 ms) - fast
+ * toggles do not spam IPC and disk I/O;
+ * * LDAP passwords do NOT travel through this bridge: `ldapConfigs` contain only
+ * the `hasPassword` flag; the secret is set by a separate command
+ * `set_ldap_password` from the AD settings screen;
+ * * the `save_config` response (the backend-normalized config) is reconciled
+ * against the current state and applied only on divergence —
+ * this breaks the potential persist → setState → persist cycle.
  */
 import { toast } from 'sonner';
 import type { StateStorage } from 'zustand/middleware';
@@ -31,6 +31,7 @@ interface PersistedState {
   managedRevision: number | null;
   testMode: boolean;
   animationsEnabled: boolean;
+  showAvatars: boolean;
   syncIntervalHours: number;
   ldapConnectTimeoutSecs: number;
   ldapOperationTimeoutSecs: number;
@@ -71,6 +72,7 @@ async function persistNow(value: string): Promise<void> {
       globalMode: state.globalMode ?? false,
       testMode: state.testMode ?? false,
       animationsEnabled: state.animationsEnabled ?? true,
+      showAvatars: state.showAvatars ?? true,
       syncIntervalHours: state.syncIntervalHours ?? 24,
       ldapConnectTimeoutSecs: state.ldapConnectTimeoutSecs ?? 15,
       ldapOperationTimeoutSecs: state.ldapOperationTimeoutSecs ?? 30,
@@ -84,22 +86,22 @@ async function persistNow(value: string): Promise<void> {
       externalPhonebookEnabled: state.externalPhonebookEnabled ?? false,
       externalPhonebookIntervals: state.externalPhonebookIntervals ?? {},
       externalHideAdDuplicates: state.externalHideAdDuplicates ?? true,
-      // Черновики без названия не сохраняем: бэкенд валидирует имя,
-      // а незаполненная карточка — это ещё не организация.
+      // Do not save untitled drafts: the backend validates the name,
+      // while an unfilled card is not an organization yet.
       ldapConfigs: (state.ldapConfigs ?? []).filter((org) => org.organization.trim() !== '').map(toLdapOrgInput),
     });
 
-    // Бэкенд нормализовал конфиг (trim, валидация, hasPassword из keyring).
-    // Применяем расхождения обратно в store, не провоцируя новый цикл.
-    // Сверяем без черновиков: иначе несохранённые карточки затирались бы
-    // ответом бэкенда при каждом автосохранении.
+    // The backend normalized the config (trim, validation, hasPassword from the keyring).
+    // We apply the divergences back into the store without provoking a new cycle.
+    // Compare without drafts: otherwise unsaved cards would be overwritten
+    // backend response on every autosave.
     const current = useAppStore.getState().ldapConfigs.filter((org) => org.organization.trim() !== '');
     if (JSON.stringify(current) !== JSON.stringify(saved.ldapConfigs)) {
       useAppStore.setState({ ldapConfigs: saved.ldapConfigs });
     }
 
-    // Бэкенд нормализует группы (trim, дедупликация) и сбрасывает битую
-    // ссылку вкладки предприятия: применяем расхождения тем же способом.
+    // The backend normalizes groups (trim, deduplication) and resets a broken
+    // enterprise tab reference: apply discrepancies the same way.
     const storeState = useAppStore.getState();
     if (JSON.stringify(storeState.orgGroups) !== JSON.stringify(saved.orgGroups)) {
       useAppStore.setState({ orgGroups: saved.orgGroups });
@@ -115,7 +117,7 @@ async function persistNow(value: string): Promise<void> {
       });
     }
   } catch (error) {
-    console.error('[configStorage] не удалось сохранить конфигурацию', error);
+    console.error('[configStorage] failed to save configuration', error);
     toast.error(i18n.t('settings.saveError'), { id: 'config-save-error' });
   }
 }
@@ -135,7 +137,7 @@ function scheduleSave(value: string): void {
   }, SAVE_DEBOUNCE_MS);
 }
 
-/** Storage persist через бэкенд: чтение `config.json` и дебаунс-сохранение. */
+/** Storage persist through the backend: reading `config.json` and debounced saving. */
 export const configStorage: StateStorage = {
   getItem: async (): Promise<string | null> => {
     try {
@@ -160,6 +162,7 @@ export const configStorage: StateStorage = {
           managedRevision: config.managedRevision,
           testMode: config.testMode,
           animationsEnabled: config.animationsEnabled,
+          showAvatars: config.showAvatars ?? true,
           syncIntervalHours: config.syncIntervalHours,
           ldapConnectTimeoutSecs: config.ldapConnectTimeoutSecs ?? 15,
           ldapOperationTimeoutSecs: config.ldapOperationTimeoutSecs ?? 30,
@@ -167,9 +170,9 @@ export const configStorage: StateStorage = {
           emailOverrides: config.emailOverrides,
           ldapConfigs: config.ldapConfigs,
           savedContactIds: config.savedContactIds,
-          // Группы организаций и отметка вкладки предприятия обязаны
-          // переживать перезапуск: без них гидрация затирала импортированные
-          // и созданные группы дефолтным пустым значением.
+          // Organization groups and the enterprise tab mark must
+          // survive restart: without them hydration wiped the imported
+          // and created groups with the default empty value.
           orgGroups: config.orgGroups,
           enterpriseGroupId: config.enterpriseGroupId,
           externalPhonebookPaths:
@@ -185,7 +188,7 @@ export const configStorage: StateStorage = {
         version: 0,
       });
     } catch (error) {
-      console.error('[configStorage] не удалось загрузить конфигурацию', error);
+      console.error('[configStorage] failed to load configuration', error);
       return null;
     }
   },
@@ -195,11 +198,11 @@ export const configStorage: StateStorage = {
   },
 
   removeItem: async (): Promise<void> => {
-    // Конфигурация не удаляется: сброс выполняется записью дефолтов.
+    // The configuration is not deleted: the reset is done by writing defaults.
   },
 };
 
-/** Немедленно сбросить накопленные изменения на диск (например, при выходе). */
+/** Immediately flush accumulated changes to disk (e.g. on exit). */
 export async function flushConfigSave(): Promise<void> {
   if (saveTimer) {
     clearTimeout(saveTimer);

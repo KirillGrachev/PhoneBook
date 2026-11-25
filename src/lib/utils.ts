@@ -1,12 +1,12 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-/** Композиция clsx + tailwind-merge (устранение конфликтующих классов). */
+/** A clsx + tailwind-merge composition (resolving conflicting classes). */
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-/** «5 минут назад» / «вчера, 14:32» — компактный человекочитаемый формат. */
+/** "5 minutes ago" / "yesterday, 14:32" — a compact human-readable format. */
 export function formatRelativeTime(unixSeconds: number | null | undefined, locale: string): string {
   if (!unixSeconds) {
     return '';

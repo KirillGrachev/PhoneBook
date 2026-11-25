@@ -1,18 +1,19 @@
-//! Типы данных кэша: DTO сотрудника, запись синхронизации, параметры поиска.
+//! Cache data types: employee DTO, sync record, search parameters.
 
 use serde::{Deserialize, Serialize};
 
-/// Сотрудник — DTO, пересекающее IPC-границу (serde → camelCase).
+/// Employee - a DTO crossing the IPC boundary (serde -> camelCase).
 ///
-/// Намеренно **не содержит** фотографию: `thumbnailPhoto` из AD не читается
-/// вовсе — аватары на фронте буквенные, а кэш остаётся компактным.
+/// Intentionally **does not contain** the photo: `thumbnailPhoto` is stored in the cache as
+/// a separate BLOB and is returned by the point command `get_contact_photo` only
+/// for the open card - search pages stay compact.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Employee {
     pub object_guid: String,
     pub source_org: String,
-    // Пустые поля не сериализуются: каталог на десятки тысяч строк отдаёт
-    // заметно меньший IPC-payload, фронтенд читает их через `?.`/`??`.
+    // Empty fields are not serialized: a directory of tens of thousands of rows gives
+    // a noticeably smaller IPC payload; the frontend reads them via `?.`/`??`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sam_account_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -41,22 +42,22 @@ pub struct Employee {
     pub phone_mobile: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manager: Option<String>,
-    /// GUID руководителя для клика по карточке из карточки подчинённого.
+    /// Supervisor GUID for clicking a card from a subordinate's card.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manager_guid: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub usn_changed: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<i64>,
-    /// TrueConf ID (AD-атрибут `pager`).
+    /// TrueConf ID (the AD `pager` attribute).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pager: Option<String>,
 }
 
-/// AD-контакт, используемый для отсечения дублей во внешней телефонной книге.
+/// AD contact used to cut off duplicates in the external phone book.
 ///
-/// Сравнение идёт по ФИО + любому непустому контакту/атрибуту. Отдельная
-/// структура нужна, чтобы `external` не зависел от SQL-схемы.
+/// Comparison is by full name + any non-empty contact/attribute. A separate
+/// the structure is needed so `external` does not depend on the SQL schema.
 #[derive(Debug, Clone)]
 pub struct AdDuplicateRecord {
     pub display_name: String,
@@ -70,10 +71,10 @@ pub struct AdDuplicateRecord {
     pub phone_mobile: Option<String>,
 }
 
-/// Запись, подготовленная сервисом синхронизации для вставки в БД.
+/// Record prepared by the sync service for insertion into the DB.
 ///
-/// Текстовые значения (организация, подразделение, кабинет) нормализуются
-/// в справочники на стороне БД — [`Db::replace_org_users`].
+/// Text values (organization, department, office) are normalized
+/// into lookups on the DB side - [`Db::replace_org_users`].
 pub struct UserRecord {
     pub object_guid: String,
     pub sam_account_name: Option<String>,
@@ -91,18 +92,21 @@ pub struct UserRecord {
     pub phone_external: Option<String>,
     pub phone_mobile: Option<String>,
     pub manager: Option<String>,
-    /// GUID руководителя, если он присутствует в той же выборке AD
-    /// (иначе `None` и карточка ищется по имени).
+    /// Supervisor GUID if present in the same AD selection
+    /// (otherwise `None` and the card is searched by name).
     pub manager_guid: Option<String>,
-    /// TrueConf ID (AD-атрибут `pager`).
+    /// TrueConf ID (the AD `pager` attribute).
     pub pager: Option<String>,
     pub usn_changed: Option<i64>,
-    /// Служебная строка токенов для FTS (инициалы, e-mail, «хвосты» телефонов).
+    /// Service token string for FTS (initials, email, phone "tails").
     pub tokens: String,
+    /// Raw avatar bytes (AD `thumbnailPhoto`); `None` for a letter avatar.
+    /// Stored as a BLOB and served lazily per card, never in search pages.
+    pub photo: Option<Vec<u8>>,
 }
 
-/// Страница выдачи поиска: сами контакты + ТОЧНОЕ общее число совпадений
-/// (без LIMIT) — сайдбар показывает полное количество, а не «300+».
+/// Search result page: the contacts themselves + the EXACT total number of matches
+/// (without LIMIT) - the sidebar shows the full count, not "300+".
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchPage {
@@ -110,7 +114,7 @@ pub struct SearchPage {
     pub total: u64,
 }
 
-/// Параметры команды `search_contacts`.
+/// Parameters of the `search_contacts` command.
 #[derive(Debug, Default, Clone, Hash, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchParams {
@@ -118,56 +122,56 @@ pub struct SearchParams {
     pub query: Option<String>,
     #[serde(default)]
     pub organization: Option<String>,
-    /// Объединение организаций (группа фильтров из настроек): каждое имя
-    /// разрешается в ключ справочника `orgs` (точное совпадение либо
-    /// единственный содержащий его справочник), выдача учитывает союз.
-    /// `Some(пустой список)` после разрешения — «не выдавать ничего»
-    /// (ни одна организация группы не найдена в AD); `None` — фильтра нет.
-    /// Пара с `source_org` — маркер фолбэка на источник синхронизации,
-    /// когда группа не разрешилась ни в один справочник.
+    /// Organization union (filter group from settings): each name is
+    /// resolved to an `orgs` lookup key (exact match or
+    /// the single lookup containing it), results consider the union.
+    /// `Some(empty list)` after resolution - "return nothing"
+    /// (no organization of the group was found in AD); `None` - no filter.
+    /// A pair with `source_org` is a fallback marker to the sync source,
+    /// used when the group did not resolve to any lookup.
     #[serde(default)]
     pub organizations: Option<Vec<String>>,
-    /// Фильтр по организации-источнику синхронизации: в отличие от
-    /// `organization` (атрибут AD `company`), включает и учётки с незаполненной
-    /// организацией — например сервисные. Вкладка предприятия передаёт его
-    /// только парой с `organization` (то же имя): это маркер фолбэка для
-    /// [`crate::services::db::read`] на случай, если имя из настроек не
-    /// совпадает ни с одним `company` в AD.
+    /// Filter by sync source organization: unlike
+    /// `organization` (the AD `company` attribute); includes accounts with an unfilled
+    /// organization - e.g. service accounts. The enterprise tab passes it
+    /// only as a pair with `organization` (the same name): this is a fallback marker for
+    /// [`crate::services::db::read`] in case the name from settings does not
+    /// match any `company` in AD.
     #[serde(default)]
     pub source_org: Option<String>,
     #[serde(default)]
     pub department: Option<String>,
-    /// Фильтр по должности (клик по должности в карточке).
+    /// Job title filter (clicking the job title in the card).
     #[serde(default)]
     pub title: Option<String>,
-    /// Фильтр по кабинету (клик по кабинету в карточке): список людей
-    /// в том же кабинете — тот же точный фильтр, что отдел/должность.
+    /// Office filter (clicking the office in the card): list of people
+    /// in the same office - the same exact filter as department/job title.
     #[serde(default)]
     pub office: Option<String>,
-    /// Точная выборка по GUID (вкладка «Мои контакты»).
+    /// Exact selection by GUID (the "My contacts" tab).
     #[serde(default)]
     pub ids: Option<Vec<String>>,
-    /// Скрывать учётки без почты и телефонов (мусорные/системные).
-    /// По умолчанию включено: IPC-клиент может вообще не прислать ключ.
+    /// Hide accounts without email and phones (junk/system).
+    /// Enabled by default: the IPC client may not send the key at all.
     #[serde(default = "default_hide_empty")]
     pub hide_empty: bool,
     #[serde(default)]
     pub limit: Option<u32>,
-    /// Смещение порции выдачи (порционная загрузка каталога списком).
+    /// Offset of a result portion (paginated catalog list loading).
     #[serde(default)]
     pub offset: Option<u32>,
-    /// Монотонный номер поискового запроса: устаревшие запросы, ещё не
-    /// дошедшие до БД, отбрасываются.
+    /// Monotonic search request number: stale requests that have not yet
+    /// that reached the DB are discarded.
     #[serde(default)]
     pub request_id: Option<u64>,
 }
 
-/// IPC-значение по умолчанию для [`SearchParams::hide_empty`].
+/// IPC default value for [`SearchParams::hide_empty`].
 fn default_hide_empty() -> bool {
     true
 }
 
-/// Метаданные последней синхронизации организации.
+/// Metadata of the organization's last sync.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrgSyncMeta {
@@ -175,10 +179,10 @@ pub struct OrgSyncMeta {
     pub last_sync_at: Option<i64>,
     pub last_count: Option<i64>,
     pub last_error: Option<String>,
-    /// Максимальный `uSNChanged`, применённый к кэшу этого источника.
+    /// Maximum `uSNChanged` applied to this source's cache.
     #[serde(default)]
     pub last_usn: Option<i64>,
-    /// Время последней полной выборки: только она удаляет исчезнувших.
+    /// Time of the last full selection: only it removes disappeared records.
     #[serde(default)]
     pub last_full_sync_at: Option<i64>,
 }

@@ -1,9 +1,9 @@
 /**
- * Типизированные обёртки над командами бэкенда.
+ * Typed wrappers over the backend commands.
  *
- * Группировка по доменам: контакты, конфигурация, синхронизация,
- * система, vCard. Имена команд и аргументов соответствуют
- * `#[tauri::command]`-функциям в `src-tauri/src/commands/*`.
+ * Grouped by domain: contacts, configuration, synchronization,
+ * system, vCard. Command and argument names correspond to
+ * `#[tauri::command]` functions in `src-tauri/src/commands/*`.
  */
 import { invokeCommand } from './backend';
 import type {
@@ -21,7 +21,7 @@ import type {
   VCardInputDto,
 } from './contracts';
 
-/** Команды справочника: поиск, карточка, организации, счётчик. */
+/** Directory commands: search, card, organizations, counter. */
 export const contactsApi = {
   search: (params: SearchParamsDto): Promise<SearchPageDto> =>
     invokeCommand<SearchPageDto>('search_contacts', {
@@ -43,49 +43,52 @@ export const contactsApi = {
 
   getById: (id: string): Promise<EmployeeDto> => invokeCommand<EmployeeDto>('get_contact', { id }),
 
+  /** Avatar of a contact as a `data:` URL, or `null` when there is no photo. */
+  getPhoto: (id: string): Promise<string | null> => invokeCommand<string | null>('get_contact_photo', { id }),
+
   listOrganizations: (): Promise<string[]> => invokeCommand<string[]>('list_organizations'),
 
   count: (): Promise<number> => invokeCommand<number>('count_contacts'),
 
-  /** Превью дубликатов учёток: кластеры, число убираемых записей, примеры. */
+  /** Duplicate preview: clusters, the number of removable records, and their names. */
   previewDuplicates: (): Promise<DuplicatesPreviewDto> =>
     invokeCommand<DuplicatesPreviewDto>('preview_duplicate_contacts'),
 
-  /** Уборка дубликатов: возвращает число удалённых записей. */
+  /** Duplicate cleanup: returns the number of removed records. */
   deduplicate: (): Promise<number> => invokeCommand<number>('deduplicate_contacts'),
 };
 
-/** Конфигурация: чтение/сохранение, секрет, проверка подключения. */
+/** Configuration: read/save, secret, connection test. */
 export const configApi = {
   load: (): Promise<AppConfigDto> => invokeCommand<AppConfigDto>('load_config'),
 
   save: (config: SaveConfigRequest): Promise<AppConfigDto> => invokeCommand<AppConfigDto>('save_config', { config }),
 
   /**
-   * Отдельный канал для секрета: `null` — удалить сохранённый пароль.
-   * Пароль никогда не проходит через store/конфигурацию.
+   * A separate channel for the secret: `null` — remove the saved password.
+   * The password never passes through the store/configuration.
    */
   setPassword: (organization: string, password: string | null): Promise<void> =>
     invokeCommand<void>('set_ldap_password', { organization, password }),
 
-  /** Экспорт групп организаций в файл обмена; возвращает путь записанного файла. */
+  /** Exporting organization groups to an exchange file; returns the written file path. */
   exportOrgGroupsFile: (): Promise<string> => invokeCommand<string>('export_org_groups_file'),
 
-  /** Валидировать содержимое файла обмена группами; возвращает нормализованный DTO. */
+  /** Validate the content of a group exchange file; returns a normalized DTO. */
   parseOrgGroupsFile: (content: string): Promise<OrgGroupsFileDto> =>
     invokeCommand<OrgGroupsFileDto>('parse_org_groups_file', { content }),
 
-  /** Перечитать внешний телефонный файл по сохранённой конфигурации. */
+  /** Re-read the external phone file using the saved configuration. */
   refreshExternalPhonebook: (): Promise<ExternalRefreshDto> =>
     invokeCommand<ExternalRefreshDto>('refresh_external_phonebook'),
 
   /** Native multi-file XML picker; an empty array means the dialog was closed. */
   pickExternalPhonebookFiles: (): Promise<string[]> => invokeCommand<string[]>('pick_external_phonebook_files'),
 
-  /** Экспорт конфигурации в файл обмена; возвращает путь записанного файла. */
+  /** Exporting the configuration to an exchange file; returns the written file path. */
   exportConfigFile: (): Promise<string> => invokeCommand<string>('export_config_file'),
 
-  /** Валидировать содержимое файла обмена конфигурацией; возвращает DTO конфига. */
+  /** Validate the content of a config exchange file; returns the config DTO. */
   parseConfigFile: (content: string): Promise<AppConfigDto> =>
     invokeCommand<AppConfigDto>('parse_config_file', { content }),
 
@@ -103,15 +106,15 @@ export const configApi = {
     }),
 };
 
-/** Синхронизация: запуск прогона и совокупный статус. */
+/** Synchronization: starting a run and the aggregate status. */
 export const syncApi = {
-  /** Возвращает `false`, если синхронизация уже идёт. */
+  /** Returns `false` if synchronization is already running. */
   start: (force = false): Promise<boolean> => invokeCommand<boolean>('start_sync', { force }),
 
   status: (): Promise<SyncStatusDto> => invokeCommand<SyncStatusDto>('get_sync_status'),
 };
 
-/** Системные команды: трей, внешние ссылки, devtools. */
+/** System commands: tray, external links, devtools. */
 export const systemApi = {
   updateTrayMenu: (openText: string, quitText: string): Promise<void> =>
     invokeCommand<void>('update_tray_menu', { openText, quitText }),
@@ -121,7 +124,7 @@ export const systemApi = {
   openDevtools: (): Promise<void> => invokeCommand<void>('open_devtools'),
 };
 
-/** Генерация vCard контакта на бэкенде. */
+/** Generating a contact vCard on the backend. */
 export const vcardApi = {
   generate: (contact: VCardInputDto): Promise<string> => invokeCommand<string>('generate_vcard', { contact }),
 };

@@ -1,15 +1,15 @@
-//! Оркестрация синхронизации Active Directory → локальный кэш.
+//! Orchestration of Active Directory -> local cache sync.
 //!
-//! Ключевые свойства:
-//! * **Single-flight**: одновременный запуск невозможен (ручная кнопка,
-//!   стартовое расписание и периодический тик не пересекаются).
-//! * **Неблокирующий UI**: синхронизация всегда фоновая, фронтенд получает
-//!   live-события `directory-sync` (started/progress/finished/error/runFinished)
-//!   и инвалидирует кэши react-query по завершении.
-//! * **Свежесть кэша**: планировщик запускает синхронизацию, только если
-//!   [`crate::services::policy::needs_sync`] говорит, что кэш пуст или устарел.
-//! * Ошибка одной организации не прерывает синхронизацию остальных;
-//!   последняя ошибка сохраняется в `sync_meta` и видна в настройках.
+//! Key properties:
+//! * **Single-flight**: simultaneous runs are impossible (manual button,
+//!   the initial schedule and the periodic tick do not overlap).
+//! * **Non-blocking UI**: sync is always background; the frontend receives
+//!   live `directory-sync` events (started/progress/finished/error/runFinished)
+//!   and invalidates react-query caches on completion.
+//! * **Cache freshness**: the scheduler runs sync only if
+//!   [`crate::services::policy::needs_sync`] says the cache is empty or stale.
+//! * An error in one organization does not interrupt sync of the others;
+//!   the last error is saved in `sync_meta` and visible in settings.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -28,17 +28,17 @@ use crate::services::ldap::{self, DirectoryCredentials};
 use crate::services::{external, policy, records};
 use crate::state::AppState;
 
-/// Имя Tauri-события с прогрессом синхронизации.
+/// Tauri event name with sync progress.
 pub const SYNC_EVENT: &str = "directory-sync";
 
-/// Пауза перед первой проверкой при старте приложения — даём UI отрисоваться.
+/// Pause before the first check at application startup - let the UI render.
 const STARTUP_DELAY: Duration = Duration::from_secs(6);
-/// Как часто планировщик проверяет свежесть кэша.
+/// How often the scheduler checks cache freshness.
 const SCHEDULE_TICK: Duration = Duration::from_secs(20 * 60);
-/// Полная выборка нужна для удалений: дельта не видит tombstones AD.
+/// A full selection is needed for deletions: the delta does not see AD tombstones.
 const FULL_SYNC_INTERVAL: i64 = 24 * 60 * 60;
 
-/// События синхронизации для фронтенда.
+/// Sync events for the frontend.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "state")]
 pub enum SyncEvent {
@@ -62,7 +62,7 @@ pub enum SyncEvent {
     RunFinished,
 }
 
-/// Состояние синхронизации организации (для UI настроек).
+/// Organization sync state (for the settings UI).
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrgSyncState {
@@ -73,7 +73,7 @@ pub struct OrgSyncState {
     pub last_error: Option<String>,
 }
 
-/// Совокупный статус для команды `get_sync_status`.
+/// Aggregate status for the `get_sync_status` command.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncStatus {
@@ -84,7 +84,7 @@ pub struct SyncStatus {
 #[derive(Default)]
 struct Inner {
     running: AtomicBool,
-    /// Single-flight «ворота»: удерживаются на всё время прогона.
+    /// Single-flight "gate": held for the entire run.
     gate: AsyncMutex<()>,
     running_orgs: Mutex<Vec<String>>,
     /// Last successful batch read of external XML files, keyed by path.
@@ -148,8 +148,8 @@ impl SyncManager {
         })
     }
 
-    /// Запускает синхронизацию в фоне, не блокируя вызывающего.
-    /// Возвращает `false`, если прогон уже идёт.
+    /// Starts sync in the background without blocking the caller.
+    /// Returns `false` if a run is already in progress.
     pub fn spawn(&self, app: AppHandle, force: bool) -> bool {
         if self.is_running() {
             return false;
@@ -161,7 +161,7 @@ impl SyncManager {
         true
     }
 
-    /// Полный прогон синхронизации (single-flight).
+    /// Full sync run (single-flight).
     pub async fn run(&self, app: &AppHandle, force: bool) {
         let Ok(_guard) = self.inner.gate.try_lock() else {
             info!("синхронизация уже выполняется — новый запуск пропущен");
@@ -187,8 +187,8 @@ impl SyncManager {
             return Ok(());
         }
 
-        // Внешний телефонный файл не зависит от подключений AD: грузим до
-        // проверки организаций, чтобы справочник работал и без каталога.
+        // The external phone file does not depend on AD connections: we load before
+        // organization checks, so the lookup works even without the catalog.
         refresh_external(&state.db, &config);
         self.mark_external_refreshed(&config.external_phonebook_paths);
 
@@ -214,8 +214,8 @@ impl SyncManager {
             return Ok(());
         }
 
-        // Организации синхронизируются последовательно: не создаём
-        // параллельную нагрузку на контроллеры домена.
+        // Organizations are synchronized sequentially: we do not create
+        // parallel load on the domain controllers.
         for org in orgs {
             self.sync_org(
                 app,
@@ -228,9 +228,9 @@ impl SyncManager {
             .await;
         }
 
-        // AD sync может добавить сотрудника, которого ещё не было в кэше на
-        // момент первой загрузки внешнего файла. Повторно применяем файлы,
-        // чтобы отсечь появившиеся дубли Yealink + AD по ФИО и контактам.
+        // AD sync may add an employee that was not yet in the cache at
+        // the first load of the external file. Reapply the files,
+        // to cut off newly appeared Yealink + AD duplicates by full name and contacts.
         if config.external_phonebook_enabled && !config.external_phonebook_paths.is_empty() {
             refresh_external(&state.db, &config);
             self.mark_external_refreshed(&config.external_phonebook_paths);
@@ -257,9 +257,9 @@ impl SyncManager {
         self.set_org_running(&name, true);
         let started = Instant::now();
 
-        // Дельта вместо полной выборки: uSNChanged — монотонная метка AD.
-        // Tombstones дельта не видит, поэтому раз в сутки или по ручному
-        // запуску делаем полную выборку и удаляем исчезнувших.
+        // A delta instead of a full sample: uSNChanged is a monotonic AD marker.
+        // The delta does not see tombstones, so once a day or on a manual
+        // startup we perform a full selection and remove disappeared records.
         let meta = db
             .sync_meta()
             .unwrap_or_default()
@@ -380,7 +380,7 @@ impl SyncManager {
         }
     }
 
-    /// Совокупный статус: персистентная мета из БД + live-состояние.
+    /// Aggregate status: persistent metadata from the DB + live state.
     pub fn status(&self, db: &Db, configured_orgs: &[String]) -> SyncStatus {
         let metas = db.sync_meta().unwrap_or_default();
         let running_orgs = self
@@ -401,7 +401,7 @@ impl SyncManager {
             })
             .collect();
 
-        // Организации из конфига без меты (ещё ни разу не синхронизировались).
+        // Organizations from the config without meta (never synchronized yet).
         for name in configured_orgs {
             if !organizations
                 .iter()
@@ -423,7 +423,7 @@ impl SyncManager {
         }
     }
 
-    /// Фоновый планировщик: стартовая проверка + периодический контроль свежести.
+    /// Background scheduler: startup check + periodic freshness control.
     pub fn spawn_scheduler(self, app: AppHandle) {
         tauri::async_runtime::spawn(async move {
             tokio::time::sleep(STARTUP_DELAY).await;
@@ -457,8 +457,8 @@ fn is_transient_ldap_error(error: &AppError) -> bool {
     matches!(error, AppError::LdapUnreachable(_) | AppError::LdapTimeout)
 }
 
-/// Загрузка внешнего телефонного файла по текущей конфигурации.
-/// Ошибка (файл удалён, битый XML) не прерывает синхронизацию: логируется.
+/// Loading the external phone file according to the current configuration.
+/// An error (file deleted, broken XML) does not interrupt sync: it is logged.
 fn refresh_external(db: &Db, config: &AppConfig) {
     match external::refresh(
         db,
