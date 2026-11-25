@@ -1,24 +1,24 @@
-//! Шифрование локального кэша: AES-256-GCM поверх сериализованной базы.
+//! Local cache encryption: AES-256-GCM over the serialized database.
 //!
-//! Рабочая база живёт в памяти (`Connection::open_in_memory`), а на диске
-//! лежит только контейнер `KMPBENC1` = magic + nonce(12) + шифртекст
-//! сериализованного образа SQLite (AES-256-GCM, rusqlite-фича `serialize`).
-//! Незашифрованные страницы на диск не попадают вообще: запись — это
-//! «сериализовать → зашифровать → temp-файл → rename». GCM даёт и
-//! конфиденциальность, и целостность: подделка и битый файл не
-//! расшифровываются.
+//! The working database lives in memory (`Connection::open_in_memory`), while on disk
+//! there is only the `KMPBENC1` container = magic + nonce(12) + ciphertext
+//! (a serialized SQLite image; AES-256-GCM, rusqlite `serialize` feature).
+//! Unencrypted pages never reach disk: writing is
+//! "serialize -> encrypt -> temp file -> rename". GCM provides
+//! both confidentiality and integrity: tampering and a broken file are not
+//! decrypted.
 //!
-//! Ключ (32 байта CSPRNG) хранится в системном хранилище секретов — на
-//! Windows это Credential Manager (защищён DPAPI и привязан к учётной
-//! записи пользователя) — и никогда не попадает в конфигурацию, логи и
-//! IPC. Никаких внешних зависимостей сборки: шифрование и SQLite —
-//! pure-Rust/vendored C без OpenSSL, Perl и NASM.
+//! The key (32 bytes from CSPRNG) is stored in the system secret store - on
+//! Windows this is Credential Manager (protected by DPAPI and tied to the
+//! Windows user account) - and never ends up in configuration, logs, or
+//! IPC. No external build dependencies: encryption and SQLite are
+//! pure-Rust/vendored C without OpenSSL, Perl, and NASM.
 //!
-//! Кэш не содержит уникальных данных (избранное и настройки живут в
-//! `config.json`, пароли — в keyring, сотрудники — из AD), поэтому
-//! нерасшифровываемый файл (потеря ключа, повреждение) или файл, вообще не
-//! являющийся контейнером, зануляется и создаётся заново: ближайшая
-//! синхронизация восстановит содержимое.
+//! The cache contains no unique data (starred contacts and settings live in
+//! `config.json`, passwords in the keyring, employees from AD), therefore an
+//! undecryptable file (lost key, corruption) or a file that is not
+//! a container is zeroed and recreated: the nearest
+//! sync will restore the contents.
 
 use std::fs;
 use std::io::{Read, Write};
@@ -41,60 +41,60 @@ use windows::Win32::Security::Cryptography::{
 use crate::error::AppError;
 use crate::services::config::store::KEYRING_SERVICE;
 
-/// Длина ключа AES-256, байты.
+/// AES-256 key length, bytes.
 const KEY_BYTES: usize = 32;
 
-/// Имя записи ключа базы в keyring (сервис общий с секретами LDAP).
+/// Database key entry name in the keyring (the service is shared with LDAP secrets).
 const DB_KEY_USER: &str = "db-key";
 /// Redundant copy: Windows Credential Manager occasionally drops a single
 /// generic credential during upgrades; the backup lets the cache open again.
 const DB_KEY_BACKUP_USER: &str = "db-key-backup";
 
-/// Второй, независимый от Credential Manager носитель ключа: файл рядом
-/// с базой, зашифрованный DPAPI (привязка к учётной записи Windows).
-/// Credential Manager иногда теряет обе generic-записи (переустановка,
-/// чистка профиля, политика), и тогда кэш становился недоступен.
+/// A second key carrier independent of Credential Manager: a file next
+/// with the database, encrypted by DPAPI (bound to the Windows account).
+/// Credential Manager sometimes loses both generic entries (reinstallation,
+/// profile cleanup, policy), and then the cache became inaccessible.
 #[cfg(windows)]
 const KEY_FILE_MAGIC: &[u8; 8] = b"KMPBKEY1";
 
-/// Магический заголовок зашифрованного контейнера (версия формата).
+/// Magic header of the encrypted container (format version).
 const MAGIC: &[u8; 8] = b"KMPBENC1";
 
-/// Длина nonce AES-GCM.
+/// AES-GCM nonce length.
 const NONCE_BYTES: usize = 12;
 
-/// Размер заголовка контейнера: magic + nonce.
+/// Container header size: magic + nonce.
 const HEADER_BYTES: usize = MAGIC.len() + NONCE_BYTES;
 
-/// Смещения номеров версии формата в заголовке SQLite: байт 18 — версия
-/// записи, байт 19 — версия чтения. Значение 2 означает WAL-режим,
-/// 1 — rollback-журнал.
+/// Offsets of the format version numbers in the SQLite header: byte 18 - version
+/// record; byte 19 - read version. The value 2 means WAL mode,
+/// 1 - rollback journal.
 const WRITE_VERSION_OFFSET: usize = 18;
 const READ_VERSION_OFFSET: usize = 19;
 const VERSION_WAL: u8 = 2;
 const VERSION_ROLLBACK: u8 = 1;
 
-/// Длина файлового заголовка SQLite; образ короче — не база данных.
+/// SQLite file header length; a shorter image is not a database.
 const SQLITE_HEADER_LEN: usize = 100;
 
-/// Результат чтения файла кэша.
+/// Cache file read result.
 #[derive(Debug)]
 pub enum LoadOutcome {
-    /// Контейнер расшифрован — образ базы.
+    /// The container is decrypted - a database image.
     Bytes(Vec<u8>),
-    /// Файла нет — база создаётся с нуля.
+    /// No file - the database is created from scratch.
     Missing,
-    /// Файл есть, но не является нашим контейнером (чужой/битый).
+    /// The file exists but is not our container (foreign/broken).
     Foreign,
-    /// Контейнер наш, но ключ не подошёл. Preserve the file for recovery
+    /// The container is ours, but the key did not match. Preserve the file for recovery
     /// instead of silently destroying a cache that may still be recoverable.
     WrongKey,
 }
 
-/// Ключ базы: взять из keyring, затем из DPAPI-файла, при отсутствии —
-/// сгенерировать и сохранить во все доступные хранилища. Ошибка keyring не
-/// фатальна, если ключ нашёлся в файле: это переживает чистку Credential
-/// Manager и перезагрузку.
+/// Database key: take from the keyring, then from the DPAPI file; if absent -
+/// generate and save it to all available stores. A keyring error is not
+/// fatal if the key was found in the file: this survives Credential
+/// Manager cleanup and reload.
 pub fn database_key(db_path: &Path) -> Result<[u8; KEY_BYTES], AppError> {
     let key_path = key_file_path(db_path);
     let mut key_store_error = false;
@@ -131,9 +131,9 @@ pub fn database_key(db_path: &Path) -> Result<[u8; KEY_BYTES], AppError> {
         }
     };
 
-    // Не mint-им новый ключ при временной ошибке keyring и существующей
-    // базе: иначе контейнер будет отправлен в карантин. Файл ключа —
-    // последний шанс восстановить доступ.
+    // We do not mint a new key on a temporary keyring error and an existing
+    // database: otherwise the container would be quarantined. The key file -
+    // the last chance to restore access.
     if primary_key.is_none()
         && backup_key.is_none()
         && file_key.is_none()
@@ -188,7 +188,7 @@ pub fn database_key(db_path: &Path) -> Result<[u8; KEY_BYTES], AppError> {
     Ok(key)
 }
 
-/// Путь к DPAPI-файлу ключа рядом с зашифрованным контейнером.
+/// Path to the DPAPI key file next to the encrypted container.
 fn key_file_path(db_path: &Path) -> PathBuf {
     db_path.with_extension("key")
 }
@@ -312,7 +312,7 @@ fn set_key(entry: &keyring::Entry, key: &[u8; KEY_BYTES]) -> Result<(), AppError
         .map_err(|e| AppError::Config(format!("не удалось сохранить ключ базы: {e}")))
 }
 
-/// Сгенерировать ключ CSPRNG.
+/// Generate a CSPRNG key.
 pub fn generate_key() -> Result<[u8; KEY_BYTES], AppError> {
     let mut key = [0u8; KEY_BYTES];
     fill_random(&mut key)?;
@@ -341,12 +341,12 @@ fn fill_random(buf: &mut [u8]) -> Result<(), AppError> {
 }
 
 fn cipher(key: &[u8; KEY_BYTES]) -> Aes256Gcm {
-    // Ключ всегда ровно 32 байта, new_from_slice не может ошибиться.
+    // The key is always exactly 32 bytes, new_from_slice cannot fail.
     Aes256Gcm::new_from_slice(key).expect("32-byte AES key")
 }
 
-/// Прочитать файл кэша и классифицировать его. Ошибки дешифрования —
-/// не ошибка приложения: контейнер помечается `Foreign` и пересоздаётся.
+/// Read the cache file and classify it. Decryption errors -
+/// not an application error: the container is marked `Foreign` and recreated.
 pub fn load(path: &Path, key: &[u8; KEY_BYTES]) -> Result<LoadOutcome, AppError> {
     let raw = match fs::read(path) {
         Ok(raw) => raw,
@@ -359,7 +359,7 @@ pub fn load(path: &Path, key: &[u8; KEY_BYTES]) -> Result<LoadOutcome, AppError>
     let (nonce, ciphertext) = raw.split_at(HEADER_BYTES);
     match cipher(key).decrypt(Nonce::from_slice(&nonce[MAGIC.len()..]), ciphertext) {
         Ok(bytes) => Ok(LoadOutcome::Bytes(bytes)),
-        // Наш контейнер, но ключ не подошёл: сохранить файл, не затирать.
+        // Our container, but the key did not fit: keep the file, do not overwrite.
         Err(_) => Ok(LoadOutcome::WrongKey),
     }
 }
@@ -380,7 +380,7 @@ pub fn quarantine_database_file(path: &Path) -> Result<Option<PathBuf>, AppError
     Ok(Some(target))
 }
 
-/// Зашифровать образ базы и атомарно заменить файл кэша.
+/// Encrypt the database image and atomically replace the cache file.
 pub fn save(path: &Path, key: &[u8; KEY_BYTES], plaintext: &[u8]) -> Result<(), AppError> {
     let mut nonce = [0u8; NONCE_BYTES];
     fill_random(&mut nonce)?;
@@ -397,28 +397,28 @@ pub fn save(path: &Path, key: &[u8; KEY_BYTES], plaintext: &[u8]) -> Result<(), 
     Ok(())
 }
 
-/// Сериализовать открытую базу в образ.
+/// Serialize the open database into an image.
 pub fn serialize(conn: &mut Connection) -> Result<Vec<u8>, AppError> {
     let data = conn.serialize(MAIN_DB)?;
     Ok(data.to_vec())
 }
 
-/// Восстановить базу из образа: скопировать байты в память SQLite и
-/// десериализовать.
+/// Restore the database from an image: copy the bytes into SQLite memory and
+/// deserialize.
 ///
-/// # Safety-контракт
-/// Буфер выделяется `sqlite3_malloc` и передаётся в `OwnedData`, который
-/// освобождает его через `sqlite3_free` при закрытии базы.
+/// # Safety contract
+/// The buffer is allocated by `sqlite3_malloc` and passed to `OwnedData`, which
+/// frees it via `sqlite3_free` when the database is closed.
 pub fn restore(conn: &mut Connection, bytes: &[u8]) -> Result<(), AppError> {
     let len = i32::try_from(bytes.len())
         .map_err(|_| AppError::Internal("образ кэша слишком большой".into()))?;
-    // Десериализуем образ в отдельное соединение, а затем копируем его в
-    // целевое через backup API. Прямой sqlite3_deserialize в shared-cache
-    // соединение подменяет образ только у этого соединения: reader-пул
-    // продолжает видеть пустую базу, и список контактов после перезапуска
-    // оказывается пустым при живых count/sync_meta. Backup пишет страницы
-    // через обычный механизм SQLite, поэтому данные видны всем соединениям
-    // общего кэша.
+    // We deserialize the image into a separate connection, then copy it into the
+    // target via the backup API. Direct sqlite3_deserialize on a shared-cache
+    // connection replaces the image only for that connection: the reader pool
+    // continues to see an empty database, and the contact list after restart
+    // turns out empty while count/sync_meta are live. Backup writes pages
+    // through the normal SQLite mechanism, so the data is visible to all connections
+    // in the shared cache.
     let mut source = Connection::open_in_memory()?;
     unsafe {
         let buf = rusqlite::ffi::sqlite3_malloc(len);
@@ -426,8 +426,8 @@ pub fn restore(conn: &mut Connection, bytes: &[u8]) -> Result<(), AppError> {
             return Err(AppError::Internal("не хватило памяти на образ кэша".into()));
         }
         std::ptr::copy_nonoverlapping(bytes.as_ptr(), buf.cast::<u8>(), bytes.len());
-        // WAL-образ десериализировать нельзя (см. force_rollback_header) —
-        // правим заголовок на копии, уже переданной во владение SQLite.
+        // A WAL image cannot be deserialized (see force_rollback_header) —
+        // edit the header on the copy already passed into SQLite ownership.
         force_rollback_header(std::slice::from_raw_parts_mut(
             buf.cast::<u8>(),
             bytes.len(),
@@ -444,15 +444,15 @@ pub fn restore(conn: &mut Connection, bytes: &[u8]) -> Result<(), AppError> {
     Ok(())
 }
 
-/// Переписать WAL-флаг заголовка образа на rollback-режим.
+/// Rewrite the image header's WAL flag to rollback mode.
 ///
-/// Документация SQLite к `sqlite3_deserialize`: образ в WAL-режиме
-/// использовать нельзя — любое обращение к базе завершится
-/// `SQLITE_CANTOPEN`; вызывающий вправе переписать номера версии формата
-/// (байты 18 и 19) на `0x01` до вызова, принудительно переведя образ в
-/// rollback-режим. Рабочая база живёт в памяти и сериализуется в
-/// rollback-режиме, поэтому правка — защитная нормализация образа перед
-/// восстановлением.
+/// SQLite documentation for `sqlite3_deserialize`: an image in WAL mode
+/// cannot be used - any database access will end with
+/// `SQLITE_CANTOPEN`; the caller may rewrite the format version numbers
+/// (bytes 18 and 19) to `0x01` before the call, forcibly putting the image into
+/// rollback mode. The working database lives in memory and is serialized into
+/// rollback mode, so the edit is a defensive normalization of the image before
+/// recovery.
 fn force_rollback_header(image: &mut [u8]) {
     if image.len() < SQLITE_HEADER_LEN {
         return;
@@ -464,8 +464,8 @@ fn force_rollback_header(image: &mut [u8]) {
     }
 }
 
-/// Полный список файлов кэша: контейнер и временный файл записи.
-/// Журналов (WAL/SHM) у кэша нет: рабочая база живёт в памяти.
+/// Full list of cache files: the container and the temporary write file.
+/// The cache has no journals (WAL/SHM): the working database lives in memory.
 pub fn database_files(path: &Path) -> Vec<PathBuf> {
     vec![path.to_path_buf(), tmp_path(path)]
 }
@@ -474,7 +474,7 @@ fn tmp_path(path: &Path) -> PathBuf {
     path.with_extension("db.enctmp")
 }
 
-/// Занулить и удалить файлы базы и временный контейнер.
+/// Zero out and delete the database files and the temporary container.
 pub fn wipe_database_files(path: &Path) -> Result<(), AppError> {
     for file in database_files(path) {
         secure_wipe(&file)?;
@@ -482,8 +482,8 @@ pub fn wipe_database_files(path: &Path) -> Result<(), AppError> {
     Ok(())
 }
 
-/// Перезаписать файл нулями и удалить: на диске не должно оставаться
-/// ни шифртекста с утерянным ключом, ни содержимого чужих файлов.
+/// Overwrite the file with zeros and delete it: nothing must remain on disk
+/// neither ciphertext with a lost key nor the contents of foreign files.
 pub fn secure_wipe(path: &Path) -> Result<(), AppError> {
     if !path.exists() {
         return Ok(());
@@ -554,7 +554,7 @@ mod tests {
             LoadOutcome::WrongKey
         ));
 
-        // Бит шифртекста → auth tag не сходится → WrongKey.
+        // A flipped ciphertext bit → the auth tag does not match → WrongKey.
         let mut raw = fs::read(&path).expect("read");
         let i = raw.len() - 3;
         raw[i] ^= 0xFF;
@@ -586,7 +586,7 @@ mod tests {
     fn plaintext_sqlite_file_is_foreign() {
         let path = db_path("plaintext");
         let k = key(3);
-        // Файл с заголовком SQLite — не наш контейнер: пересоздать.
+        // A file with a SQLite header is not our container: recreate it.
         fs::write(&path, b"SQLite format 3\0....").expect("write");
         assert!(matches!(
             load(&path, &k).expect("load"),

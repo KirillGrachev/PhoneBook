@@ -3,30 +3,35 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/components/ui/Avatar';
+import { useContactPhoto } from '@/features/contacts/hooks/useContactData';
 import { devLog } from '@/lib/devlog';
 import { personNameForLanguage } from '@/lib/transliteration';
+import { useAppStore } from '@/store/useAppStore';
 import type { Contact } from '@/types';
 
 interface ContactHeaderProps {
   contact: Contact;
-  isSaved: boolean;
-  onToggleSave: (id: string) => void;
-  /** «Написать»: если почты нет, родитель откроет диалог ввода адреса. */
+  /** "Write": if there is no email, the parent opens the address input dialog. */
   onWrite: () => void;
   onActionClick: (type: 'mailto' | 'trueconf', url: string) => void;
 }
 
-/** Шапка карточки контакта: аватар, ФИО, действия, «в мои контакты». */
-export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActionClick }: ContactHeaderProps) {
+/** The contact card header: avatar, name, actions, "add to my contacts". */
+export function ContactHeader({ contact, onWrite, onActionClick }: ContactHeaderProps) {
   const { t, i18n } = useTranslation();
   const displayName = personNameForLanguage(contact.fullName, i18n.language);
+  const { data: photoUrl } = useContactPhoto(contact.id);
+  // Favorite state is read directly from the store so the button always reflects
+  // the latest savedContactIds, even if the parent re-renders with a stale prop.
+  const isSaved = useAppStore((state) => state.savedContactIds.includes(contact.id));
+  const toggleSavedContact = useAppStore((state) => state.toggleSavedContact);
   const details = [contact.jobTitle, contact.department, contact.organization].filter((value): value is string =>
     Boolean(value && value.trim()),
   );
 
   const handleToggleSave = () => {
     devLog('favorite', { id: contact.id, name: displayName, saved: !isSaved });
-    onToggleSave(contact.id);
+    toggleSavedContact(contact.id);
     if (isSaved) {
       toast.success(t('removedFromContacts', { name: displayName }), {
         id: 'favorite-toggle-toast',
@@ -43,7 +48,7 @@ export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActio
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8 mb-6 sm:mb-8 pb-6 border-b border-border mt-4 md:mt-0">
       <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-6">
-        <Avatar fullName={displayName} size="md" className="shadow-sm ring-4 ring-surface" />
+        <Avatar fullName={displayName} photoUrl={photoUrl} size="md" className="shadow-sm ring-4 ring-surface" />
         <div className="min-w-0">
           <h2 className="text-[22px] sm:text-[28px] font-semibold text-foreground mb-1.5 leading-tight break-words select-text">
             {displayName}
@@ -74,11 +79,11 @@ export function ContactHeader({ contact, isSaved, onToggleSave, onWrite, onActio
             <button
               type="button"
               onClick={() => {
-                // Официальная схема TrueConf: чат с пользователем — `<id>&do=chat`.
-                // ID — AD-атрибут `pager` КАК ЕСТЬ: значение уже содержит домен
-                // TrueConf-сервера (`login@kma-meet.metholding.com`); без этого
-                // хвоста сервер не поймёт, какой чат открыть. Пустой pager —
-                // кнопки нет вовсе.
+                // The official TrueConf scheme: a chat with a user is `<id>&do=chat`.
+                // ID is the AD `pager` attribute AS IS: the value already contains the domain
+                // of the TrueConf server (`login@kma-meet.metholding.com`); without this
+                // tail the server will not understand which chat to open. An empty pager -
+                // there is no button at all.
                 const url = `trueconf:${contact.trueconfId}&do=chat`;
                 devLog('trueconf', { trueconfId: contact.trueconfId, url });
                 onActionClick('trueconf', url);

@@ -8,7 +8,7 @@ interface SettingsAdAuthToggleProps {
   onChange: (patch: Partial<LdapOrgConfigDto>) => void;
 }
 
-/** Переключатель встроенной аутентификации Windows. */
+/** The Windows integrated authentication toggle. */
 export function SettingsAdAuthToggle({ config, onChange }: SettingsAdAuthToggleProps) {
   const { t } = useTranslation();
 

@@ -1,4 +1,4 @@
-/** Признак «запрос похож на номер телефона»: цифры и телефонная пунктуация. */
+/** The "query looks like a phone number" flag: digits and phone punctuation. */
 export function isPhoneQuery(search: string): boolean {
   const trimmed = search.trim();
   if (!trimmed) {

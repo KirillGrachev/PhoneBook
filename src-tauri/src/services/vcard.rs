@@ -1,15 +1,15 @@
-//! Генерация vCard 3.0 (RFC 2426) для QR-кода контакта.
+//! vCard 3.0 generation (RFC 2426) for a contact QR code.
 //!
-//! В отличие от наивной реализации, здесь соблюдены требования формата:
-//! * разделители строк CRLF;
-//! * folding длинных строк (≤ 74 октета, продолжение начинается с пробела) —
-//!   без этого крупные QR-коды не читаются некоторыми телефонами;
-//! * экранирование `\`, `;`, `,` и переводов строк;
-//! * нормализация российских мобильных номеров к `+7...`.
+//! Unlike a naive implementation, the format requirements are met here:
+//! * CRLF line separators;
+//! * folding of long lines (<= 74 octets, continuation starts with a space) -
+//!   without this, large QR codes are unreadable by some phones;
+//! * escaping `\`, `;`, `,`, and newlines;
+//! * normalization of Russian mobile numbers to `+7...`.
 
 use serde::Deserialize;
 
-/// Контактные данные, присылаемые фронтендом для генерации vCard.
+/// Contact data sent by the frontend for vCard generation.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VCardInput {
@@ -26,12 +26,12 @@ pub struct VCardInput {
     pub mobile_phone: Option<String>,
     #[serde(default)]
     pub ip_phone: Option<String>,
-    /// Полный (внешний) номер IP-телефонии.
+    /// Full (external) IP telephony number.
     #[serde(default)]
     pub phone_external: Option<String>,
-    /// Режим предприятия (вкладка «КМАруда» не глобальной версии): в QR
-    /// подставляется внешний номер вместо внутреннего — снаружи короткий
-    /// внутренний номер ненабираем.
+    /// Enterprise mode (the "KMAruda" tab in the non-global version): in the QR
+    /// the external number is substituted instead of the internal one - from outside the short
+    /// the internal number is not dialable.
     #[serde(default)]
     pub prefer_external_phone: bool,
     #[serde(default)]
@@ -39,9 +39,9 @@ pub struct VCardInput {
 }
 
 const CRLF: &str = "\r\n";
-/// Лимит октетов в первой физической строке (RFC 2426: 75 с учётом CRLF).
+/// Octet limit on the first physical line (RFC 2426: 75 including CRLF).
 const MAX_FIRST_LINE: usize = 74;
-/// Лимит октетов в строках продолжения (первый символ — пробел).
+/// Octet limit on continuation lines (the first character is a space).
 const MAX_CONT_LINE: usize = 73;
 
 pub fn generate(contact: &VCardInput) -> String {
@@ -88,8 +88,8 @@ pub fn generate(contact: &VCardInput) -> String {
         lines.push(format!("TITLE:{}", escape(title)));
     }
 
-    // Мобильный — первым: телефоны-клиенты (например, Samsung) берут первый
-    // TEL как основной номер контакта; корпоративный остаётся вторым.
+    // The mobile first: client phones (e.g. Samsung) take the first
+    // TEL as the primary contact number; the corporate one stays second.
     if let Some(mobile) = contact
         .mobile_phone
         .as_deref()
@@ -101,10 +101,10 @@ pub fn generate(contact: &VCardInput) -> String {
             escape(&normalize_phone(mobile))
         ));
     }
-    // Корпоративный номер: в режиме предприятия (вкладка «КМАруда» не
-    // глобальной версии) — ТОЛЬКО внешний (полный): внутренний короткий
-    // номер снаружи ненабираем, и в QR ему в этом режиме места нет, даже
-    // как фолбэк. В остальных режимах — внутренний, как обычно.
+    // The corporate number: in enterprise mode (the "KMAruda" tab of the non-
+    // global version) - ONLY the external (full) number: the internal short
+    // number is not dialable from outside, and in this mode it has no place in the QR, even
+    // as a fallback. In the other modes - the internal number, as usual.
     let work_phone = if contact.prefer_external_phone {
         contact.phone_external.as_deref()
     } else {
@@ -134,7 +134,7 @@ pub fn generate(contact: &VCardInput) -> String {
         .join(CRLF)
 }
 
-/// Экранирование специальных символов vCard.
+/// Escaping vCard special characters.
 pub fn escape(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for ch in value.chars() {
@@ -150,10 +150,10 @@ pub fn escape(value: &str) -> String {
     out
 }
 
-/// Разбиение ФИО на компоненты для поля `N`.
+/// Splitting the full name into components for the `N` field.
 ///
-/// Русская традиция: «Фамилия Имя Отчество». Всё, что сверх трёх частей,
-/// присоединяется к отчеству.
+/// Russian tradition: "Surname GivenName Patronymic". Everything beyond three parts,
+/// appended to the patronymic.
 pub fn split_name(full_name: &str) -> (&str, &str, &str) {
     let mut parts = full_name.split_whitespace();
     match (parts.next(), parts.next(), parts.next()) {
@@ -165,8 +165,8 @@ pub fn split_name(full_name: &str) -> (&str, &str, &str) {
     }
 }
 
-/// Нормализация российских номеров: `8 (999) 111-22-33` → `+79991112233`.
-/// Короткие внутренние номера (1–6 цифр) не трогаем.
+/// Normalization of Russian numbers: `8 (999) 111-22-33` -> `+79991112233`.
+/// Short internal numbers (1-6 digits) are left untouched.
 pub fn normalize_phone(phone: &str) -> String {
     let mut digits: String = phone.chars().filter(|c| c.is_ascii_digit()).collect();
     if digits.is_empty() {
@@ -187,7 +187,7 @@ pub fn normalize_phone(phone: &str) -> String {
     digits
 }
 
-/// Folding строки vCard по границам UTF-8 символов.
+/// Folding a vCard line at UTF-8 character boundaries.
 pub fn fold_line(line: &str) -> String {
     if line.len() <= MAX_FIRST_LINE {
         return line.to_string();
@@ -239,8 +239,8 @@ mod tests {
         assert!(vcard.contains("TITLE:Системный администратор"));
         assert!(vcard.contains("TEL;TYPE=CELL:+79991112233"));
         assert!(vcard.contains("TEL;TYPE=WORK,VOICE:1234"));
-        // Мобильный идёт первым TEL: клиенты телефонов берут первый номер
-        // как основной (кейс Samsung с двумя полями).
+        // The mobile goes as the first TEL: phone clients take the first number
+        // as primary (the Samsung case with two fields).
         assert!(
             vcard.find("TEL;TYPE=CELL").expect("cell") < vcard.find("TEL;TYPE=WORK").expect("work")
         );
@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn folds_long_lines_by_octets() {
-        let long = format!("NOTE:{}", "я".repeat(60)); // 60 * 2 байта = 120+ октетов
+        let long = format!("NOTE:{}", "я".repeat(60)); // 60 * 2 bytes = 120+ octets
         let folded = fold_line(&long);
         for physical in folded.split("\r\n") {
             assert!(
@@ -265,9 +265,9 @@ mod tests {
                 physical.len()
             );
         }
-        // Продолжения начинаются с пробела.
+        // Continuations start with a space.
         assert!(folded.contains("\r\n "));
-        // После unfold содержимое не потерялось.
+        // After unfold the content was not lost.
         assert_eq!(folded.replace("\r\n ", ""), long);
     }
 
@@ -282,7 +282,7 @@ mod tests {
         assert_eq!(normalize_phone("79991112233"), "+79991112233");
         assert_eq!(normalize_phone("+7 999 111 22 33"), "+79991112233");
         assert_eq!(normalize_phone("9991112233"), "+79991112233");
-        // Внутренние номера не трогаем.
+        // We do not touch internal numbers.
         assert_eq!(normalize_phone("1234"), "1234");
     }
 
@@ -314,7 +314,7 @@ mod tests {
         let vcard = generate(&input);
         assert!(vcard.contains("TEL;TYPE=WORK,VOICE:+74951234567"));
         assert!(!vcard.contains("TEL;TYPE=WORK,VOICE:1234"));
-        // Мобильный по-прежнему первый TEL.
+        // The mobile is still the first TEL.
         assert!(
             vcard.find("TEL;TYPE=CELL").expect("cell") < vcard.find("TEL;TYPE=WORK").expect("work")
         );
@@ -322,8 +322,8 @@ mod tests {
 
     #[test]
     fn enterprise_mode_never_exposes_internal_phone() {
-        // Внешнего номера нет — корпоративный TEL отсутствует вовсе:
-        // внутренний в режиме предприятия в QR не подставляется.
+        // There is no external number — the corporate TEL is absent entirely:
+        // the internal number is not substituted into the QR in enterprise mode.
         let mut input = input();
         input.prefer_external_phone = true;
         let vcard = generate(&input);

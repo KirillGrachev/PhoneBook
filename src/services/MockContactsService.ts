@@ -12,9 +12,9 @@ const DEMO_DELAY_MS = 150;
 const RU_COLLATOR = new Intl.Collator('ru');
 
 /**
- * Демо-источник контактов: браузерная разработка и «тестовый режим».
- * Поведение (фильтры вкладок, поиск, сортировка) намеренно повторяет
- * серверную семантику, чтобы переключение режимов не ломало UI.
+ * Demo contact source: browser development and "test mode".
+ * The behavior (tab filters, search, sorting) intentionally repeats
+ * the server semantics so that switching modes does not break the UI.
  */
 export class MockContactsService implements ContactsService {
   private readonly engine = new ContactSearchEngine();
@@ -27,9 +27,9 @@ export class MockContactsService implements ContactsService {
       list = list.filter((contact) => saved.has(contact.id));
     } else {
       if (query.activeTab === 'kmaruda') {
-        // В тестовом режиме тоже уважаем звезду: без выбранной группы
-        // демо-контакты не подставляются, с группой — фильтруем по её
-        // организациям. Реальные LDAP-подключения при этом игнорируются.
+        // In test mode we also respect the star: with no group selected
+        // demo contacts are not substituted; with a group - filter by its
+        // organizations. Real LDAP connections are ignored in this case.
         const { testMode, ldapConfigs, orgGroups, enterpriseGroupId } = useAppStore.getState();
         const scope = resolveDirectoryScope(testMode, ldapConfigs, orgGroups, enterpriseGroupId);
         const orgs = resolveEnterpriseOrgs(scope.ldapConfigs, scope.groups, scope.enterpriseGroupId);
@@ -55,14 +55,14 @@ export class MockContactsService implements ContactsService {
       }
     }
 
-    // Текстовый поиск работает и в «Моих контактах»: избранное — это
-    // подмножество справочника, но строка поиска должна его фильтровать.
+    // Text search also works in "My contacts": starred contacts are
+    // a subset of the lookup, but the search bar must filter it.
     const text = query.search?.trim();
     if (text) {
       list = list.filter((contact) => this.engine.match(contact, text));
     }
 
-    // «Кириллица сначала»: служебные учётки с латиницей не поднимаются наверх.
+    // "Cyrillic first": service accounts with Latin letters do not rise to the top.
     if (query.hideEmpty !== false) {
       list = list.filter((c) => c.email || c.mobilePhone || c.ipPhone || c.fullIpPhone);
     }
@@ -86,6 +86,11 @@ export class MockContactsService implements ContactsService {
       });
     }
     return delay(contact, 80);
+  }
+
+  async getPhoto(): Promise<string | null> {
+    // Demo contacts have no AD photo; the UI falls back to a letter avatar.
+    return null;
   }
 
   async listOrganizations(): Promise<string[]> {

@@ -14,7 +14,7 @@ void i18n.use(initReactI18next).init({
   lng: 'en',
   fallbackLng: 'en',
   interpolation: {
-    /** React экранирует значения самостоятельно. */
+    /** React escapes values on its own. */
     escapeValue: false,
   },
 });

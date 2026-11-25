@@ -5,14 +5,14 @@ interface SwitchProps {
   onChange: (checked: boolean) => void;
   disabled?: boolean;
   ariaLabel: string;
-  /** Акцентный цвет во включённом состоянии (по умолчанию — primary). */
+  /** Accent color in the enabled state (primary by default). */
   activeClassName?: string;
   className?: string;
 }
 
 /**
- * Доступный тумблер (role="switch") — единый компонент вместо пяти
- * копий разметки, как было в исходной версии.
+ * An accessible toggle (role="switch") — a single component instead of five
+ * copies of the markup, as in the original version.
  */
 export function Switch({ checked, onChange, disabled, ariaLabel, activeClassName, className }: SwitchProps) {
   return (

@@ -21,7 +21,7 @@ vi.mock('@/api/directory', () => ({
   },
 }));
 
-// Персист конфигурации в тестах не нужен: проверяем логику экрана, а не мост к Rust.
+// Config persistence is not needed in tests: we check the screen logic, not the bridge to Rust.
 vi.mock('@/store/configStorage', () => ({
   configStorage: {
     getItem: async () => null,
@@ -60,7 +60,7 @@ describe('SettingsExternalView', () => {
 
     expect(useAppStore.getState().externalPhonebookEnabled).toBe(true);
     expect(refreshExternalPhonebook).not.toHaveBeenCalled();
-    // Подсказка объясняет, чего не хватает, вместо мигающих кнопок.
+    // The hint explains what is missing, instead of blinking buttons.
     expect(screen.getByText('settings.externalHintNeedFile')).toBeTruthy();
   });
 
@@ -107,7 +107,7 @@ describe('SettingsExternalView', () => {
 
     expect(screen.getByRole('button', { name: 'settings.externalLoadNow' })).toBeDisabled();
 
-    // Путь задан, но тумблер выключен — загрузка всё ещё бессмысленна.
+    // A path is set but the toggle is off — loading is still pointless.
     act(() => useAppStore.setState({ externalPhonebookPaths: ['C:/phonebook.xml'] }));
     expect(screen.getByRole('button', { name: 'settings.externalLoadNow' })).toBeDisabled();
 
@@ -118,12 +118,12 @@ describe('SettingsExternalView', () => {
   it('при выключенном тумблере выбор файла заблокирован, состояние объяснено подсказкой', () => {
     renderView();
 
-    // Рубильник выключен и файла нет: карточка файла неактивна целиком.
+    // The switch is off and the file is absent: the entire file card is disabled.
     expect(screen.getByRole('button', { name: 'settings.externalChoose' })).toBeDisabled();
     expect(screen.getByText('settings.externalHintOff')).toBeTruthy();
 
-    // Путь запомнен с прошлого включения: кнопки по-прежнему неактивны,
-    // подсказка меняется на «путь запомнен — включите тумблер».
+    // The path is remembered from the last enable: the buttons are still inactive,
+    // the hint changes to "path remembered - enable the switch".
     act(() => useAppStore.setState({ externalPhonebookPaths: ['C:/phonebook.xml'] }));
     expect(screen.getByRole('button', { name: 'settings.externalChoose' })).toBeDisabled();
     expect(screen.getByText('settings.externalHintDisabled')).toBeTruthy();
@@ -132,8 +132,8 @@ describe('SettingsExternalView', () => {
   it('раздел не дублирует заголовок страницы внутри содержимого', () => {
     renderView();
 
-    // Название экрана рендерит только общая шапка SettingsHeader;
-    // внутри раздела повторного заголовка быть не должно.
+    // The screen title is rendered only by the shared SettingsHeader;
+    // there must be no repeated header within a section.
     expect(screen.queryAllByText('settings.externalTitle')).toHaveLength(0);
   });
 });

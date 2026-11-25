@@ -1,10 +1,10 @@
-//! Хранилище конфигурации: атомарная запись `config.json` и секреты keyring.
+//! Configuration store: atomic `config.json` writes and keyring secrets.
 //!
-//! * `config.json` пишется атомарно (temp-файл + rename) — повреждение
-//!   невозможно даже при обрыве питания.
-//! * Пароли bind-учёток LDAP **никогда** не попадают ни в `config.json`,
-//!   ни во фронтенд.
-//! * При удалении организации её секрет гарантированно удаляется из keyring.
+//! * `config.json` is written atomically (temp file + rename) - corruption
+//!   impossible even on power loss.
+//! * LDAP bind account passwords **never** end up in `config.json`,
+//!   nor into the frontend.
+//! * When an organization is deleted, its secret is guaranteed to be removed from the keyring.
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -22,21 +22,21 @@ use super::validate::{
 };
 
 const CONFIG_FILE: &str = "config.json";
-/// Сервис keyring общий для всех секретов приложения: пароли LDAP
-/// (`ldap:<org>`) и ключ шифрования кэша (`db-key`, см. `db::encryption`).
+/// The keyring service is shared by all application secrets: LDAP passwords
+/// (`ldap:<org>`) and the cache encryption key (`db-key`, see `db::encryption`).
 pub(crate) const KEYRING_SERVICE: &str = "kmaruda-phonebook";
 
 pub struct ConfigStore;
 
 impl ConfigStore {
-    /// Путь к `config.json` внутри папки данных приложения.
+    /// Path to `config.json` inside the application data folder.
     pub fn config_path(dir: &Path) -> PathBuf {
         dir.join(CONFIG_FILE)
     }
 
-    /// Загрузка конфигурации. Отсутствующий файл → значения по умолчанию,
-    /// повреждённый → бэкап `.corrupt` и значения по умолчанию (без wipe БД:
-    /// кэш контактов переживает проблему с конфигом).
+    /// Configuration loading. Missing file -> default values,
+    /// corrupted -> `.corrupt` backup and default values (without wiping the DB:
+    /// the contact cache survives the config problem).
     pub fn load(dir: &Path) -> Result<AppConfig, AppError> {
         let path = Self::config_path(dir);
         let mut config = Self::load_from_disk(&path);
@@ -80,8 +80,8 @@ impl ConfigStore {
         }
     }
 
-    /// Валидация и атомарное сохранение конфигурации.
-    /// Возвращает сохранённую конфигурацию (с актуальными `hasPassword`).
+    /// Configuration validation and atomic save.
+    /// Returns the saved configuration (with up-to-date `hasPassword`).
     pub fn save(dir: &Path, request: SaveConfigRequest) -> Result<AppConfig, AppError> {
         let path = Self::config_path(dir);
         let previous = Self::load_from_disk(&path);
@@ -99,7 +99,7 @@ impl ConfigStore {
             &external_phonebook_paths,
         );
 
-        // Секреты удалённых организаций не должны оставаться в keyring.
+        // Secrets of deleted organizations must not remain in the keyring.
         let kept: Vec<&str> = ldap_configs
             .iter()
             .map(|o| o.organization.as_str())
@@ -120,6 +120,7 @@ impl ConfigStore {
             ldap_configs,
             test_mode: request.test_mode,
             animations_enabled: request.animations_enabled,
+            show_avatars: request.show_avatars,
             sync_interval_hours: request.sync_interval_hours.clamp(1, 168),
             ldap_connect_timeout_secs: request.ldap_connect_timeout_secs.clamp(1, 300),
             ldap_operation_timeout_secs: request.ldap_operation_timeout_secs.clamp(1, 300),
@@ -163,8 +164,8 @@ impl ConfigStore {
         let tmp = path.with_extension("json.tmp");
         let mut file = fs::File::create(&tmp)?;
         file.write_all(json.as_bytes())?;
-        // Синхронизируем содержимое до rename: иначе после сбоя питания
-        // можно получить пустой/частичный config.json.
+        // Sync the contents before rename: otherwise a power failure
+        // could yield an empty/partial config.json.
         file.sync_all()?;
         drop(file);
         fs::rename(&tmp, path)?;
@@ -172,12 +173,12 @@ impl ConfigStore {
         Ok(())
     }
 
-    /// keyring-запись секрета LDAP организации (`ldap:<org>`).
+    /// keyring entry for an organization's LDAP secret (`ldap:<org>`).
     fn entry(organization: &str) -> Option<keyring::Entry> {
         keyring::Entry::new(KEYRING_SERVICE, &format!("ldap:{organization}")).ok()
     }
 
-    /// `Some(password)` — установить/обновить; `None` — удалить секрет.
+    /// `Some(password)` - set/update; `None` - delete the secret.
     pub fn set_password(organization: &str, password: Option<String>) -> Result<(), AppError> {
         let organization = organization.trim();
         if organization.is_empty() {
@@ -207,7 +208,7 @@ impl ConfigStore {
         Self::entry(organization)?.get_password().ok()
     }
 
-    /// Удаляет секрет; возвращает `Some(())`, если запись существовала.
+    /// Deletes the secret; returns `Some(())` if the entry existed.
     fn delete_password(organization: &str) -> Option<()> {
         let entry = Self::entry(organization)?;
         match entry.delete_credential() {

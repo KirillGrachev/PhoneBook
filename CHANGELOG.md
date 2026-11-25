@@ -3,6 +3,35 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.29] - 2026-11-25
+
+### Added
+
+- **Contact photos as avatars:** the open card lazily loads the AD
+  `thumbnailPhoto` as a data URL, falls back to letter initials when missing or
+  broken, and respects a new **Show avatars** interface setting. List rows stay
+  lightweight; only the visible card requests a photo.
+- Offline npm installation via `vendor/npm-cache` + `.npmrc`, with
+  `vendor:fetch` / `vendor:verify` maintenance scripts.
+
+### Fixed
+
+- Replaced `react-focus-lock` with the custom `focus-trap` wrapper that uses
+  `preventScroll` for activation, tab cycling and return focus. Opening
+  dialogs, the settings page and duplicate cleanup no longer jumps to the top
+  when the clicked button becomes disabled or unmounts.
+- Favorites now stay in sync between My contacts and search tabs; removing a
+  favorite keeps the card open and unsaved as expected.
+- Sidebar keyboard navigation and contact-photo fallbacks have dedicated tests.
+
+### Internal
+
+- All source comments and technical documentation are now in English; legacy
+  mojibake in comments was fixed.
+- Frontend: **113** tests and **9** Playwright E2E tests; Rust: **148** normal /
+  **151** embedded; clippy, typecheck, format and locale checks pass.
+- Release 0.2.29.
+
 ## [0.2.28] - 2026-11-24
 
 ### Changed
@@ -472,7 +501,8 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.28...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.29...HEAD
+[0.2.29]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.28...v0.2.29
 [0.2.28]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.27...v0.2.28
 [0.2.27]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.26...v0.2.27
 [0.2.26]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.25...v0.2.26

@@ -1,13 +1,13 @@
-//! Конфигурация приложения и хранилище секретов.
+//! Application configuration and secret store.
 //!
-//! Принципы:
-//! * `config.json` пишется атомарно (temp-файл + rename) — повреждение
-//!   невозможно даже при обрыве питания.
-//! * Пароли bind-учёток LDAP **никогда** не попадают ни в `config.json`,
-//!   ни во фронтенд. Они хранятся в системном хранилище секретов
+//! Principles:
+//! * `config.json` is written atomically (temp file + rename) - corruption
+//!   impossible even on power loss.
+//! * LDAP bind account passwords **never** end up in `config.json`,
+//!   nor into the frontend. They are stored in the system secret store
 //!   (Windows Credential Manager / macOS Keychain / Secret Service),
-//!   а конфигурация несёт только флаг `hasPassword`.
-//! * При удалении организации её секрет гарантированно удаляется из keyring.
+//!   while the configuration carries only the `hasPassword` flag.
+//! * When an organization is deleted, its secret is guaranteed to be removed from the keyring.
 mod embedded;
 mod model;
 pub(crate) mod share;
@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn defaults_are_applied_to_partial_json() {
-        // Конфиг старого формата: новых полей нет — сериализация не должна падать.
+        // An old-format config: no new fields — serialization must not fail.
         let json = r#"{ "theme": "dark", "language": "en" }"#;
         let config: AppConfig = serde_json::from_str(json).expect("parse");
         assert_eq!(config.theme, "dark");
@@ -38,6 +38,7 @@ mod tests {
         assert!(config.ldap_configs.is_empty());
         assert_eq!(config.sync_interval_hours, 24);
         assert!(config.animations_enabled);
+        assert!(config.show_avatars);
     }
 
     #[test]
@@ -65,8 +66,8 @@ mod tests {
             allow_invalid_tls: false,
             use_integrated_auth: true,
         }]);
-        // LDAP URL регистронезависим по схеме? Мы требуем строгий префикс —
-        // поэтому uppercase должен быть отклонён.
+        // Is the LDAP URL case-insensitive in the scheme? We require a strict prefix —
+        // therefore uppercase must be rejected.
         assert!(ok.is_err(), "схема в верхнем регистре отклоняется");
 
         let ok = validate_orgs(vec![LdapOrgInput {

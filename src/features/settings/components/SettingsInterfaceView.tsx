@@ -14,9 +14,9 @@ const THEME_OPTIONS: { value: ThemeName; icon: typeof Sun; labelKey: string }[] 
 ];
 
 /**
- * Страница «Интерфейс и поиск»: оформление, язык, анимации и параметры
- * поиска. Вынесена с главного экрана настроек, чтобы главный экран остался
- * навигацией, а не прокручиваемой свалкой всех групп подряд.
+ * The "Interface and search" page: appearance, language, animations and parameters
+ * search. Moved off the main settings screen so the main screen stays
+ * navigation, not a scrollable dump of all groups in a row.
  */
 export function SettingsInterfaceView() {
   const { t } = useTranslation();
@@ -31,6 +31,8 @@ export function SettingsInterfaceView() {
   const setHideEmptyContacts = useAppStore((state) => state.setHideEmptyContacts);
   const animationsEnabled = useAppStore((state) => state.animationsEnabled);
   const setAnimationsEnabled = useAppStore((state) => state.setAnimationsEnabled);
+  const showAvatars = useAppStore((state) => state.showAvatars);
+  const setShowAvatars = useAppStore((state) => state.setShowAvatars);
 
   return (
     <div className="flex flex-col gap-5 w-full pb-4">
@@ -61,6 +63,14 @@ export function SettingsInterfaceView() {
               <span className="leading-none">{t(labelKey)}</span>
             </button>
           ))}
+        </div>
+
+        <div className={SWITCH_ROW_CLASS}>
+          <div className="flex flex-col gap-0.5 pr-4">
+            <span className="text-[15px] font-bold text-foreground">{t('showAvatars')}</span>
+            <span className="text-[13px] text-muted-foreground leading-snug">{t('showAvatarsDesc')}</span>
+          </div>
+          <Switch checked={showAvatars} onChange={setShowAvatars} ariaLabel={t('showAvatars')} />
         </div>
       </section>
 

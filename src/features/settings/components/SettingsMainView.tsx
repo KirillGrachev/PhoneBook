@@ -19,12 +19,12 @@ interface NavRow {
 }
 
 /**
- * Главный экран настроек — только навигация по разделам.
+ * The main settings screen is navigation across sections only.
  *
- * Каждая группа настроек живёт на собственной странице («Интерфейс и поиск»,
- * «Внешний телефонный файл», «Перенос конфигурации», AD, группы, о программе):
- * главный экран остаётся коротким списком переходов, а не прокручиваемой
- * страницей со всеми органами управления сразу.
+ * Each settings group lives on its own page ("Interface and search",
+ * "External phone file", "Config transfer", AD, groups, about):
+ * the main screen stays a short list of links, not a scrollable
+ * page with all controls at once.
  */
 export function SettingsMainView({ onNavigate }: SettingsMainViewProps) {
   const { t } = useTranslation();

@@ -25,8 +25,8 @@ describe('vcard (клиентский генератор)', () => {
     expect(vcard).toContain('ORG:ООО «КМАруда»;IT-отдел');
     expect(vcard).toContain('TEL;TYPE=CELL:+79991112233');
     expect(vcard).toContain('TEL;TYPE=WORK,VOICE:1234');
-    // Мобильный — первый TEL: клиенты телефонов (Samsung) берут первый
-    // номер как основной; без мобильного первым становится корпоративный.
+    // The mobile is the first TEL: phone clients (Samsung) take the first
+    // number as primary; without a mobile number the corporate one comes first.
     expect(vcard.indexOf('TEL;TYPE=CELL')).toBeLessThan(vcard.indexOf('TEL;TYPE=WORK'));
     expect(vcard).toContain('EMAIL;TYPE=INTERNET:ivanov@kmaruda.ru');
     expect(vcard).toContain('UID:guid-1');

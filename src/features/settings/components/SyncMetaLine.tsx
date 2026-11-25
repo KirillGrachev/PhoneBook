@@ -14,7 +14,7 @@ export interface SyncMetaLineProps {
   locale: string;
 }
 
-/** Строка состояния последней синхронизации организации. */
+/** The last-sync status row of an organization. */
 export function SyncMetaLine({ organization, syncStates, locale }: SyncMetaLineProps) {
   const { t } = useTranslation();
   const meta = syncStates.find((state) => state.organization === organization);
