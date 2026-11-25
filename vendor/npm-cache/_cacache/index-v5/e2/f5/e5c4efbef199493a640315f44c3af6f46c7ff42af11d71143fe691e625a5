@@ -1,2 +1,0 @@
-
-f75bddb4a05423feeaa2699372149bcc7cf135bd	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/pathe/-/pathe-2.0.3.tgz","integrity":"sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==","time":1795604143578,"size":10514,"metadata":{"time":1795604143576,"url":"https://registry.npmjs.org/pathe/-/pathe-2.0.3.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

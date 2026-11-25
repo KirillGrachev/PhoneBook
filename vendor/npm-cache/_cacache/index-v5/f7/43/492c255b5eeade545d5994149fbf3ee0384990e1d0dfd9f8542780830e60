@@ -1,2 +1,0 @@
-
-3eb6c9835332e7621c75a27f4d04ad8c2b909bcc	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/i18next/-/i18next-26.7.2.tgz","integrity":"sha512-RsOY3BeaCDdkk52NeJSFAXELQ2rQXBO/tOub6L8ue2ICPfR/FRDWDOfEDg4xMPd1SqO5goVYQ6i72qWEUB/PPw==","time":1795604143195,"size":146042,"metadata":{"time":1795604143193,"url":"https://registry.npmjs.org/i18next/-/i18next-26.7.2.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

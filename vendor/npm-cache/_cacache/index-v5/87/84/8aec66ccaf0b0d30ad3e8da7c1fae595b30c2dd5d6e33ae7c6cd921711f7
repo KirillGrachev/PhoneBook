@@ -1,2 +1,0 @@
-
-d97238326c71de0f94b4022d5f01be07d09bca88	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/hookified/-/hookified-2.2.0.tgz","integrity":"sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==","time":1795604143760,"size":59568,"metadata":{"time":1795604143710,"url":"https://registry.npmjs.org/hookified/-/hookified-2.2.0.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

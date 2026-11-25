@@ -1,2 +1,0 @@
-
-008ee02942953645febbddf5fa86ee11f4dfabec	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/@vitest/spy/-/spy-4.1.12.tgz","integrity":"sha512-RGq9x4JNGNTZHEJxvN0oSiJjeSCExm0n2gZKKJZHY9cX5AVA6M7VJILBT3ZJ/tJ/0J9uWT7fETV9/btoi//vSg==","time":1795604142869,"size":9566,"metadata":{"time":1795604142868,"url":"https://registry.npmjs.org/@vitest/spy/-/spy-4.1.12.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:42 GMT"},"options":{"compress":true}}}

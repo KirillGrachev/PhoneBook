@@ -1,2 +1,0 @@
-
-be3e3b80e079d1d593e53ff4e23685a34dd52389	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/sonner/-/sonner-2.0.8.tgz","integrity":"sha512-UM/ByIoFra8yzV75n1o0Puu0bw5U/9UNnDacrJNspekBewIfsQ3D6ez1nvlWpt7aTsO6rujQtifBpycwIivqlg==","time":1795604143897,"size":35242,"metadata":{"time":1795604143896,"url":"https://registry.npmjs.org/sonner/-/sonner-2.0.8.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

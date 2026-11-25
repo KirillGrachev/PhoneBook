@@ -1,2 +1,0 @@
-
-5f0e32edcf5f35317788d85788360fa83786a84f	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/chai/-/chai-6.3.0.tgz","integrity":"sha512-XWAtwJ6OHO+tj0EKCs0Y2UamnyOxseZWltU4x2U2wh8g4AigdjwvtUjvLP2tqkA/avxHEtzxNaqGq/YGNwckKg==","time":1795604142962,"size":30712,"metadata":{"time":1795604142956,"url":"https://registry.npmjs.org/chai/-/chai-6.3.0.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:42 GMT"},"options":{"compress":true}}}

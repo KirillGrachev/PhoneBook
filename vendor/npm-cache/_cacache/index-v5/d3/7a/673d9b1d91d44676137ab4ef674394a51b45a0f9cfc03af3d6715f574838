@@ -1,2 +1,0 @@
-
-c0a7dd82229b98d5dd3cee0dcb03113021bc03df	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/axe-core/-/axe-core-4.14.1.tgz","integrity":"sha512-FHfa+lmNjQZfJz1q8wKqIDwC6DExcHt/pkjNQb09a3NPjCKg2rhu5qb2S4r76ASyFNNtuFooJpZe37OgudVGtQ==","time":1795604142920,"size":708405,"metadata":{"time":1795604142914,"url":"https://registry.npmjs.org/axe-core/-/axe-core-4.14.1.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:42 GMT"},"options":{"compress":true}}}

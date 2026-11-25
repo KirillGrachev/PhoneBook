@@ -1,2 +1,0 @@
-
-7f24cae3d5fcca12fd1c8e8738f2b520610e1c6b	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/json5/-/json5-2.2.3.tgz","integrity":"sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==","time":1795604143361,"size":50318,"metadata":{"time":1795604143356,"url":"https://registry.npmjs.org/json5/-/json5-2.2.3.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

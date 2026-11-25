@@ -1,2 +1,0 @@
-
-f4bed32c100514ee0a46768d213e167cd28d02af	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz","integrity":"sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==","time":1795604143264,"size":3756,"metadata":{"time":1795604143254,"url":"https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

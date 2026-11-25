@@ -1,2 +1,0 @@
-
-e7c4df02594d7b76514d142b6d036f1cd5ee8e34	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/flatted/-/flatted-3.4.4.tgz","integrity":"sha512-5+ybhBZANEJxaH3X5evAFatUxLfEHSr7n6kYJ+1Qd0mUqr4eu9gIf6GDbWHf8RJijHrjjO8G+la14SlL2SeS1Q==","time":1795604143124,"size":11683,"metadata":{"time":1795604143120,"url":"https://registry.npmjs.org/flatted/-/flatted-3.4.4.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

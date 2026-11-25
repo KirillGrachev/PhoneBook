@@ -1,2 +1,0 @@
-
-2c92f3d39f882ee9f4a07b0a64726fa9061921f9	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/make-dir/-/make-dir-4.0.0.tgz","integrity":"sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==","time":1795604143499,"size":3743,"metadata":{"time":1795604143410,"url":"https://registry.npmjs.org/make-dir/-/make-dir-4.0.0.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

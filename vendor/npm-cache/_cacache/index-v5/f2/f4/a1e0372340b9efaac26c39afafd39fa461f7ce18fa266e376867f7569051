@@ -1,2 +1,0 @@
-
-e5e30f1d4abb8ed48803a34dbd77a1dfe7eba372	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/css-tree/-/css-tree-3.2.1.tgz","integrity":"sha512-X7sjQzceUhu1u7Y/ylrRZFU2FS6LRiFVp6rKLPg23y3x3c3DOKAwuXGDp+PAGjh6CSnCjYeAul8pcT8bAl+lSA==","time":1795604142999,"size":316943,"metadata":{"time":1795604142996,"url":"https://registry.npmjs.org/css-tree/-/css-tree-3.2.1.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:42 GMT"},"options":{"compress":true}}}

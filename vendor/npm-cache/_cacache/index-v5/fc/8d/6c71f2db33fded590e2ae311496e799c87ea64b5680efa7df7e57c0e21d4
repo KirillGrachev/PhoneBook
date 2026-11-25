@@ -1,2 +1,0 @@
-
-e460aa4e1acee90e5c80350317d1eee80f119b81	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/qified/-/qified-0.10.1.tgz","integrity":"sha512-+Owyggi9IxT1ePKGafcI87ubSmxol6smwJ+RAHDQlx9+9cPwFWDiKFFCPuWhr9ignlGpZ9vDQLw67N4dcTVFEA==","time":1795604143760,"size":21247,"metadata":{"time":1795604143710,"url":"https://registry.npmjs.org/qified/-/qified-0.10.1.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}

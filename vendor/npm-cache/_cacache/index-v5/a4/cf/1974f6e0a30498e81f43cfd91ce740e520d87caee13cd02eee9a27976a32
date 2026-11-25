@@ -1,2 +1,0 @@
-
-ad9c216248c9a42f6a28018cd8565fb94a18d162	{"key":"make-fetch-happen:request-cache:https://registry.npmjs.org/tldts/-/tldts-7.4.3.tgz","integrity":"sha512-A3BDQBeeukYPzB4QdQ1DtdlUmp4x2OCH8n5UVhEWbyANxNep8GavottKzd1xYKFJKjUgMyPT7EzOfnBO55s8Sg==","time":1795604144003,"size":673799,"metadata":{"time":1795604143999,"url":"https://registry.npmjs.org/tldts/-/tldts-7.4.3.tgz","reqHeaders":{},"resHeaders":{"cache-control":"public, immutable, max-age=31557600","content-type":"application/octet-stream","date":"Wed, 25 Nov 2026 10:55:43 GMT"},"options":{"compress":true}}}
