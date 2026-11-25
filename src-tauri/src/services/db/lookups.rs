@@ -1,6 +1,6 @@
-//! Разрешение текстовых значений в справочники: источники, организации,
-//! подразделения, кабинеты. Повторы схлопываются ограничениями UNIQUE,
-//! кэш в памяти экономит запросы в пределах одной синхронизации.
+//! Resolving text values into lookups: sources, organizations,
+//! departments, offices. Duplicates are collapsed by UNIQUE constraints,
+//! the in-memory cache saves queries within a single sync.
 
 use std::collections::HashMap;
 
@@ -8,19 +8,19 @@ use rusqlite::Connection;
 
 use crate::error::AppError;
 
-/// Тип источника синхронизации: значение колонки `sources.kind`.
+/// Sync source type: the value of the `sources.kind` column.
 pub(super) mod source_kind {
-    /// Подключение к Active Directory из настроек приложения.
+    /// Active Directory connection from application settings.
     pub const AD: &str = "ad";
-    /// Внешний телефонный файл (Yealink IPPhoneBook).
+    /// External phone file (Yealink IPPhoneBook).
     pub const EXTERNAL: &str = "external";
 }
 
-/// Строка источника синхронизации: создаётся при первом обращении.
+/// Sync source row: created on first access.
 ///
-/// `kind` обновляется при коллизии имён: имя источника уникально, а тип
-/// определяет, какой механизм владеет кэшем источника (синхронизация AD или
-/// внешний файл) — вызывающие исключают коллизии до обращения сюда.
+/// `kind` is updated on a name collision: the source name is unique, while the type
+/// determines which mechanism owns the source cache (AD sync or
+/// external file) - callers exclude collisions before reaching here.
 pub(super) fn upsert_source(conn: &Connection, name: &str, kind: &str) -> Result<i64, AppError> {
     conn.execute(
         "INSERT INTO sources (name, kind) VALUES (?1, ?2)
@@ -34,13 +34,13 @@ pub(super) fn upsert_source(conn: &Connection, name: &str, kind: &str) -> Result
     )?)
 }
 
-/// Id организации по значению AD-атрибута `company`.
+/// Organization id by the value of the AD `company` attribute.
 ///
-/// Дедупликация — по нормализованному ключу (`name_key`): «КМАруда»,
-/// «КМАРУДА» и «КМАруда » — одна организация. Отображаемое имя —
-/// байтовый максимум вариантов (строчная кириллица > заглавной, поэтому
-/// смешанное написание побеждает капс — то же правило, что и
-/// `MAX(TRIM(company))` по группе вариантов).
+/// Deduplication by normalized key (`name_key`): "KMAruda",
+/// "KMARUDA" and "KMAruda " are one organization. The display name is the
+/// byte-wise maximum of the variants (lowercase Cyrillic > uppercase, therefore
+/// mixed case beats all caps - the same rule as
+/// `MAX(TRIM(company))` per variant group).
 pub(super) fn resolve_org(
     conn: &Connection,
     cache: &mut HashMap<String, i64>,
@@ -68,9 +68,9 @@ pub(super) fn resolve_org(
     Ok(Some(id))
 }
 
-/// Id строки простого справочника (`departments`/`locations`): значение
-/// хранится один раз, повторы разрешаются через кэш. `table` — константа
-/// компиляции, пользователю не передаётся: подстановка в SQL безопасна.
+/// Row id of a simple lookup (`departments`/`locations`): the value
+/// stored once; repeats are resolved through the cache. `table` is a constant
+/// compile time, not passed to the user: SQL substitution is safe.
 pub(super) fn resolve_lookup(
     conn: &Connection,
     cache: &mut HashMap<String, i64>,

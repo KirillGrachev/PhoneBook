@@ -1,4 +1,4 @@
-//! Команды синхронизации с Active Directory.
+//! Active Directory sync commands.
 
 use tauri::{AppHandle, State};
 
@@ -7,8 +7,8 @@ use crate::services::config::ConfigStore;
 use crate::services::sync::SyncStatus;
 use crate::state::AppState;
 
-/// Запускает фоновую синхронизацию. Возвращает `true`, если запуск принят,
-/// `false` — если синхронизация уже идёт (single-flight).
+/// Starts background sync. Returns `true` if the start was accepted,
+/// `false` if sync is already running (single-flight).
 #[tauri::command]
 pub fn start_sync(
     app: AppHandle,
@@ -18,12 +18,12 @@ pub fn start_sync(
     Ok(state.sync.spawn(app, force.unwrap_or(false)))
 }
 
-/// Текущий статус: идёт ли синхронизация и метаданные по организациям.
+/// Current status: whether sync is running and per-organization metadata.
 ///
-/// Читает `sync_meta` из кэша (мьютекс!) и конфигурацию с диска: во время
-/// прогона синхронизации мьютекс занят большой транзакцией, поэтому команда
-/// async и исполняется в пуле блокирующих задач — главный поток окна не
-/// ждёт и UI не «зависает» на период синхронизации.
+/// Reads `sync_meta` from the cache (mutex!) and configuration from disk: during
+/// a sync run the mutex is held by a large transaction, so the command is
+/// async and runs in the blocking task pool; the window's main thread does not
+/// wait, and the UI does not "hang" during sync.
 #[tauri::command]
 pub async fn get_sync_status(state: State<'_, AppState>) -> Result<SyncStatus, AppError> {
     let db = state.db.clone();

@@ -1,23 +1,23 @@
 /**
- * Файл обмена конфигурацией: перенос настроек между ПК.
+ * Config exchange file: transferring settings between PCs.
  *
- * Семантика синхронизирована с бэкендом (`services/config/share.rs`):
- * маркер `format` и `version` проверяются до применения, секреты LDAP
- * не переносятся (флаг `hasPassword` из файла игнорируется — пароли
- * живут в системном хранилище каждой машины).
+ * Semantics synchronized with the backend (`services/config/share.rs`):
+ * the `format` marker and `version` are checked before applying, LDAP secrets
+ * are not transferred (the `hasPassword` flag from the file is ignored — passwords
+ * live in the system store of each machine).
  *
- * В desktop-сборке валидацию выполняет Rust-команда `parse_config_file`;
- * функции этого модуля — чистая точка сборки патча стора и fallback-разбор
- * для браузерного демо-режима (покрыты unit-тестами).
+ * In the desktop build validation is performed by the Rust command `parse_config_file`;
+ * the functions of this module are a pure assembly point for the store patch and fallback parsing
+ * for the browser demo mode (covered by unit tests).
  */
 import type { AppConfigDto, LanguageCode, LdapOrgConfigDto, OrgGroupDto, ThemeName } from '@/api/contracts';
 
-/** Маркер формата файла обмена (зеркалит `CONFIG_SHARE_FORMAT` бэкенда). */
+/** The exchange file format marker (mirrors the backend `CONFIG_SHARE_FORMAT`). */
 export const CONFIG_FILE_FORMAT = 'kmaruda-phonebook/config';
-/** Текущая версия формата файла обмена (зеркалит `CONFIG_SHARE_VERSION`). */
+/** The current exchange file format version (mirrors `CONFIG_SHARE_VERSION`). */
 export const CONFIG_FILE_VERSION = 1;
 
-/** Ошибка формата файла обмена конфигурацией (для локализованных тостов). */
+/** A config exchange file format error (for localized toasts). */
 export class ConfigFileError extends Error {
   constructor(message: string) {
     super(message);
@@ -26,8 +26,8 @@ export class ConfigFileError extends Error {
 }
 
 /**
- * Патч стора из конфигурации файла обмена: все переносимые поля.
- * Применяется `useAppStore.setState`, персист уходит обычным save_config.
+ * A store patch from the exchange file config: all transferable fields.
+ * `useAppStore.setState` is applied, persistence goes through the usual save_config.
  */
 export interface ConfigPatch {
   theme: ThemeName;
@@ -35,6 +35,7 @@ export interface ConfigPatch {
   globalMode: boolean;
   testMode: boolean;
   animationsEnabled: boolean;
+  showAvatars: boolean;
   syncIntervalHours: number;
   ldapConnectTimeoutSecs: number;
   ldapOperationTimeoutSecs: number;
@@ -51,7 +52,7 @@ export interface ConfigPatch {
   externalHideAdDuplicates: boolean;
 }
 
-/** Собрать патч стора из проверенного DTO конфигурации. */
+/** Build a store patch from a validated configuration DTO. */
 export function buildConfigPatch(config: AppConfigDto): ConfigPatch {
   return {
     theme: config.theme as ThemeName,
@@ -59,12 +60,13 @@ export function buildConfigPatch(config: AppConfigDto): ConfigPatch {
     globalMode: config.globalMode,
     testMode: config.testMode,
     animationsEnabled: config.animationsEnabled,
+    showAvatars: config.showAvatars ?? true,
     syncIntervalHours: config.syncIntervalHours,
     ldapConnectTimeoutSecs: config.ldapConnectTimeoutSecs,
     ldapOperationTimeoutSecs: config.ldapOperationTimeoutSecs,
     hideEmptyContacts: config.hideEmptyContacts,
     emailOverrides: config.emailOverrides,
-    // Флаг «пароль сохранён» с чужой машины ложён на этой: секреты не переносятся.
+    // The "password saved" flag from another machine is false here: secrets are not transferred.
     ldapConfigs: config.ldapConfigs.map((org) => ({ ...org, hasPassword: false })),
     savedContactIds: config.savedContactIds,
     orgGroups: config.orgGroups,
@@ -83,9 +85,9 @@ export function buildConfigPatch(config: AppConfigDto): ConfigPatch {
 }
 
 /**
- * Fallback-разбор файла обмена для браузерного демо-режима: структура
- * проверяется здесь, в desktop-сборке вместо этой функции используется
- * валидация на бэкенде (`parse_config_file`).
+ * Fallback parsing of the exchange file for the browser demo mode: the structure
+ * is checked here; in the desktop build this function is replaced by
+ * validation on the backend (`parse_config_file`).
  */
 export function parseConfigFileContent(content: string, errorMessage: string): AppConfigDto {
   let raw: unknown;
@@ -108,7 +110,7 @@ export function parseConfigFileContent(content: string, errorMessage: string): A
   return normalizeConfigDto(config as Record<string, unknown>);
 }
 
-/** DTO конфигурации из произвольного JSON с дефолтами по каждому полю. */
+/** Configuration DTO from arbitrary JSON with defaults for each field. */
 function normalizeConfigDto(raw: Record<string, unknown>): AppConfigDto {
   const str = (value: unknown, fallback: string): string => (typeof value === 'string' ? value : fallback);
   const theme = (value: unknown): ThemeName =>
@@ -152,6 +154,7 @@ function normalizeConfigDto(raw: Record<string, unknown>): AppConfigDto {
     ldapConfigs,
     testMode: bool(raw.testMode, false),
     animationsEnabled: bool(raw.animationsEnabled, true),
+    showAvatars: bool(raw.showAvatars, true),
     syncIntervalHours: num(raw.syncIntervalHours, 24),
     ldapConnectTimeoutSecs: num(raw.ldapConnectTimeoutSecs, 15),
     ldapOperationTimeoutSecs: num(raw.ldapOperationTimeoutSecs, 30),
@@ -191,8 +194,8 @@ function normalizeConfigDto(raw: Record<string, unknown>): AppConfigDto {
 }
 
 /**
- * Содержимое файла обмена для браузерного экспорта: desktop-сборку пишет
- * бэкенд, в демо-режиме файл собирает фронтенд из текущего состояния стора.
+ * Exchange file content for browser export: the desktop build is written by
+ * the backend; in demo mode the frontend assembles the file from the current store state.
  */
 export function renderConfigFile(patch: ConfigPatch): string {
   return JSON.stringify(

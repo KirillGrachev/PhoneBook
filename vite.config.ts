@@ -5,11 +5,11 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
-// Версия из package.json попадает в бандл на этапе сборки: экран «О программе»
-// не показывает временный хардкод до асинхронного Tauri getVersion().
+// The version from package.json lands in the bundle at build time: the "About" screen
+// does not show the temporary hardcode before the asynchronous Tauri getVersion().
 const packageVersion = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version as string;
 
-// Хост для разработки на физическом устройстве (TAURI_DEV_HOST).
+// Host for development on a physical device (TAURI_DEV_HOST).
 const devHost = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
@@ -30,8 +30,9 @@ export default defineConfig({
     host: devHost || '127.0.0.1',
     hmr: devHost ? { protocol: 'ws', host: devHost, port: 1421 } : undefined,
     watch: {
-      // Пересборка не должна реагировать на изменения Rust-половины.
-      ignored: ['**/src-tauri/**'],
+      // A rebuild must not react to changes of the Rust half, and the vendored
+      // npm cache is a package store that npm writes to during installs.
+      ignored: ['**/src-tauri/**', '**/vendor/npm-cache/**'],
     },
   },
   preview: {
@@ -42,7 +43,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
-        // Vite 8 (rolldown) поддерживает manualChunks только как функцию.
+        // Vite 8 (rolldown) supports manualChunks only as a function.
         manualChunks(id: string) {
           if (!id.includes('node_modules')) {
             return undefined;
@@ -74,8 +75,8 @@ export default defineConfig({
           if (/[\\/]node_modules[\\/](tailwind-merge|clsx)[\\/]/.test(id)) {
             return 'vendor-utils';
           }
-          // Остальные пакеты — отдельными vendor-чанками по имени пакета,
-          // чтобы один «vendor» не разрастался до сотен килобайт.
+          // The rest of the packages are separate vendor chunks by package name,
+          // so one "vendor" does not grow to hundreds of kilobytes.
           const parts =
             id
               .split(/node_modules[\\/]/)

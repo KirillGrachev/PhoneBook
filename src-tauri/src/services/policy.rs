@@ -1,16 +1,16 @@
-//! Правила принятия решений о синхронизации (чистая логика, без Tauri).
+//! Sync decision rules (pure logic, no Tauri).
 
 use crate::services::config::{AppConfig, LdapOrgConfig};
 use crate::services::db::{unix_now, Db};
 
-/// Организация считается настроенной, если указаны сервер и Base DN.
+/// An organization is considered configured if the server and Base DN are specified.
 pub fn is_configured(org: &LdapOrgConfig) -> bool {
     !org.ldap_url.trim().is_empty() && !org.base_dn.trim().is_empty()
 }
 
-/// Нужна ли фоновая синхронизация:
-/// есть валидные подключения И (кэш пуст ИЛИ любая организация
-/// не синхронизирована / её кэш старше `sync_interval_hours`).
+/// Whether background sync is needed:
+/// there are valid connections AND (the cache is empty OR any organization
+/// not synced / its cache is older than `sync_interval_hours`).
 pub fn needs_sync(db: &Db, config: &AppConfig) -> bool {
     if config.test_mode {
         return false;
@@ -87,6 +87,7 @@ mod tests {
             pager: None,
             usn_changed: None,
             tokens: String::new(),
+            photo: None,
         }
     }
 
@@ -128,7 +129,7 @@ mod tests {
         let db = Db::open_in_memory().expect("db");
         db.replace_org_users("Org", &[record("g1")]).expect("sync");
 
-        // Искусственно «состариваем» отметку синхронизации.
+        // We artificially "age" the synchronization mark.
         {
             let conn = std::sync::Arc::clone(db.conn_for_tests());
             let guard = conn.lock().expect("lock");

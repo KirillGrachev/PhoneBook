@@ -3,23 +3,23 @@ import type { Variants } from 'motion/react';
 import { useAppStore } from '@/store/useAppStore';
 
 /**
- * Общие пресеты появления содержимого после загрузки.
+ * Shared presets for content appearing after loading.
  *
- * Единая семья движения для всех поверхностей справочника: списки коллег
- * (модалка отдела / должности / кабинета), основной список результатов и
- * разделы настроек переключаются одинаковым кроссфейдом, а непустые списки
- * дополнительно раскрываются поколенно. Длительности и easing собраны здесь,
- * чтобы «плавно» везде означало одно и то же движение; CSS-тайминги радикс-
- * дропдаунов (`.submenu-pop` в index.css) зеркалят эти же значения.
+ * A single motion family for all directory surfaces: colleague lists
+ * (the department / job title / office modal), the main result list and
+ * settings sections switch with the same crossfade, and non-empty lists
+ * are additionally revealed generation by generation. Durations and easing are gathered here,
+ * so that "smooth" means the same motion everywhere; the CSS timings of Radix
+ * dropdowns (`.submenu-pop` in index.css) mirror these same values.
  *
- * Переключатель «Анимации» обесценивает пресеты через
- * [`useMotionPresets`]: у выключенных пресетов duration/delay/stagger
- * обнулены, потому что собственный `transition` варианта перекрывает
- * `MotionConfig`. Класс `.disable-animations` дополнительно обнуляет
- * CSS-анимации дропдаунов.
+ * The "Animations" switch disables presets through
+ * [`useMotionPresets`]: disabled presets have duration/delay/stagger
+ * zeroed because the variant's own `transition` overrides
+ * `MotionConfig`. The `.disable-animations` class additionally zeroes
+ * CSS animations of dropdowns.
  */
 
-/** Кроссфейд блока содержимого: загрузка → список → пустое состояние. */
+/** Crossfade of the content block: loading → list → empty state. */
 export const contentRevealVariants: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { duration: 0.2, ease: 'easeOut' } },
@@ -27,11 +27,11 @@ export const contentRevealVariants: Variants = {
 };
 
 /**
- * Контейнер списка: кроссфейд целиком плюс каскад строк.
+ * The list container: a whole crossfade plus a row cascade.
  *
- * `staggerChildren` касается только монтирования строк (первая загрузка,
- * смена страницы или режима): строки, домонтированные фильтром поиска
- * поверх уже показанного списка, просто занимают свои места без каскада.
+ * `staggerChildren` only affects mounting of rows (first load,
+ * page or mode change): rows pre-mounted by the search filter
+ * over the already shown list, simply take their places without a cascade.
  */
 export const listRevealVariants: Variants = {
   hidden: { opacity: 0 },
@@ -42,7 +42,7 @@ export const listRevealVariants: Variants = {
   exit: { opacity: 0, transition: { duration: 0.12, ease: 'easeIn' } },
 };
 
-/** Строка списка: лёгкий подъём с проявлением, без рывка по горизонтали. */
+/** A list row: a light rise with a fade-in, no horizontal jerk. */
 export const listRowRevealVariants: Variants = {
   hidden: { opacity: 0, y: 8 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' } },
@@ -83,8 +83,8 @@ const disabledPresets = {
 };
 
 /**
- * Пресеты с учётом глобального тумблера анимаций. Возвращает стабильные
- * объекты, чтобы не пересоздавать variants на каждый рендер.
+ * Presets that respect the global animation toggle. Returns stable
+ * objects, so as not to recreate variants on every render.
  */
 export function useMotionPresets() {
   const animationsEnabled = useAppStore((state) => state.animationsEnabled);

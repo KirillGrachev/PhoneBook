@@ -43,7 +43,7 @@ export default [
     },
   },
   {
-    // Тесты и сетапы: ослабляем ограничения (jsdom-заглушки, any в моках).
+    // Tests and setups: relax restrictions (jsdom stubs, any in mocks).
     files: ['**/*.test.{ts,tsx}', 'src/setupTests.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
@@ -51,7 +51,7 @@ export default [
     },
   },
   {
-    // Node-контекст конфигов сборки.
+    // Node context of the build configs.
     files: ['*.config.{ts,mts}'],
     languageOptions: {
       globals: {

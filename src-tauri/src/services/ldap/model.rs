@@ -1,4 +1,4 @@
-//! Типы LDAP-слоя: учётные данные, сырая запись каталога, результат теста.
+//! LDAP layer types: credentials, raw catalog record, test result.
 
 use std::time::Duration;
 
@@ -6,8 +6,8 @@ use serde::Serialize;
 
 pub(super) const PAGE_SIZE: i32 = 500;
 
-/// Фильтр «живых» пользователей AD: person + user, без заблокированных
-/// (флаг ACCOUNTDISABLE в userAccountControl).
+/// Filter for "live" AD users: person + user, without blocked
+/// (the ACCOUNTDISABLE flag in userAccountControl).
 pub const USER_FILTER: &str =
     "(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))";
 
@@ -30,9 +30,10 @@ pub(super) const USER_ATTRIBUTES: &[&str] = &[
     "userAccountControl",
     "objectGUID",
     "uSNChanged",
+    "thumbnailPhoto",
 ];
 
-/// Параметры подключения к каталогу организации.
+/// Organization catalog connection parameters.
 #[derive(Debug, Clone)]
 pub struct DirectoryCredentials<'a> {
     pub ldap_url: &'a str,
@@ -58,7 +59,7 @@ impl DirectoryCredentials<'_> {
     }
 }
 
-/// Сырые данные пользователя из LDAP (до нормализации в [`crate::services::db::UserRecord`]).
+/// Raw user data from LDAP (before normalization into [`crate::services::db::UserRecord`]).
 #[derive(Debug, Clone)]
 pub struct RawUser {
     pub dn: String,
@@ -77,38 +78,41 @@ pub struct RawUser {
     pub phone_external: Option<String>,
     pub phone_mobile: Option<String>,
     pub manager_dn: Option<String>,
-    /// TrueConf ID сотрудника хранится в AD-атрибуте `pager`.
+    /// The employee's TrueConf ID is stored in the AD `pager` attribute.
     pub pager: Option<String>,
-    /// Флаги учётки (`userAccountControl`): бит ACCOUNTDISABLE означает
-    /// отключённую учётку (уволенный сотрудник или архив) — такие записи
-    /// не попадают в справочник даже при ошибке фильтра поиска.
+    /// Account flags (`userAccountControl`): the ACCOUNTDISABLE bit means
+    /// a disabled account (dismissed employee or archive) - such records
+    /// do not enter the lookup even if the search filter fails.
     pub user_account_control: Option<i64>,
     pub usn_changed: Option<i64>,
+    /// Raw bytes of the AD `thumbnailPhoto` attribute (usually JPEG).
+    /// `None` when the account has no photo; the UI then shows a letter avatar.
+    pub photo: Option<Vec<u8>>,
 }
 
-/// Бит ACCOUNTDISABLE в `userAccountControl`.
+/// The ACCOUNTDISABLE bit in `userAccountControl`.
 pub const UAC_ACCOUNTDISABLE: i64 = 0x2;
 
 impl RawUser {
-    /// Учётка отключена: человек не пользуется ей или уволен.
+    /// The account is disabled: the person does not use it or has been dismissed.
     pub fn is_account_disabled(&self) -> bool {
         self.user_account_control
             .is_some_and(|flags| flags & UAC_ACCOUNTDISABLE != 0)
     }
 }
 
-/// Результат диагностической команды «Проверить подключение».
+/// Result of the "Check connection" diagnostic command.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectionTest {
-    /// Время bind, мс.
+    /// Bind time, ms.
     pub bind_ms: u64,
-    /// `dnsHostName` из rootDSE.
+    /// `dnsHostName` from rootDSE.
     pub server_dns_name: Option<String>,
-    /// `defaultNamingContext` из rootDSE — подсказка для Base DN.
+    /// `defaultNamingContext` from rootDSE - a hint for the Base DN.
     pub default_naming_context: Option<String>,
-    /// Первые найденные сотрудники (до 5 имён) — доказательство, что поиск работает.
+    /// The first employees found (up to 5 names) - proof that search works.
     pub sample_names: Vec<String>,
-    /// `true`, если сотрудников больше, чем показано в `sample_names`.
+    /// `true` if there are more employees than shown in `sample_names`.
     pub sample_is_truncated: bool,
 }

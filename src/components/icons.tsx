@@ -5,11 +5,11 @@ import { cn } from '@/lib/utils';
 import { AppIcon, type AppIconName } from './AppIcon';
 
 /**
- * Иконки приложения.
+ * Application icons.
  *
- * Имена совпадают с прежними экспортами, чтобы замена не затрагивала разметку.
- * Готовые иконки из нового набора идут через `AppIcon`; для иконок, которых
- * в наборе пока нет, временно используется эмодзи-заглушка.
+ * The names match the former exports so the replacement does not touch the markup.
+ * Ready-made icons from the new set go through `AppIcon`; for icons that are
+ * not in the set yet, an emoji placeholder is used temporarily.
  */
 export interface AppIconProps {
   className?: string;
@@ -28,7 +28,7 @@ function createIcon(name: AppIconName, baseClassName?: string): IconComponent {
   };
 }
 
-/** Управляющие иконки (крестик, галочка, шевроны, спиннер) — без Lucide. */
+/** Control icons (cross, checkmark, chevrons, spinner) — without Lucide. */
 function createStrokeIcon(children: ReactNode): IconComponent {
   return function StrokeIcon({ className, size, 'aria-label': ariaLabel, strokeWidth = 2 }: AppIconProps) {
     return (
@@ -54,9 +54,9 @@ function createStrokeIcon(children: ReactNode): IconComponent {
 }
 
 /**
- * Размер эмодзи берём из тех же `w-*`/`h-*` классов, что передают вызывающие
- * компоненты: эмодзи рисуется шрифтом, поэтому ему нужен `font-size`, а не
- * только ширина/высота контейнера.
+ * The emoji size is taken from the same `w-*`/`h-*` classes that callers pass to
+ * components: the emoji is drawn by the font, so it needs `font-size`, not
+ * only the width/height of the container.
  */
 function dimensionFromClassName(className?: string): string | undefined {
   if (!className) {
@@ -98,7 +98,7 @@ function createEmoji(glyph: string, baseClassName?: string): IconComponent {
   };
 }
 
-// Новый набор иконок.
+// The new icon set.
 export const ArrowLeft = createIcon('arrow-left');
 export const ArrowRight = createIcon('arrow-right');
 export const BookmarkCheck = createIcon('contact');
@@ -136,7 +136,7 @@ export const Terminal = createIcon('terminal');
 export const Trash = createIcon('trash');
 export const UserRound = createIcon('manager');
 
-// Временные эмодзи-заглушки для иконок, которых ещё нет в наборе.
+// Temporary emoji placeholders for icons not yet in the set.
 export const AlertTriangle = createEmoji('⚠️');
 export const SearchX = createEmoji('🔎');
 

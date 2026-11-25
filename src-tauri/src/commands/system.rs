@@ -1,15 +1,15 @@
-//! Системные команды: трей, открытие внешних ссылок, devtools, dev-лог.
+//! System commands: tray, opening external links, devtools, dev log.
 
 use tauri::AppHandle;
 use tracing::{debug, error, info, warn};
 
 use crate::error::AppError;
 
-/// Схемы URL, которые разрешено открывать во внешней программе.
-/// Всё остальное (file:, javascript:, произвольные exe-схемы) отклоняется.
+/// URL schemes allowed to be opened in an external program.
+/// Everything else (file:, javascript:, arbitrary exe schemes) is rejected.
 const ALLOWED_SCHEMES: [&str; 6] = ["http", "https", "mailto", "tel", "callto", "trueconf"];
 
-/// Обновляет пункты меню трея текущими строками из i18n фронтенда.
+/// Updates tray menu items with the current i18n strings from the frontend.
 #[tauri::command]
 pub fn update_tray_menu(
     app: AppHandle,
@@ -38,11 +38,11 @@ pub fn update_tray_menu(
     Ok(())
 }
 
-/// Открывает URL во внешней программе (почта, TrueConf, браузер).
+/// Opens a URL in an external program (mail, TrueConf, browser).
 ///
-/// Реализовано через прямой запуск OS-хелпера **без командной оболочки**,
-/// поэтому shell-инъекции через содержимое URL невозможны; схема и символы
-/// дополнительно валидируются по allow-list.
+/// Implemented by launching the OS helper directly **without a command shell**,
+/// so shell injections via URL content are impossible; the scheme and characters
+/// additionally validated against an allow-list.
 #[tauri::command]
 pub fn open_external(url: String) -> Result<(), AppError> {
     validate_external_url(&url)?;
@@ -95,8 +95,8 @@ fn validate_external_url(url: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-/// Открывает DevTools. Работает только в debug-сборке: в release команда
-/// зарегистрирована, но является no-op (devtools-фича tauri не включена).
+/// Opens DevTools. Works only in a debug build: in release the command
+/// registered but is a no-op (the tauri devtools feature is not enabled).
 #[tauri::command]
 pub fn open_devtools(window: tauri::WebviewWindow) {
     #[cfg(debug_assertions)]
@@ -105,20 +105,20 @@ pub fn open_devtools(window: tauri::WebviewWindow) {
     let _ = window;
 }
 
-/// Печатает запись фронтового dev-логгера в терминале.
+/// Prints a frontend dev logger record in the terminal.
 ///
-/// В dev-режиме (`npm run tauri dev`) фронтенд дублирует свои `devLog`
-/// в stdout процесса — ту же консоль, куда уже пишут Vite и tracing
-/// Rust-части. В release команда не вызывается: фронтенд вырезает
-/// вызовы `devLog` на этапе сборки (`import.meta.env.DEV`), а GUI-процесс
-/// без консоли (`windows_subsystem = "windows"`) никуда не пишет.
+/// In dev mode (`npm run tauri dev`) the frontend duplicates its `devLog`
+/// into the process stdout - the same console Vite and tracing already write to -
+/// via this Rust command. In release the command is not called: the frontend strips
+/// `devLog` calls at the build stage (`import.meta.env.DEV`), while the GUI process
+/// has no console (`windows_subsystem = "windows"`) and writes nowhere.
 #[tauri::command]
 pub fn dev_log(scope: String, message: String) {
     info!(target: "frontend", "[phonebook:{scope}] {message}");
 }
 
-/// Запись фронтенд-ошибки в файловый лог release-сборки. Вызывается из
-/// ErrorBoundary и обработчиков окна, где `console.*` пользователю недоступен.
+/// Writing a frontend error to the release build's file log. Called from
+/// ErrorBoundary and window handlers, where `console.*` is unavailable to the user.
 #[tauri::command]
 pub fn frontend_log(level: String, scope: String, message: String) {
     let scope: String = scope.chars().take(64).collect();

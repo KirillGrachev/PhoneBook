@@ -1,21 +1,21 @@
-//! Внешний телефонный файл (Yealink IPPhoneBook): подгрузка XML в справочник.
+//! External phone file (Yealink IPPhoneBook): loading XML into a lookup.
 //!
-//! В холдинге часть номеров живёт не в Active Directory, а в выгрузке
-//! телефонной книги Yealink (`IPPhoneBook/Menu/Unit`). Файл подключается в
-//! настройках (путь и признак хранятся в `config.json`) и загружается в локальный
-//! кэш отдельным источником (`sources.kind = 'external'`), поэтому его записи
-//! участвуют в поиске, фильтрах и карточках наравне с сотрудниками AD.
+//! In the holding, some numbers live not in Active Directory but in an export of a
+//! Yealink phone book (`IPPhoneBook/Menu/Unit`). The file is connected in
+//! settings (path and flag are stored in `config.json`) and loaded into the local
+//! cache as a separate source (`sources.kind = 'external'`), so its records
+//! participate in search, filters, and cards equally with AD employees.
 //!
-//! Соответствие полей файла и карточки:
-//! * `Unit/@Name` — отображаемое имя;
-//! * `Unit/@Phone1..Phone3` — внутренний, рабочий и мобильный номера;
-//! * `Menu/@Name` — подразделение (вложенные меню разбираются рекурсивно);
-//! * `IPPhoneBook/Title` — имя источника (организация в фильтрах); без заголовка
-//!   берётся [`FALLBACK_TITLE`].
+//! File-to-card field mapping:
+//! * `Unit/@Name` - display name;
+//! * `Unit/@Phone1..Phone3` - internal, work, and mobile numbers;
+//! * `Menu/@Name` - department (nested menus are parsed recursively);
+//! * `IPPhoneBook/Title` - source name (organization in filters); without a title
+//! [`FALLBACK_TITLE`] is used.
 //!
-//! Кэш внешнего источника заменяется целиком при каждой загрузке (та же
-//! доктрина, что и у синхронизации AD): правки файла подхватываются без
-//! ручной чистки, отключение опции полностью убирает записи из выдачи.
+//! The external source cache is replaced entirely on every load (the same
+//! doctrine as AD sync): file edits are picked up without
+//! manual cleanup; disabling the option removes the records from results entirely.
 
 use std::collections::HashSet;
 use std::fs;
@@ -28,25 +28,25 @@ use crate::error::AppError;
 use crate::services::db::{AdDuplicateRecord, Db, UserRecord};
 use crate::services::tokens;
 
-/// Имя источника, когда в файле нет заголовка `IPPhoneBook/Title`.
+/// Source name when the file has no `IPPhoneBook/Title` header.
 pub const FALLBACK_TITLE: &str = "Внешний телефонный файл";
-/// Суффикс имени источника на случай коллизии с организацией AD: источник
-/// с таким именем уже синхронизируется с каталогом, и смешивать кэши нельзя.
+/// Source name suffix in case of a collision with an AD organization: the source
+/// with this name is already being synced with the catalog, and the caches must not be mixed.
 pub const COLLISION_SUFFIX: &str = "(файл)";
-/// Ограничение размера файла: выгрузка телефонной книги исчисляется
-/// килобайтами, мегабайтный XML почти наверняка выбран по ошибке.
+/// File size limit: a phone book export is measured
+/// kilobytes; a megabyte-sized XML was almost certainly selected by mistake.
 const MAX_FILE_BYTES: u64 = 8 * 1024 * 1024;
 
 pub use phonebook_xml::{ParsedPhonebook, PhonebookUnit};
 
-/// Итог загрузки внешнего файла в кэш (DTO события для фронтенда).
+/// Result of loading an external file into the cache (event DTO for the frontend).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase", tag = "state")]
 pub enum ExternalRefresh {
-    /// Опция выключена или путь не задан: кэш внешнего источника очищен.
+    /// The option is off or the path is unset: the external source cache is cleared.
     Disabled,
-    /// Опция включена, но записей больше нет: кэш очищен, `cleared` — сколько
-    /// строк убрано из выдачи.
+    /// The option is enabled but there are no records left: the cache is cleared; `cleared` - how many
+    /// rows removed from the results.
     Cleared { cleared: usize },
     /// Files loaded: `sources` — one entry per imported file, `count` — total records.
     Loaded {
@@ -66,9 +66,9 @@ pub struct ExternalSource {
     pub count: usize,
 }
 
-/// Разобрать XML телефонной книги Yealink (`IPPhoneBook`).
+/// Parse a Yealink phone book XML (`IPPhoneBook`).
 ///
-/// Сам разбор живёт в `phonebook-xml`, чтобы фуззер не тянул Tauri/SQLite.
+/// The parsing itself lives in `phonebook-xml` so the fuzzer does not pull in Tauri/SQLite.
 pub fn parse_phonebook_xml(xml: &str) -> Result<ParsedPhonebook, AppError> {
     let parsed = phonebook_xml::parse_phonebook_xml(xml)
         .map_err(|error| AppError::ExternalFile(error.to_string()))?;
@@ -79,12 +79,12 @@ pub fn parse_phonebook_xml(xml: &str) -> Result<ParsedPhonebook, AppError> {
     Ok(parsed)
 }
 
-/// Построить записи кэша из разобранного файла.
+/// Build cache records from the parsed file.
 ///
-/// Идентификатор записи — детерминированный отпечаток FNV-1a от имени,
-/// подразделения и номеров: повторная загрузка того же файла заменяет строки
-/// на месте, а не плодит дубликаты. Префикс `ext-` исключает коллизию с
-/// GUID сотрудников AD.
+/// Record identifier - a deterministic FNV-1a fingerprint of the name,
+/// departments and numbers: reloading the same file replaces the rows
+/// in place, rather than multiplying duplicates. The `ext-` prefix excludes a collision with
+/// GUIDs of AD employees.
 pub fn build_records(parsed: &ParsedPhonebook, organization: &str) -> Vec<UserRecord> {
     parsed
         .units
@@ -118,12 +118,13 @@ pub fn build_records(parsed: &ParsedPhonebook, organization: &str) -> Vec<UserRe
                 pager: None,
                 usn_changed: None,
                 tokens: token_parts.join(" "),
+                photo: None,
             }
         })
         .collect()
 }
 
-/// Детерминированный идентификатор записи внешнего источника (FNV-1a 64).
+/// Deterministic external source record identifier (FNV-1a 64).
 fn unit_guid(unit: &PhonebookUnit, organization: &str) -> String {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for part in [
@@ -159,11 +160,11 @@ fn cached_fallback(db: &Db, path: &str, reason: String) -> Result<ExternalRefres
     Ok(ExternalRefresh::Cached { count })
 }
 
-/// Загрузить внешние телефонные файлы в кэш согласно настройкам.
+/// Load external phone files into the cache according to settings.
 ///
-/// Каждый файл становится отдельным источником справочника. Все файлы
-/// проверяются до записи в БД: битый файл не оставляет частично обновлённый
-/// кэш. Если исходный файл исчез, сохраняется ранее зашифрованный кэш.
+/// Each file becomes a separate lookup source. All files
+/// checked before writing to the DB: a broken file does not leave a partially updated
+/// cache. If the source file disappeared, the previously encrypted cache is kept.
 pub fn refresh(
     db: &Db,
     enabled: bool,
@@ -265,10 +266,10 @@ pub fn refresh(
     Ok(ExternalRefresh::Loaded { sources, count })
 }
 
-/// ФИО + любой непустой контакт/атрибут совпадает с AD-контактом.
+/// Full name + any non-empty contact/attribute matches an AD contact.
 ///
-/// Внешняя запись считается дублем только при совпадении имени; одного
-/// телефона/почты без совпадения имени недостаточно.
+/// An external record is considered a duplicate only on a name match; a single
+/// phone/email without a name match is not enough.
 fn is_ad_duplicate(record: &UserRecord, ad_contacts: &[AdDuplicateRecord]) -> bool {
     let name = normalized_text(&record.display_name);
     if name.is_empty() {
@@ -391,7 +392,7 @@ mod tests {
         assert_eq!(first.ip_phone.as_deref(), Some("310"));
         assert_eq!(first.department.as_deref(), Some("Тестовое"));
         assert_eq!(first.company.as_deref(), Some("Yealink"));
-        // Номер ищет и хвост: триграммный индекс строится по тем же токеням.
+        // The number also searches the tail: the trigram index is built on the same tokens.
         assert!(first.tokens.contains("310"));
     }
 

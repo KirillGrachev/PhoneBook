@@ -1,22 +1,22 @@
-//! Предпроверка WebView2 Runtime до создания окна Tauri.
+//! WebView2 Runtime pre-check before creating the Tauri window.
 //!
-//! Без WebView2 интерфейс приложения создать нечем: процесс при этом жив
-//! (трей создаётся в `setup`), а окно не появляется вовсе — «трей-зомби».
-//! Чтобы диагностировать это на месте, до инициализации Tauri опрашивается
-//! реестр (три расположения ключа клиента EdgeUpdate: per-machine,
-//! WOW6432Node и per-user), и при отсутствии рантайма показывается
-//! нативный MessageBox (GUI рисовать нечем) с предложением открыть
-//! официальную страницу загрузки WebView2 Runtime.
+//! Without WebView2 there is no way to create the application UI: the process stays alive
+//! (the tray is created in `setup`), and the window never appears - a "tray zombie".
+//! To diagnose this on site, before Tauri initialization we query
+//! registry (three EdgeUpdate client key locations: per-machine,
+//! WOW6432Node and per-user), and if the runtime is absent, a prompt is shown
+//! native MessageBox (there is nothing to draw a GUI with) offering to open
+//! official WebView2 Runtime download page.
 //!
-//! Установка из приложения намеренно не делается тихой: инсталлятор
-//! поставки уже несёт встроенный бутстраппер WebView2
-//! (`webviewInstallMode: embedBootstrapper` в `tauri.conf.json`), а ручная
-//! установка требует UAC и сети; в закрытых контурах используют offline-
-//! installer или fixed-version runtime (папка рядом с exe и переменная
+//! In-app installation is intentionally not silent: the installer
+//! delivery already carries the embedded WebView2 bootstrapper
+//! (`webviewInstallMode: embedBootstrapper` in `tauri.conf.json`), while manual
+//! installation requires UAC and network; closed environments use the offline
+//! installer or fixed-version runtime (folder next to the exe and the variable
 //! `WEBVIEW2_BROWSER_EXECUTABLE_FOLDER`).
 //!
-//! Проверку можно отключить переменной окружения
-//! `KMPB_SKIP_WEBVIEW_CHECK=1` (нестандартные окружения, fixed-version).
+//! The check can be disabled with the environment variable
+//! `KMPB_SKIP_WEBVIEW_CHECK=1` (non-standard environments, fixed-version).
 
 use windows::core::w;
 use windows::Win32::System::Registry::{
@@ -28,16 +28,16 @@ use windows::Win32::UI::WindowsAndMessaging::{
     MessageBoxW, IDYES, MB_ICONWARNING, MB_YESNO, SW_SHOWNORMAL,
 };
 
-/// GUID клиента WebView2 Runtime в ключе EdgeUpdate.
+/// WebView2 Runtime client GUID in the EdgeUpdate key.
 const WEBVIEW2_CLIENTS_SUBKEY: &str =
     r"SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
 
-/// Читает строковое значение `pv` (версия рантайма) из ключа клиента.
+/// Reads the string value `pv` (runtime version) from the client key.
 fn read_version(root: HKEY, subkey: &str) -> Option<String> {
     unsafe {
         let mut key = HKEY::default();
-        // Явный &HSTRING: без аннотации P1 не выводится (&HSTRING и &BSTR
-        // оба реализуют Param<PCWSTR>).
+        // Explicit &HSTRING: without the annotation P1 is not inferred (&HSTRING and &BSTR
+        // both implement Param<PCWSTR>).
         let subkey = windows::core::HSTRING::from(subkey);
         if RegOpenKeyExW(root, &subkey, None, KEY_READ, &mut key).is_err() {
             return None;
@@ -79,8 +79,8 @@ fn read_version(root: HKEY, subkey: &str) -> Option<String> {
     }
 }
 
-/// Установлен ли WebView2 Runtime: версия присутствует и не нулевая
-/// (`0.0.0.0` оставляет EdgeUpdate «заглушку» без рантайма).
+/// Whether WebView2 Runtime is installed: the version is present and non-zero
+/// (`0.0.0.0` leaves the EdgeUpdate "stub" without a runtime).
 pub fn webview2_runtime_installed() -> bool {
     let by_registry = [
         read_version(HKEY_LOCAL_MACHINE, WEBVIEW2_CLIENTS_SUBKEY),
@@ -99,10 +99,10 @@ pub fn webview2_runtime_installed() -> bool {
     by_registry || runtime_on_disk()
 }
 
-/// Фолбэк по файловой системе: в большинстве случаев рантайм приезжает
-/// вместе с браузерами (Edge/Chrome) и может быть не виден в ключах
-/// EdgeUpdate (per-user установка, fixed-version). Ищем каталог рантайма
-/// с `msedgewebview2.exe` в per-machine и per-user расположениях.
+/// Filesystem fallback: in most cases the runtime arrives
+/// together with browsers (Edge/Chrome) and may not be visible in the keys
+/// EdgeUpdate (per-user installation, fixed-version). Look for the runtime directory
+/// with `msedgewebview2.exe` in per-machine and per-user locations.
 fn runtime_on_disk() -> bool {
     ["ProgramFiles(x86)", "ProgramFiles", "LocalAppData"]
         .iter()
@@ -114,8 +114,8 @@ fn runtime_on_disk() -> bool {
                 .join("Application")
         })
         .any(|app_dir| {
-            // is_ok_and вместо map_or(false, …): clippy style-lint
-            // unnecessary_map_or под -D warnings (read_dir даёт Result).
+            // is_ok_and instead of map_or(false, …): the clippy style-lint
+            // unnecessary_map_or under -D warnings (read_dir gives a Result).
             std::fs::read_dir(&app_dir).is_ok_and(|entries| {
                 entries
                     .flatten()
@@ -124,9 +124,9 @@ fn runtime_on_disk() -> bool {
         })
 }
 
-/// Нативный диалог об отсутствии WebView2 Runtime: GUI рисовать нечем,
-/// поэтому MessageBox, а не окно приложения. «Да» — открывает официальную
-/// страницу загрузки в браузере по умолчанию.
+/// Native dialog about the missing WebView2 Runtime: there is nothing to draw a GUI with,
+/// hence a MessageBox, not the application window. "Yes" opens the official
+/// download page in the default browser.
 pub fn report_missing_runtime() {
     unsafe {
         let choice = MessageBoxW(
@@ -138,7 +138,7 @@ pub fn report_missing_runtime() {
             MB_YESNO | MB_ICONWARNING,
         );
         if choice == IDYES {
-            // w!-литералы: параметр PCWSTR иначе не выводится типом.
+            // w! literals: otherwise the PCWSTR parameter is not inferred by type.
             ShellExecuteW(
                 None,
                 w!("open"),

@@ -1,6 +1,6 @@
 [package]
 name = "kmaruda-phonebook"
-version = "0.2.28"
+version = "0.2.30"
 description = "Корпоративный телефонный справочник КМАруда (Active Directory)"
 authors = ["Kirill Grachev"]
 repository = "https://github.com/KirillGrachev/PhoneBook"
@@ -34,34 +34,34 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
 
-# Локальный кэш контактов и полнотекстовый поиск (FTS5 входит в сборку).
-# Фича `serialize` нужна для шифрования at-rest: рабочая база живёт в
-# памяти, на диск пишется только зашифрованный образ (см. db/encryption.rs).
+# Local contact cache and full-text search (FTS5 is included in the build).
+# The `serialize` feature is needed for at-rest encryption: the working database lives in
+# memory; only the encrypted image is written to disk (see db/encryption.rs).
 rusqlite = { version = "0.41", features = ["bundled", "backup", "serialize"] }
-# Шифрование кэша: AES-256-GCM (pure Rust, без OpenSSL/Perl/NASM).
+# Cache encryption: AES-256-GCM (pure Rust, no OpenSSL/Perl/NASM).
 aes-gcm = "0.10"
-# Нативный LDAP-клиент: больше не нужны PowerShell и модуль RSAT.
+# Native LDAP client: PowerShell and the RSAT module are no longer needed.
 ldap3 = "0.11"
-# Разбор внешнего телефонного файла (Yealink IPPhoneBook, XML): потоковый
-# парсер без построения DOM — файл читается одним проходом. Отдельный крейт,
-# чтобы фуззер не тянул Tauri/SQLite.
+# Parsing the external phone file (Yealink IPPhoneBook, XML): a streaming
+# parser without building a DOM - the file is read in one pass. A separate crate
+# so the fuzzer does not pull in Tauri/SQLite.
 phonebook-xml = { path = "xml" }
-# Нативные диалоги выбора файла (XML телефонной книги): Rust-API плагина
-# вызывается из команд, разрешения ACL не требуются.
+# Native file selection dialogs (phone book XML): the plugin's Rust API
+# is called from commands; no ACL permissions are required.
 tauri-plugin-dialog = "2"
-# Криптостойкий генератор случайных чисел (BCryptGenRandom на Windows) —
-# ключ и nonce шифрования локальной базы.
+# Cryptographically secure random number generator (BCryptGenRandom on Windows) -
+# key and nonce for local database encryption.
 getrandom = "0.2"
 
-# Пароли bind-учёток хранятся в системном хранилище секретов,
-# а не в config.json. Набор фич зависит от платформы:
-# Windows → Credential Manager, macOS → Keychain, Linux → kernel keyutils.
+# Bind account passwords are stored in the system secret store,
+# not in config.json. The feature set depends on the platform:
+# Windows -> Credential Manager, macOS -> Keychain, Linux -> kernel keyutils.
 keyring = { version = "3", default-features = false }
 image = { version = "0.25", default-features = false, features = ["png"] }
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", default-features = false, features = ["windows-native"] }
-# Интегрированная аутентификация (Kerberos/NTLM текущей сессии Windows) через SSPI.
+# Integrated authentication (Kerberos/NTLM of the current Windows session) via SSPI.
 ldap3 = { version = "0.11", features = ["gssapi"] }
 webview2-com = "0.39.1"
 winreg = "0.55"
@@ -90,8 +90,8 @@ lto = true
 opt-level = "s"
 strip = true
 
-# Ограничение потребления памяти при локальной разработке/CI:
-# проверочные сборки не нуждаются в отладочной информации.
+# Limiting memory consumption during local development/CI:
+# check builds do not need debug information.
 [profile.dev]
 debug = 0
 

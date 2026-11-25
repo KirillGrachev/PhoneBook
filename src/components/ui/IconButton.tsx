@@ -9,7 +9,7 @@ interface IconButtonProps extends ComponentProps<'button'> {
   iconClassName?: string;
 }
 
-/** Круглая иконочная кнопка с единым стилем нажатия/ховера. */
+/** A round icon button with a unified press/hover style. */
 export function IconButton({ icon: Icon, className, iconClassName, type = 'button', ...props }: IconButtonProps) {
   return (
     <button
@@ -17,8 +17,8 @@ export function IconButton({ icon: Icon, className, iconClassName, type = 'butto
       className={cn(
         'h-11 w-11 flex items-center justify-center rounded-full text-muted-foreground',
         'hover:text-foreground hover:bg-surface-hover border border-transparent transition-all duration-300',
-        // Без «прыжка» при нажатии: в модальных окнах (QR, отдел) смещение
-        // крестика выглядит как дефект, а не как отклик.
+        // Without a "jump" on press: in modals (QR, department) the offset
+        // the close cross looks like a defect rather than a response.
         'outline-none shrink-0 cursor-pointer',
         'focus-visible:ring-2 focus-visible:ring-ring',
         className,

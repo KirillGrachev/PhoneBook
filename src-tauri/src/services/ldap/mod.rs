@@ -1,14 +1,14 @@
-//! Нативный LDAP-клиент на `ldap3` (tokio): запросы к Active Directory
-//! выполняются напрямую, без внешних скриптов и системных модулей.
+//! Native LDAP client on `ldap3` (tokio): Active Directory queries
+//! executed directly, without external scripts or system modules.
 //!
-//! * постраничный поиск (адаптер `PagedResults`) — каталоги крупнее
-//!   1000 записей не обрезаются;
-//! * StartTLS и LDAPS, опционально без проверки сертификата (внутренние CA);
-//! * таймауты: `conn_timeout` на подключение и `with_timeout` на операции;
-//! * декодирование бинарных атрибутов AD: `objectGUID`, `uSNChanged`
-//!   (с учётом того, что ldap3 уносит значения, случайно оказавшиеся
-//!   валидным UTF-8, в строковые атрибуты);
-//! * диагностика кодов отказа аутентификации AD (`data 52e` и т.п.).
+//! * paginated search (`PagedResults` adapter) - catalogs larger than
+//! 1000 records are not truncated;
+//! * StartTLS and LDAPS, optionally without certificate verification (internal CAs);
+//! * timeouts: `conn_timeout` for connection and `with_timeout` for operations;
+//! * decoding binary AD attributes: `objectGUID`, `uSNChanged`
+//! (considering that ldap3 moves values that accidentally ended up as
+//! valid UTF-8 in string attributes);
+//! * diagnostics of AD authentication failure codes (`data 52e`, etc.).
 mod connect;
 mod errors;
 mod model;
@@ -16,8 +16,8 @@ mod parse;
 
 pub use model::{ConnectionTest, DirectoryCredentials, RawUser, USER_FILTER};
 
-/// Фильтр для инкрементальной выборки: все живые пользователи, у которых
-/// `uSNChanged` не меньше `since` (включительно). `None` — полная выборка.
+/// Filter for incremental selection: all live users whose
+/// `uSNChanged` greater than or equal to `since` (inclusive). `None` - full selection.
 pub fn user_filter_since(since: Option<i64>) -> String {
     match since {
         Some(usn) => format!("(&{USER_FILTER}(uSNChanged>={usn}))"),
@@ -38,10 +38,10 @@ use errors::{classify_error, classify_search_result};
 use model::{PAGE_SIZE, USER_ATTRIBUTES};
 use parse::{attr_ci, map_entry, non_empty};
 
-/// Полный цикл выборки пользователей каталога с постраничным поиском.
+/// Full cycle of selecting catalog users with paginated search.
 ///
-/// `progress` вызывается после получения каждой страницы — используется
-/// для live-событий синхронизации.
+/// `progress` is called after each page is received - used
+/// for live sync events.
 pub async fn fetch_users<F>(
     credentials: DirectoryCredentials<'_>,
     filter: &str,
@@ -67,8 +67,8 @@ where
         Box::new(PagedResults::new(PAGE_SIZE)),
     ];
 
-    // with_timeout переходит во внутренний клон Ldap потока поиска:
-    // каждая страница ограничена настраиваемым operation timeout.
+    // with_timeout moves into the internal Ldap clone of the search thread:
+    // each page is limited by a configurable operation timeout.
     let mut stream = session
         .ldap
         .with_timeout(credentials.operation_timeout())
@@ -99,14 +99,14 @@ where
     }
 
     let result = stream.finish().await;
-    // rc == 4 (sizeLimitExceeded) при постраничном поиске не ожидается,
-    // но и не смертелен: данные мы уже получили.
+    // rc == 4 (sizeLimitExceeded) is not expected with paginated search,
+    // but it is not fatal either: we already received the data.
     if result.rc != 0 && result.rc != 4 {
         return Err(classify_search_result(&session.url, &result));
     }
 
     let _ = session.ldap.unbind().await;
-    // session.drop останавливает драйвер и закрывает сокет детерминированно.
+    // session.drop stops the driver and closes the socket deterministically.
     info!(
         count = users.len(),
         pages,
@@ -116,14 +116,14 @@ where
     Ok(users)
 }
 
-/// Диагностика подключения: bind, rootDSE, пробная выборка сотрудников.
+/// Connection diagnostics: bind, rootDSE, sample employee selection.
 pub async fn test_connection(
     credentials: DirectoryCredentials<'_>,
 ) -> Result<ConnectionTest, AppError> {
     let mut session = connect(&credentials).await?;
     let bind_ms = bind(&mut session.ldap, &credentials, &session.url).await?;
 
-    // rootDSE: имя сервера и корень домена (подсказка для Base DN).
+    // rootDSE: the server name and the domain root (a hint for Base DN).
     let SearchResult(root_entries, root_result) = session
         .ldap
         .with_timeout(credentials.operation_timeout())
@@ -148,7 +148,7 @@ pub async fn test_connection(
         debug!(rc = root_result.rc, "rootDSE недоступен (не критично)");
     }
 
-    // Пробная выборка: проверяем, что Base DN валиден и поиск отдаёт людей.
+    // A trial sample: we check that Base DN is valid and the search returns people.
     let base = non_empty(credentials.base_dn.trim())
         .or(default_naming_context.as_deref())
         .unwrap_or_default();
@@ -162,7 +162,7 @@ pub async fn test_connection(
             .await
             .map_err(|e| classify_error(&session.url, &e))?;
 
-        // rc 4 = sizeLimitExceeded: сервер отдал первую страницу — для теста достаточно.
+        // rc 4 = sizeLimitExceeded: the server returned the first page — enough for the test.
         if result.rc == 0 || result.rc == 4 {
             for raw in entries {
                 let entry = SearchEntry::construct(raw);

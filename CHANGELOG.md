@@ -3,6 +3,38 @@
 All notable changes to KMAruda PhoneBook are documented here. The project
 follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.30] - 2026-11-25
+
+### Fixed
+
+- Completed the comment/documentation migration: every source comment and
+  installer hook comment is now English, and the double-encoded UTF-8 text
+  (mojibake) was decoded back to proper Cyrillic/typography across the
+  application, tests and docs.
+- Verified the full latest workspace at once: focus-safe dialogs, avatars,
+  favorites sync, duplicate E2E, base64/photo handling and offline vendor
+  tooling.
+
+### Internal
+
+- Zero Cyrillic comment lines and zero mojibake files in the audited source.
+- Frontend **113** tests + **9** Playwright E2E; Rust **148** normal / **151**
+  embedded; clippy, typecheck, format, locales and contracts pass.
+
+## [0.2.29] - 2026-11-25
+
+### Added
+
+- Focus-safe dialogs via a custom `focus-trap` wrapper with `preventScroll`.
+- Contact photo avatars with a persisted **Show avatars** toggle and letter
+  fallback.
+- Offline npm vendor tooling (`vendor/manifest.json`, fetch/verify scripts).
+
+### Fixed
+
+- Favorites stay in sync between My contacts and search tabs; removing a
+  favorite keeps the card open and unsaved.
+
 ## [0.2.28] - 2026-11-24
 
 ### Changed
@@ -143,7 +175,7 @@ follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - The MSI and NSIS "launch application" checkbox is now labelled in Russian:
-  "Ð—Ð°Ð¿ÑƒÑÑ‚Ð¸Ñ‚ÑŒ KMAruda PhoneBook" instead of "Launch KMAruda PhoneBook".
+  "Запустить KMAruda PhoneBook" instead of "Launch KMAruda PhoneBook".
 - The MSI entry keeps the application icon in Settings > Apps. Because the
   uninstaller rewrite sets ARP `WindowsInstaller=0`, Windows no longer derives
   the icon from the MSI; the installer now writes an explicit `DisplayIcon`
@@ -372,7 +404,7 @@ follows [Semantic Versioning](https://semver.org/).
   encrypted directory cache is kept and a warning is shown instead of a sync
   error.
 - Montserrat as the application font, with local 400/500/600/700 weights.
-- Configurable LDAP connection and operation timeouts (1â€“300 seconds) in AD
+- Configurable LDAP connection and operation timeouts (1–300 seconds) in AD
   settings.
 - Transient LDAP resets/timeouts are retried twice with exponential backoff.
 - LDAP fetch logs include page count, elapsed time and retry context.
@@ -472,7 +504,9 @@ follows [Semantic Versioning](https://semver.org/).
   FTS5/trigram search, QR vCard, favorites, organization groups, external
   Yealink XML import and MSI/NSIS installers.
 
-[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.28...HEAD
+[Unreleased]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.30...HEAD
+[0.2.30]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.29...v0.2.30
+[0.2.29]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.28...v0.2.29
 [0.2.28]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.27...v0.2.28
 [0.2.27]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.26...v0.2.27
 [0.2.26]: https://github.com/KirillGrachev/PhoneBook/compare/v0.2.25...v0.2.26

@@ -1,53 +1,53 @@
-//! Локальный кэш контактов: SQLite + полнотекстовый поиск (FTS5).
+//! Local contact cache: SQLite + full-text search (FTS5).
 //!
-//! База — единственный источник данных для выдачи: поиск никогда не ходит
-//! в AD напрямую (это быстро и работает офлайн), а синхронизация с каталогом
-//! выполняется отдельным фоновым процессом [`crate::services::sync`].
+//! The database is the only data source for results: search never goes
+//! directly to AD (this is fast and works offline), while catalog sync
+//! is performed by a separate background process [`crate::services::sync`].
 //!
-//! # Схема (нормализована до 3НФ)
+//! # Schema (normalized to 3NF)
 //!
-//! Повторяющиеся текстовые значения хранятся **по одному разу** в
-//! справочниках, а `users` ссылается на них внешними ключами:
+//! Repeated text values are stored **exactly once** in
+//! lookups, and `users` references them via foreign keys:
 //!
 //! ```text
-//! sources ──┬──< users >──┬── orgs         организация (AD company)
-//!           │             ├── departments  подразделение (AD department)
-//! sync_meta ┘             └── locations    кабинет/адрес (AD physicalDeliveryOfficeName)
+//! sources ──┬──< users >──┬── orgs         organization (AD company)
+//! │             ├── departments  department (AD department)
+//! sync_meta ┘             └── locations    office/address (AD physicalDeliveryOfficeName)
 //!
-//! users_fts — поисковый индекс (намеренно денормализован, пересоздаётся при синхронизации)
+//! users_fts - search index (intentionally denormalized, rebuilt during sync)
 //! ```
 //!
-//! * `sources` — источники записей: подключения к AD из настроек приложения
-//!   (`kind = 'ad'`) и внешний телефонный файл (`kind = 'external'`,
-//!   [`crate::services::external`]). Кэш сотрудников принадлежит источнику
-//!   и полностью заменяется при его повторной синхронизации
-//!   (`ON DELETE CASCADE`).
-//! * `orgs` — одна строка на группу вариантов написания: `name_key`
-//!   (нормализованный ключ — SQLite `lower()` не знает кириллицу, поэтому
-//!   ключ вычисляется в Rust), `name` — отображаемый вариант.
-//! * `departments`, `locations` — справочники с уникальными именами;
-//!   значения, на которые больше никто не ссылается, удаляются при
-//!   синхронизации вместе с исчезнувшими сотрудниками.
-//! * `users` — сотрудник: идентификаторы (GUID, SAM, ФИО), контакты
-//!   (почта, телефоны, `pager` — TrueConf ID), должность/руководитель,
-//!   ссылки на справочники и мета синхронизации (`usn_changed`, `updated_at`).
+//! * `sources` - record sources: AD connections from application settings
+//! (`kind = 'ad'`) and the external phone file (`kind = 'external'`,
+//! [`crate::services::external`]). The employee cache belongs to the source
+//! and is fully replaced when it is synchronized again
+//! (`ON DELETE CASCADE`).
+//! * `orgs` - one row per group of spelling variants: `name_key`
+//! (normalized key - SQLite `lower()` does not know Cyrillic, therefore
+//! the key is computed in Rust), `name` is the display variant.
+//! * `departments`, `locations` - lookups with unique names;
+//! values no longer referenced by anyone are removed during
+//! sync together with disappeared employees.
+//! * `users` - employee: identifiers (GUID, SAM, full name), contacts
+//! (email, phone numbers, `pager` - TrueConf ID), job title/supervisor,
+//! lookup references and sync metadata (`usn_changed`, `updated_at`).
 //!
-//! Целостность обеспечивают ограничения схемы, а не код запросов:
-//! `PRIMARY KEY`, `UNIQUE`, `NOT NULL` и `FOREIGN KEY` (`PRAGMA foreign_keys=ON`).
-//! Версия схемы хранится в `PRAGMA user_version`; несовпадение с актуальной
-//! пересоздаёт кэш ([`schema::ensure_schema`]) — содержимое восстановит
-//! синхронизация.
+//! Integrity is enforced by schema constraints, not query code:
+//! `PRIMARY KEY`, `UNIQUE`, `NOT NULL`, and `FOREIGN KEY` (`PRAGMA foreign_keys=ON`).
+//! The schema version is stored in `PRAGMA user_version`; a mismatch with the current version
+//! recreates the cache ([`schema::ensure_schema`]); sync will restore the contents.
 //!
-//! # Шифрование
 //!
-//! Рабочая база живёт в памяти, а на диске — только контейнер `KMPBENC1`
-//! (AES-256-GCM поверх сериализованного образа SQLite): без ключа файл
-//! нечитаем даже при утечке диска, а подделку отсекает auth-тег GCM. Ключ
-//! хранится в системном хранилище секретов (Windows Credential Manager) и
-//! на диск не попадает — подробности в [`encryption`]. Файл, не являющийся
-//! контейнером (чужой, повреждённый, утерянный ключ), зануляется и
-//! пересоздаётся: данные восстановит синхронизация. Каждое изменение кэша
-//! сразу пересохраняет контейнер ([`Db::flush`]).
+//! # Encryption
+//!
+//! The working database lives in memory, while on disk there is only the `KMPBENC1` container
+//! (AES-256-GCM over a serialized SQLite image): without the key the file
+//! is unreadable even if the disk leaks, and the GCM auth tag rejects tampering. The key
+//! is stored in the system secret store (Windows Credential Manager) and
+//! never reaches disk - details in [`encryption`]. A file that is not
+//! a container (foreign, corrupted, lost key), it is zeroed and
+//! recreated: sync will restore the data. Every cache change
+//! immediately resaves the container ([`Db::flush`]).
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -74,8 +74,8 @@ mod tests;
 pub use dedup::DuplicatesPreview;
 pub use model::{AdDuplicateRecord, Employee, SearchPage, SearchParams, UserRecord};
 
-/// Небольшой кэш готовых страниц: повторный/обратный ввод не должен каждый
-/// раз сериализоваться на общем `Mutex<Connection>`.
+/// Small cache of ready pages: repeated/backward input must not every
+/// time serialize on the shared `Mutex<Connection>`.
 const SEARCH_CACHE_LIMIT: usize = 64;
 
 #[derive(Default)]
@@ -105,16 +105,16 @@ impl SearchCache {
 
 pub struct Db {
     conn: Arc<Mutex<Connection>>,
-    /// Путь зашифрованного контейнера; `None` у in-memory баз (тесты) —
-    /// там flush() не пишет на диск.
+    /// Encrypted container path; `None` for in-memory databases (tests) -
+    /// there flush() does not write to disk.
     path: Option<PathBuf>,
-    /// Ключ AES-256 контейнера (в тестах — нулевой, не используется).
+    /// AES-256 container key (zero in tests, unused).
     key: [u8; 32],
     search_generation: Arc<AtomicU64>,
     search_cache: Arc<Mutex<SearchCache>>,
-    /// Read-only connections к тому же shared-cache in-memory DB. Пусто в
-    /// тестах; production использует 4, чтобы холодные поиски не ждали
-    /// единственный `Mutex<Connection>`.
+    /// Read-only connections to the same shared-cache in-memory DB. Empty in
+    /// tests; production uses 4 so cold searches do not wait on
+    /// the single `Mutex<Connection>`.
     readers: Arc<Mutex<Vec<Connection>>>,
 }
 
@@ -162,8 +162,8 @@ impl Db {
                 None
             }
         };
-        // Shared-cache in-memory DB даёт read-only соединениям видеть тот же
-        // кэш, не копируя его. Имя уникально в пределах процесса.
+        // A shared-cache in-memory DB lets read-only connections see the same
+        // cache without copying it. The name is unique within the process.
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_nanos())
@@ -187,8 +187,8 @@ impl Db {
             match Connection::open_with_flags(&db_uri, flags) {
                 Ok(reader) => {
                     Self::apply_pragmas(&reader)?;
-                    // DDL мог не попасть в shared-cache читателя (например,
-                    // после deserialize образа); схема должна быть видна.
+                    // The DDL might not reach the shared-cache reader (e.g.,
+                    // after deserializing the image); the schema must be visible.
                     schema::ensure_schema(&reader)?;
                     readers.push(reader);
                 }
@@ -204,13 +204,13 @@ impl Db {
             search_cache: Arc::new(Mutex::new(SearchCache::default())),
             readers: Arc::new(Mutex::new(readers)),
         };
-        // Фиксируем контейнер сразу: свежая база или образ после deserialize —
-        // на диске всегда актуальный зашифрованный файл.
+        // Pin the container immediately: a fresh database or an image after deserialize -
+        // an up-to-date encrypted file is always on disk.
         db.flush()?;
         Ok(db)
     }
 
-    /// In-memory база — для unit-тестов (файла на диске нет, flush() no-op).
+    /// In-memory database - for unit tests (no file on disk, flush() is a no-op).
     #[cfg(test)]
     pub fn open_in_memory() -> Result<Self, AppError> {
         let conn = Connection::open_in_memory()?;
@@ -226,7 +226,7 @@ impl Db {
         })
     }
 
-    /// Тестовая копия production-пути: shared-cache in-memory + read pool.
+    /// Test copy of the production path: shared-cache in-memory + read pool.
     #[cfg(test)]
     pub fn open_shared_in_memory() -> Result<Self, AppError> {
         let uri = format!(
@@ -258,19 +258,19 @@ impl Db {
     }
 
     fn apply_pragmas(conn: &Connection) -> Result<(), AppError> {
-        // База живёт в памяти: WAL/synchronous не применяются.
-        // Внешние ключи в SQLite по умолчанию выключены: без этой прагмы
-        // REFERENCES в схеме были бы просто документацией.
+        // The database lives in memory: WAL/synchronous do not apply.
+        // Foreign keys in SQLite are off by default: without this pragma
+        // REFERENCES in the schema would be just documentation.
         conn.pragma_update(None, "foreign_keys", "ON")?;
-        // Shared-cache readers/writer могут ждать друг друга; не отдаём
-        // мгновенный SQLITE_BUSY, а ждём до 5 секунд.
+        // Shared-cache readers/writer may wait on each other; we do not hand out
+        // immediate SQLITE_BUSY, but wait up to 5 seconds.
         conn.busy_timeout(Duration::from_secs(5))?;
         Ok(())
     }
 
-    /// Сериализовать базу, зашифровать и атомарно записать контейнер.
-    /// Вызывается после каждого изменения кэша; для in-memory баз (тесты)
-    /// это no-op.
+    /// Serialize the database, encrypt it, and atomically write the container.
+    /// Called after every cache change; for in-memory databases (tests)
+    /// this is a no-op.
     fn flush(&self) -> Result<(), AppError> {
         let Some(path) = self.path.as_deref() else {
             return Ok(());
@@ -281,8 +281,8 @@ impl Db {
         encryption::save(path, &self.key, &bytes)
     }
     fn lock(&self) -> MutexGuard<'_, Connection> {
-        // Отравленный мьютекс (паника в другой команде) не должен ронять
-        // всё приложение — соединение остаётся валидным.
+        // A poisoned mutex (a panic in another command) must not crash
+        // the whole application - the connection remains valid.
         self.conn.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
@@ -308,7 +308,7 @@ impl Db {
             .clear();
     }
 
-    /// Доступ к соединению для тестов (например, подкрутка sync_meta).
+    /// Connection access for tests (e.g. tweaking sync_meta).
     #[cfg(test)]
     pub fn conn_for_tests(&self) -> &Arc<Mutex<Connection>> {
         &self.conn

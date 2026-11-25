@@ -75,9 +75,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # Фронтенд собирается ДО cargo: макрос tauri::generate_context!
-      # встраивает ассеты из frontendDist (../dist), а dist/ в git не хранится.
-      # Без этого шага cargo test/clippy падают на чистом checkout.
+      # The frontend is built BEFORE cargo: the tauri::generate_context! macro
+      # embeds assets from frontendDist (../dist), and dist/ is not stored in git.
+      # Without this step cargo test/clippy fail on a clean checkout.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22

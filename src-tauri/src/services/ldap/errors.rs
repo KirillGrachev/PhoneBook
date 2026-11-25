@@ -1,15 +1,15 @@
-//! Классификация ошибок LDAP: отказ аутентификации AD, анонимный поиск,
-//! сетевые сбои. Тексты сообщений — подсказки пользователю, а не сырые коды.
+//! LDAP error classification: AD authentication failure, anonymous search,
+//! network failures. Message texts are user hints, not raw codes.
 
 use ldap3::LdapError;
 
 use crate::error::AppError;
 
-/// Классификация кода результата поисковой операции.
+/// Classification of a search operation result code.
 ///
-/// Самый частый случай в боевых доменах: `rc=1` (operationsError) с текстом
-/// «a successful bind must be completed» — сервер запрещает анонимный поиск.
-/// Превращаем это в понятное указание заполнить учётную запись.
+/// The most common case in live domains: `rc=1` (operationsError) with the text
+/// "a successful bind must be completed" - the server forbids anonymous search.
+/// Turn this into a clear instruction to fill in the account.
 pub(super) fn classify_search_result(url: &str, result: &ldap3::LdapResult) -> AppError {
     let text = result.text.trim();
     let mentions_bind = text.contains("bind") || text.contains("DSID");
@@ -64,10 +64,10 @@ fn classify_io_error(url: &str, io: &std::io::Error) -> AppError {
     }
 }
 
-/// Человекочитаемая расшифровка отказа аутентификации AD.
+/// Human-readable explanation of an AD authentication failure.
 ///
-/// AD возвращает в тексте ошибки шестнадцатеричный код причины
-/// (`... data 52e, v4f7c`), который мы переводим в понятное сообщение.
+/// AD returns a hexadecimal reason code in the error text
+/// (`... data 52e, v4f7c`), which we translate into an understandable message.
 pub fn auth_error_text(rc: u32, text: &str) -> String {
     if rc != 49 {
         return format!("код {rc}: {}", text.trim());
@@ -109,7 +109,7 @@ mod tests {
         let locked = "...data 775...";
         assert!(auth_error_text(49, locked).contains("заблокирована"));
 
-        // Не-49 коды проходят через общий формат.
+        // Non-49 codes pass through the common format.
         assert!(auth_error_text(50, "insufficient access").contains("50"));
     }
 

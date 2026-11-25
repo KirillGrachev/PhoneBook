@@ -1,6 +1,6 @@
 /**
- * Тесты файла обмена конфигурацией: патч стора и fallback-разбор.
- * Desktop-валидацию формата покрывают Rust-тесты `ConfigShareFile`.
+ * Config exchange file tests: the store patch and fallback parsing.
+ * Desktop format validation is covered by the Rust tests of `ConfigShareFile`.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -34,6 +34,7 @@ function sampleConfig(): AppConfigDto {
     ],
     testMode: false,
     animationsEnabled: false,
+    showAvatars: false,
     syncIntervalHours: 6,
     ldapConnectTimeoutSecs: 12,
     ldapOperationTimeoutSecs: 45,
@@ -60,6 +61,7 @@ describe('buildConfigPatch', () => {
     expect(patch.language).toBe('en');
     expect(patch.globalMode).toBe(true);
     expect(patch.syncIntervalHours).toBe(6);
+    expect(patch.showAvatars).toBe(false);
     expect(patch.ldapConnectTimeoutSecs).toBe(12);
     expect(patch.ldapOperationTimeoutSecs).toBe(45);
     expect(patch.externalPhonebookPath).toBe('C:\\PhoneBook\\yealink.xml');
@@ -68,7 +70,7 @@ describe('buildConfigPatch', () => {
     expect(patch.externalPhonebookIntervals).toEqual({ 'C:\\PhoneBook\\yealink.xml': 24 });
     expect(patch.orgGroups).toHaveLength(1);
     expect(patch.enterpriseGroupId).toBe('grp-1');
-    // Секреты не переносятся: флаг hasPassword гасится.
+    // Secrets are not transferred: the hasPassword flag is cleared.
     expect(patch.ldapConfigs[0].hasPassword).toBe(false);
     expect(patch.ldapConfigs[0].allowInvalidTls).toBe(true);
   });

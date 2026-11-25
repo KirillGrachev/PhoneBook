@@ -10,7 +10,7 @@ interface SettingsAdIdentityFieldsProps {
   onChange: (patch: Partial<LdapOrgConfigDto>) => void;
 }
 
-/** Идентификация подключения: организация, LDAP URL, Base DN. */
+/** Connection identification: organization, LDAP URL, Base DN. */
 export function SettingsAdIdentityFields({ config, onChange }: SettingsAdIdentityFieldsProps) {
   const { t } = useTranslation();
 
