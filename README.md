@@ -7,7 +7,7 @@ employee profiles, contact photos, QR vCards and vCard export. Built with Tauri
 - [Documentation](docs/README.md) — features, stack, setup and checks
 - [Deployment](docs/DEPLOYMENT.md) — embedded managed configuration
 - [Latest release](https://github.com/KirillGrachev/PhoneBook/releases/latest)
-- [Changelog](CHANGELOG.md)
+- [Changelog](docs/CHANGELOG.md)
 
 ## Quick start
 
