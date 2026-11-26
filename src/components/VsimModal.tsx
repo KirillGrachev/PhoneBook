@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { ClearInput, Loader2 } from '@/components/icons';
-import FocusLock, { AutoFocusInside } from 'react-focus-lock';
+import FocusLock, { AutoFocusInside } from '@/components/ui/FocusLock';
 import { useTranslation } from 'react-i18next';
 
 import { IconButton } from '@/components/ui/IconButton';
@@ -17,7 +17,7 @@ interface VsimModalProps {
   contact: Contact | null;
 }
 
-/** Модальное окно QR-кода визитки (vCard) контакта. */
+/** The QR code modal of a contact business card (vCard). */
 export function VsimModal({ isOpen, onClose, contact }: VsimModalProps) {
   const { t, i18n } = useTranslation();
   const vcardValue = useVcard(contact);
@@ -33,7 +33,7 @@ export function VsimModal({ isOpen, onClose, contact }: VsimModalProps) {
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <FocusLock returnFocus>
+        <FocusLock returnFocus={{ preventScroll: true }} focusOptions={{ preventScroll: true }}>
           <div
             className="fixed inset-0 top-[32px] z-[100] flex items-center justify-center p-4"
             role="dialog"

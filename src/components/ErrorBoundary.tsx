@@ -14,9 +14,9 @@ interface State {
 }
 
 /**
- * Boundary изолирует падение поддерева (список/карточка) от всего окна.
- * Ошибки логируются в консоль; пользователь может повторить рендер
- * или перезапустить приложение.
+ * The boundary isolates a subtree crash (list/card) from the whole window.
+ * Errors are logged to the console; the user can retry the render
+ * or restart the application.
  */
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = { hasError: false };

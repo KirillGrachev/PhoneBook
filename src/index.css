@@ -1,6 +1,10 @@
 @import 'tailwindcss';
 @plugin "tailwindcss-animate";
 
+/* The vendored npm cache is a binary package store, not application source.
+   Excluding it keeps Tailwind's scanner from walking tens of megabytes. */
+@source not "../vendor/npm-cache";
+
 @font-face {
   font-family: 'Montserrat';
   font-style: normal;
@@ -156,7 +160,7 @@ textarea {
   -ms-user-select: auto;
 }
 
-/* Числовые поля: убираем нативные стрелки, значение центрируем в поле. */
+/* Numeric fields: remove the native spin buttons; center the value in the field. */
 input[type='number']::-webkit-outer-spin-button,
 input[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -356,11 +360,11 @@ input::-ms-clear {
   animation-delay: 0s !important;
 }
 
-/* Появление «подменюшек» (радикс-дропдауны: фильтр организаций, селекты) —
-   та же семья движения, что и прогрузка списков в lib/motionPresets.ts
-   (0.18s ease-out против 0.2s кроссфейда: меню короче и ближе к курсору).
-   При выключенных анимациях правило .disable-animations выше обнуляет
-   длительность, и меню открывается мгновенно. */
+/* Submenu appearance (Radix dropdowns: organization filter, selects) -
+   the same motion family as list loading in lib/motionPresets.ts
+   (0.18s ease-out vs the 0.2s crossfade: menus are shorter and closer to the cursor).
+   With animations disabled, the .disable-animations rule above zeroes the
+   duration, and the menu opens instantly. */
 @keyframes submenu-pop {
   from {
     opacity: 0;

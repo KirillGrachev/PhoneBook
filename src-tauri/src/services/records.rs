@@ -1,8 +1,8 @@
-//! Нормализация сырых LDAP-записей в строки локального кэша.
+//! Normalization of raw LDAP records into local cache rows.
 //!
-//! Чистая логика без зависимости от Tauri: `RawUser` → `UserRecord`.
-//! Здесь же разрешается DN руководителя в его displayName и вычисляются
-//! поисковые токены.
+//! Pure logic without a Tauri dependency: `RawUser` -> `UserRecord`.
+//! Here the supervisor DN is also resolved to displayName and computed
+//! search tokens.
 
 use std::collections::HashMap;
 
@@ -10,17 +10,17 @@ use crate::services::db::UserRecord;
 use crate::services::ldap::RawUser;
 use crate::services::tokens;
 
-/// Нормализация выборки LDAP одной организации.
+/// Normalization of one organization's LDAP selection.
 ///
-/// * отключённые учётки (бит ACCOUNTDISABLE в `userAccountControl`)
-///   отбрасываются: уволенные и архивные не попадают ни в выдачу, ни в
-///   справочник имён руководителей — вторая линия обороны после
-///   LDAP-фильтра поиска;
-/// * `manager` (DN) заменяется на displayName руководителя;
-/// * `company` берётся из AD как есть: если атрибут пуст (сервисные
-///   учётки и т.п.), организация остаётся незаполненной — название
-///   организации из конфига НЕ подставляется;
-/// * вычисляются ключ сортировки и поисковые токены.
+/// * disabled accounts (the ACCOUNTDISABLE bit in `userAccountControl`)
+///   discarded: dismissed and archived records enter neither results nor
+///   the supervisor name lookup is the second line of defense after
+///   LDAP search filter;
+/// * `manager` (DN) is replaced with the supervisor's displayName;
+/// * `company` is taken from AD as is: if the attribute is empty (service
+///   accounts, etc.), the organization remains unfilled - the name
+///   organization from the config is NOT substituted;
+/// * the sort key and search tokens are computed.
 pub fn build_records(raw_users: Vec<RawUser>) -> Vec<UserRecord> {
     let raw_users: Vec<RawUser> = raw_users
         .into_iter()
@@ -56,9 +56,9 @@ pub fn build_records(raw_users: Vec<RawUser>) -> Vec<UserRecord> {
                     .cloned()
                     .unwrap_or_else(|| cn_from_dn(dn))
             });
-            // GUID руководителя: только если руководитель есть в той же
-            // выборке (живая учётка того же источника) — иначе карточка
-            // руководителя ищется по имени кликом.
+            // Manager GUID: only if the manager is in the same
+            // selection (a live account from the same source) - otherwise the card
+            // supervisor is searched by name on click.
             let manager_guid = user
                 .manager_dn
                 .as_ref()
@@ -70,8 +70,8 @@ pub fn build_records(raw_users: Vec<RawUser>) -> Vec<UserRecord> {
                 .map(tokens::collapse_spaces)
                 .filter(|company| !company.is_empty());
 
-            // TrueConf ID сотрудника хранится в AD-атрибуте pager:
-            // обрезаем пробелы, пустые значения не сохраняем.
+            // The employee TrueConf ID is stored in the AD pager attribute:
+            // trim whitespace; empty values are not saved.
             let pager = user
                 .pager
                 .as_deref()
@@ -91,7 +91,7 @@ pub fn build_records(raw_users: Vec<RawUser>) -> Vec<UserRecord> {
             if let Some(sam) = user.sam_account_name.as_deref() {
                 token_parts.push(sam.to_lowercase());
             }
-            // Одинаковые e-mail/телефонные токены не должны раздувать FTS.
+            // Identical e-mail/phone tokens must not bloat FTS.
             token_parts.sort();
             token_parts.dedup();
 
@@ -117,12 +117,13 @@ pub fn build_records(raw_users: Vec<RawUser>) -> Vec<UserRecord> {
                 pager,
                 usn_changed: user.usn_changed,
                 tokens: token_parts.join(" "),
+                photo: user.photo,
             }
         })
         .collect()
 }
 
-/// «Фамилия Имя Отчество» из компонент, если `displayName` пуст.
+/// "Surname GivenName Patronymic" from components if `displayName` is empty.
 pub fn compose_full_name(user: &RawUser) -> Option<String> {
     let parts: Vec<&str> = [
         user.last_name.as_deref(),
@@ -137,8 +138,8 @@ pub fn compose_full_name(user: &RawUser) -> Option<String> {
     (!parts.is_empty()).then(|| parts.join(" "))
 }
 
-/// Извлекает CN из DN: `CN=Иванов И.И.,OU=IT,DC=x` → `Иванов И.И.`
-/// Учитывает экранированные разделители (`\,`, `\+`).
+/// Extracts CN from DN: `CN=Ivanov I.I.,OU=IT,DC=x` -> `Ivanov I.I.`
+/// Considers escaped separators (`\,`, `\+`).
 pub fn cn_from_dn(dn: &str) -> String {
     let mut rdn = String::new();
     let mut escaped = false;
@@ -186,6 +187,7 @@ mod tests {
             pager: None,
             user_account_control: None,
             usn_changed: None,
+            photo: None,
         }
     }
 
@@ -206,7 +208,7 @@ mod tests {
         manager.manager_dn = None;
         let mut users = vec![raw_user("g1", Some("Иванов Иван"), Some("ivanov")), manager];
 
-        // У третьего пользователя company заполнена «грязно» — проверяем нормализацию.
+        // The third user's company is filled in "dirty" - check normalization.
         let mut with_company = raw_user("g3", Some("Сидоров С.С."), Some("sidorov"));
         with_company.company = Some("  ООО   Ромашка ".into());
         users.push(with_company);
@@ -271,9 +273,9 @@ mod tests {
 
     #[test]
     fn disabled_accounts_are_skipped_entirely() {
-        // Отключённая учётка (уволенный сотрудник) не попадает ни в выдачу,
-        // ни в справочник имён руководителей, даже если контроллер домена
-        // вернул её вопреки фильтру поиска.
+        // A disabled account (a fired employee) lands neither in the result,
+        // nor into the supervisor name lookup, even if the domain controller
+        // returned it despite the search filter.
         let mut dismissed = raw_user("g7", Some("Уволенный У.У."), Some("dismissed"));
         dismissed.user_account_control = Some(0x202); // NORMAL_ACCOUNT + ACCOUNTDISABLE
         let mut manager_disabled = raw_user("g8", Some("Начальник Н.Н."), Some("boss_old"));
@@ -291,7 +293,7 @@ mod tests {
 
     #[test]
     fn enabled_account_flags_do_not_disable_user() {
-        // Обычные флаги (NORMAL_ACCOUNT, DONT_EXPIRE_PASSWORD) — не отключение.
+        // Ordinary flags (NORMAL_ACCOUNT, DONT_EXPIRE_PASSWORD) are not a disable.
         let mut user = raw_user("g9", Some("Работающий Р.Р."), Some("active"));
         user.user_account_control = Some(0x10000 | 0x40);
         let records = build_records(vec![user]);
@@ -308,11 +310,11 @@ mod tests {
     #[test]
     fn manager_guid_resolved_from_same_selection() {
         let mut boss = raw_user("g1", Some("Петров П.П."), Some("petrov"));
-        // DN из фикстуры: CN=<display>,OU=Staff,DC=kmaruda,DC=ru
+        // DN from the fixture: CN=<display>,OU=Staff,DC=kmaruda,DC=ru
         boss.dn = "CN=Петров П.П.,OU=Staff,DC=kmaruda,DC=ru".into();
         let mut employee = raw_user("g2", Some("Иванов И.И."), Some("ivanov"));
         employee.manager_dn = Some("CN=Петров П.П.,OU=Staff,DC=kmaruda,DC=ru".into());
-        // Отключённый руководитель вне выборки: guid не подставляется.
+        // A disabled manager outside the sample: the guid is not substituted.
         let mut orphan = raw_user("g3", Some("Сирота С.С."), Some("orphan"));
         orphan.manager_dn = Some("CN=Уволенный У.У.,OU=Staff,DC=kmaruda,DC=ru".into());
 

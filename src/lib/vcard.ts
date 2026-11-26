@@ -1,10 +1,10 @@
 /**
- * Клиентский генератор vCard 3.0 — зеркало Rust-сервиса `services/vcard.rs`.
+ * A client-side vCard 3.0 generator — a mirror of the Rust service `services/vcard.rs`.
  *
- * Используется в демо-режиме (браузер / тестовый режим), а в десктопе
- * служит fallback на случай недоступности команды `generate_vcard`.
- * Поведение намеренно идентично бэкенду: CRLF, folding ≤ 74 октет,
- * экранирование и нормализация номеров +7.
+ * Used in demo mode (browser / test mode), while in the desktop
+ * serves as a fallback in case the `generate_vcard` command is unavailable.
+ * The behavior is intentionally identical to the backend: CRLF, folding ≤ 74 octets,
+ * escaping and normalization of +7 numbers.
  */
 import type { Contact } from '@/types';
 
@@ -12,12 +12,12 @@ const CRLF = '\r\n';
 const MAX_FIRST_LINE = 74;
 const MAX_CONT_LINE = 73;
 
-/** Экранирование спецсимволов vCard (точка с запятой, запятая, перенос). */
+/** Escaping of vCard special characters (semicolon, comma, line break). */
 export function escapeVcard(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
 }
 
-/** Нормализация телефона: цифры и ведущий `+` для полей TEL. */
+/** Phone normalization: digits and a leading `+` for TEL fields. */
 export function normalizePhone(phone: string): string {
   const hadPlus = phone.trimStart().startsWith('+');
   const digits = phone.replace(/\D/g, '');
@@ -36,7 +36,7 @@ export function normalizePhone(phone: string): string {
   return digits;
 }
 
-/** «Фамилия Имя Отчество» → компоненты поля N (русская традиция). */
+/** "Last First Middle" → components of the N field (Russian tradition). */
 export function splitName(fullName: string): [last: string, first: string, middle: string] {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 3) {
@@ -48,7 +48,7 @@ export function splitName(fullName: string): [last: string, first: string, middl
   return ['', parts[0] ?? '', ''];
 }
 
-/** Фолдинг строк vCard по 75 октетов (продолжение — пробелом). */
+/** Folding of vCard lines to 75 octets (continuation — with a space). */
 export function foldLine(line: string): string {
   if (encodedLength(line) <= MAX_FIRST_LINE) {
     return line;
@@ -80,9 +80,9 @@ function encodedLength(value: string): number {
   return encoder.encode(value).length;
 }
 
-/** Локальная генерация vCard 3.0 (браузерный режим, без бэкенда). */
+/** Local vCard 3.0 generation (browser mode, without a backend). */
 export interface VcardOptions {
-  /** Режим предприятия: внешний номер IP-телефонии вместо внутреннего. */
+  /** Enterprise mode: the external IP telephony number instead of the internal one. */
   preferExternalPhone?: boolean;
 }
 
@@ -106,13 +106,13 @@ export function generateVcard(contact: Contact, options: VcardOptions = {}): str
   if (contact.jobTitle?.trim()) {
     lines.push(`TITLE:${escapeVcard(contact.jobTitle.trim())}`);
   }
-  // Мобильный — первым: телефоны-клиенты (например, Samsung) берут первый
-  // TEL как основной номер контакта; корпоративный остаётся вторым.
+  // The mobile first: client phones (e.g. Samsung) take the first
+  // TEL as the primary contact number; the corporate one stays second.
   if (contact.mobilePhone?.trim()) {
     lines.push(`TEL;TYPE=CELL:${escapeVcard(normalizePhone(contact.mobilePhone))}`);
   }
-  // Режим предприятия: ТОЛЬКО внешний номер, внутренний не подставляется
-  // даже как фолбэк (короткий номер снаружи ненабираем).
+  // Enterprise mode: ONLY the external number, the internal one is not substituted
+  // even as a fallback (the short number is not dialable from outside).
   const workPhone = options.preferExternalPhone ? contact.fullIpPhone?.trim() : contact.ipPhone?.trim();
   if (workPhone) {
     lines.push(`TEL;TYPE=WORK,VOICE:${escapeVcard(normalizePhone(workPhone))}`);

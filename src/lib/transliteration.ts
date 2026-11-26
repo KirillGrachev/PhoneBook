@@ -1,8 +1,8 @@
 /**
- * Транслитерация по приложению 1 (русский → латинский).
+ * Transliteration per appendix 1 (Russian → Latin).
  *
- * Таблица задаёт только заглавные буквы; строчные получают тот же результат
- * в нижнем регистре. Мягкий и твёрдый знаки не имеют латинского аналога.
+ * The table defines only capital letters; lowercase gets the same result
+ * in lower case. The soft and hard signs have no Latin analogue.
  */
 const UPPER: Record<string, string> = {
   А: 'A',
@@ -53,7 +53,7 @@ export function transliterateRussian(value: string): string {
     .join('');
 }
 
-/** Имя для показа/экспорта: в английской локали — транслитерация. */
+/** The name for display/export: in the English locale — transliteration. */
 export function personNameForLanguage(fullName: string, language = 'en'): string {
   return language.toLowerCase().startsWith('en') ? transliterateRussian(fullName) : fullName;
 }

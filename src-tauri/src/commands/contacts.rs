@@ -1,10 +1,10 @@
-//! Команды работы со справочником.
+//! Directory commands.
 //!
-//! Все выборки идут из локального кэша SQLite — но исполняются в пуле
-//! блокирующих задач через [`super::run_blocking`]: синхронные команды
-//! Tauri v2 работают на главном потоке окна, и ожидание мьютекса кэша
-//! (фоновая синхронизация держит его в большой транзакции) заморозило бы
-//! весь UI. Async-команда отдаёт ожидание в runtime, окно остаётся живым.
+//! All selections come from the local SQLite cache - but run in a pool
+//! blocking tasks via [`super::run_blocking`]: synchronous commands
+//! Tauri v2 run on the window's main thread, and waiting for the cache mutex
+//! (background sync holds it in a large transaction) would freeze
+//! the whole UI. An async command hands the wait to the runtime; the window stays alive.
 
 use std::sync::atomic::Ordering;
 
@@ -16,35 +16,35 @@ use crate::state::AppState;
 
 use super::run_blocking;
 
-/// Поиск/просмотр контактов.
+/// Contact search/browse.
 ///
-/// Контракт запроса целиком описан [`SearchParams`] (десериализуется из
-/// IPC-payload; все поля опциональны):
-/// * `ids` — точная выборка (вкладка «Мои контакты»);
-/// * `query` — полнотекстовый поиск (FTS5 + LIKE-дополнение, раскладки);
-/// * `organization`/`organizations`/`source_org`/`department` — фильтры
-///   (`organization` — по атрибуту AD `company` с нормализацией имени:
-///   точный ключ либо единственный содержащий его справочник;
-///   `organizations` — союз организаций группы фильтров из настроек:
-///   каждое имя разрешается как `organization`, выдача учитывает
-///   объединение, неразрешённая строгая группа не выдаёт ничего;
-///   `source_org` — по организации-источнику синхронизации, включает учётки
-///   без `company`; пара одинаковых имён `organization`+`source_org` —
-///   фолбэк вкладки предприятия на источник, если имя не найдено в
-///   `company`; для `organizations` тот же фолбэк срабатывает, когда не
-///   разрешилось ни одно имя группы);
-/// * `title`/`office` — точные фильтры: клик по должности или кабинету
-///   в карточке открывает список людей с той же должностью / в том же
-///   кабинете (аналог фильтра `department`);
-/// * `hide_empty` (по умолчанию `true`) — скрыть учётки без почты и телефонов;
-/// * без параметров — алфавитный список с ограничением `limit`.
+/// The whole request contract is described by [`SearchParams`] (deserialized from
+/// IPC payload; all fields are optional):
+/// * `ids` - exact selection (the "My contacts" tab);
+/// * `query` - full-text search (FTS5 + LIKE complement, keyboard layouts);
+/// * `organization`/`organizations`/`source_org`/`department` - filters
+///   (`organization` - by the AD `company` attribute with name normalization:
+///   an exact key or the single lookup containing it;
+///   `organizations` - union of organizations of the filter group from settings:
+/// each name is resolved as `organization`; results consider the
+///   union; an unresolved strict group returns nothing;
+///   `source_org` - by the sync source organization; includes accounts
+///   without `company`; a pair of identical `organization`+`source_org` names -
+///   enterprise tab fallback to the source if the name is not found in
+/// `company`; for `organizations` the same fallback triggers when
+///   no group name was resolved);
+/// * `title`/`office` - exact filters: clicking a job title or office
+///   in the card opens the list of people with the same job title / in the same
+///   office (analogous to the `department` filter);
+/// * `hide_empty` (default `true`) - hide accounts without email and phones;
+/// * without parameters - an alphabetical list limited by `limit`.
 #[tauri::command]
 pub async fn search_contacts(
     state: State<'_, AppState>,
     mut params: SearchParams,
 ) -> Result<SearchPage, AppError> {
-    // IPC-граница не доверяет размеру запроса: без клампа один вызов мог
-    // попросить весь каталог, гигантский offset или десятки тысяч ids.
+    // The IPC boundary does not trust the request size: without a clamp a single call could
+    // request the whole catalog, a giant offset, or tens of thousands of ids.
     params.limit = Some(params.limit.unwrap_or(300).clamp(1, 1_000));
     params.offset = Some(params.offset.unwrap_or(0).min(1_000_000));
     if let Some(query) = params.query.as_mut() {
@@ -71,8 +71,8 @@ pub async fn search_contacts(
     }
 
     run_blocking(move || {
-        // Пока запрос ждал мьютекс БД, пользователь мог набрать следующий.
-        // Не выполняем устаревшую работу: отдаём последнюю готовую страницу.
+        // While the request waited for the DB mutex, the user might have typed the next one.
+        // We do not run stale work: we return the last ready page.
         if let Some(id) = request_id {
             if id < latest.load(Ordering::SeqCst) {
                 if let Ok(guard) = cache.lock() {
@@ -100,29 +100,67 @@ pub async fn search_contacts(
     .await
 }
 
-/// Карточка контакта по GUID.
+/// Contact card by GUID.
 #[tauri::command]
 pub async fn get_contact(state: State<'_, AppState>, id: String) -> Result<Employee, AppError> {
     let db = state.db.clone();
     run_blocking(move || db.get_by_id(&id)).await
 }
 
-/// Список организаций для фильтра.
+/// Avatar of a contact as a `data:` URL, or `null` when there is no photo.
+///
+/// Fetched lazily for the open card only, so search pages stay small. The MIME
+/// type is sniffed from the magic bytes (AD `thumbnailPhoto` is usually JPEG).
+#[tauri::command]
+pub async fn get_contact_photo(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<Option<String>, AppError> {
+    let db = state.db.clone();
+    run_blocking(move || {
+        let bytes = db.get_photo(&id)?;
+        Ok(bytes.and_then(|bytes| {
+            let mime = sniff_image_mime(&bytes)?;
+            Some(format!(
+                "data:{mime};base64,{}",
+                crate::services::base64::encode(&bytes)
+            ))
+        }))
+    })
+    .await
+}
+
+/// Detects the image MIME type from magic bytes; `None` for unknown payloads.
+fn sniff_image_mime(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        Some("image/jpeg")
+    } else if bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
+        Some("image/png")
+    } else if bytes.starts_with(b"GIF8") {
+        Some("image/gif")
+    } else if bytes.starts_with(b"BM") {
+        Some("image/bmp")
+    } else {
+        None
+    }
+}
+
+/// Organization list for the filter.
 #[tauri::command]
 pub async fn list_organizations(state: State<'_, AppState>) -> Result<Vec<String>, AppError> {
     let db = state.db.clone();
     run_blocking(move || db.list_organizations()).await
 }
 
-/// Общее число контактов в кэше (UX первого запуска).
+/// Total number of contacts in the cache (first-run UX).
 #[tauri::command]
 pub async fn count_contacts(state: State<'_, AppState>) -> Result<u64, AppError> {
     let db = state.db.clone();
     run_blocking(move || db.count()).await
 }
 
-/// Превью дубликатов учётных записей: сколько кластеров и записей уберёт
-/// уборка (правило совпадения — в [`crate::services::db::dedup`]).
+/// Account duplicate preview: how many clusters and records the cleanup will remove
+/// (the match rule is in [`crate::services::db::dedup`]).
 #[tauri::command]
 pub async fn preview_duplicate_contacts(
     state: State<'_, AppState>,
@@ -131,7 +169,7 @@ pub async fn preview_duplicate_contacts(
     run_blocking(move || db.duplicates_preview()).await
 }
 
-/// Уборка дубликатов: возвращает число удалённых записей.
+/// Duplicate cleanup: returns the number of deleted records.
 #[tauri::command]
 pub async fn deduplicate_contacts(state: State<'_, AppState>) -> Result<usize, AppError> {
     let db = state.db.clone();

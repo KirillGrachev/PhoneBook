@@ -1,22 +1,21 @@
-﻿; Хуки NSIS-шаблона Tauri: закрываем запущенное приложение до установки
-; и удаления. Без этого exe и файлы кэша залочены живым процессом, и
-; повторная установка падает ошибкой «файл используется» (или оставляет
-; старую версию поверх трей-зомби).
+; Tauri NSIS template hooks: close a running app before install and uninstall.
+; Otherwise the exe and cache files are locked by a live process, and a repeated
+; install fails with "file in use" (or leaves the old version over a tray zombie).
 ;
-; Сначала мягкое завершение (WM_CLOSE): приложение успевает сбросить
-; отложенное сохранение конфигурации (flushConfigSave на beforeunload).
-; Затем страховочное жёсткое — если окно не закрылось само. Обе команды
-; безопасны при незапущенном приложении: ненулевой код игнорируется.
+; First a soft close (WM_CLOSE): the app can flush deferred configuration saves
+; (flushConfigSave on beforeunload). Then a forced fallback if the window did not
+; close itself. Both commands are safe when the app is not running: a non-zero
+; exit code is ignored.
 
-; Текст галочки на финальной странице установщика — по-русски.
+; The final-page checkbox text is Russian because this installer is ru-RU.
 !define MUI_FINISHPAGE_RUN_TEXT "Запустить KMAruda PhoneBook"
 
 !macro NSIS_HOOK_PREINIT
-  ; Вместо стоковой строки футера «Nullsoft Install System v3.11» —
-  ; наш нейминг: футер страниц установщика показывает продукт, а не NSIS.
+  ; Instead of the stock "Nullsoft Install System v3.11" footer, use the product
+  ; name: installer pages should show the product, not NSIS.
   BrandingText "KMAruda Phonebook · (c) КМАруда, 2026"
-  ; Компания в version-info файла (вкладка «Подробно» в свойствах).
-  ; На поле «Издатель» в UAC не влияет: то берётся только из подписи.
+  ; Company in the file version-info ("Details" in properties).
+  ; This does not affect the UAC publisher: that comes only from the signature.
   VIAddVersionKey "CompanyName" "КМАруда"
 !macroend
 

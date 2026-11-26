@@ -1,4 +1,4 @@
-//! Валидация и нормализация входных данных конфигурации.
+//! Validation and normalization of configuration input data.
 
 use crate::error::AppError;
 
@@ -9,8 +9,8 @@ pub(super) fn validate_orgs(inputs: Vec<LdapOrgInput>) -> Result<Vec<LdapOrgConf
     let mut seen = std::collections::HashSet::new();
 
     for input in inputs {
-        // Лишние пробелы схлопываются: «АО  Комбинат» и «АО Комбинат» —
-        // одна организация, дублей-невидимок в фильтрах быть не должно.
+        // Extra spaces are collapsed: "AO  Kombinat" and "AO Kombinat" are
+        // one organization; there must be no invisible duplicates in filters.
         let organization = crate::services::tokens::collapse_spaces(input.organization.trim());
         if organization.is_empty() {
             return Err(AppError::Validation(
@@ -49,7 +49,7 @@ pub(super) fn validate_orgs(inputs: Vec<LdapOrgInput>) -> Result<Vec<LdapOrgConf
             use_start_tls: input.use_start_tls,
             allow_invalid_tls: input.allow_invalid_tls,
             use_integrated_auth: input.use_integrated_auth,
-            has_password: false, // заполняется при загрузке из keyring
+            has_password: false, // filled when loading from the keyring
         });
     }
     Ok(configs)
@@ -69,13 +69,13 @@ pub(super) fn normalize_language(value: &str) -> String {
     }
 }
 
-/// Валидация и нормализация групп организаций (объединённых фильтров).
+/// Validation and normalization of organization groups (union filters).
 ///
-/// Как и для организаций AD: пустые имена недопустимы, дубликаты имён и
-/// идентификаторов отклоняются, состав группы приводится к непустым
-/// уникальным названиям. Пустая организация внутри группы — не ошибка
-/// (фронтенд мог прислать чернововой чип), а вот пустое имя группы —
-/// ошибка валидации: без имени фильтр не отличить от другого.
+/// As for AD organizations: empty names are invalid; duplicate names and
+/// identifiers are rejected; the group composition is reduced to non-empty
+/// unique names. An empty organization within a group is not an error
+/// (the frontend may have sent a draft chip), but an empty group name is a
+/// validation error: without a name the filter cannot be distinguished from another.
 pub(super) fn validate_org_groups(groups: Vec<OrgGroup>) -> Result<Vec<OrgGroup>, AppError> {
     let mut validated = Vec::with_capacity(groups.len());
     let mut seen_ids = std::collections::HashSet::new();
@@ -119,9 +119,9 @@ pub(super) fn validate_org_groups(groups: Vec<OrgGroup>) -> Result<Vec<OrgGroup>
     Ok(validated)
 }
 
-/// Привязка вкладки «КМАруда» к группе: ссылка обязана указывать на
-/// существующую группу, иначе вкладка использует организацию первого
-/// (организация первого AD-подключения) вместо пустого списка.
+/// Binding the "KMAruda" tab to a group: the reference must point to
+/// an existing group; otherwise the tab falls back to the first AD connection's
+/// organization instead of an empty list.
 pub(super) fn resolve_enterprise_group_id(
     groups: &[OrgGroup],
     id: Option<String>,
@@ -156,7 +156,7 @@ mod tests {
         assert_eq!(validated.len(), 1);
         assert_eq!(validated[0].id, "g1");
         assert_eq!(validated[0].name, "КМАруда");
-        // Регистр организации значим (отображаемое имя), дубли и пустые сняты.
+        // The organization case matters (the display name), duplicates and empties are removed.
         assert_eq!(validated[0].orgs, vec!["АО Комбинат", "Рудник"]);
     }
 
@@ -178,8 +178,8 @@ mod tests {
 
     #[test]
     fn organization_names_collapse_spaces() {
-        // «АО  Комбинат» и «АО Комбинат» — одна организация: лишние пробелы
-        // схлопываются, чтобы в фильтрах и группах не жило двойников.
+        // "AO  Kombinat" and "AO Kombinat" are one organization: extra spaces
+        // collapsed so no twins live in filters and groups.
         let configs = validate_orgs(vec![LdapOrgInput {
             organization: "  АО   Комбинат  КМАруда ".into(),
             ldap_url: "ldap://dc.kmaruda.ru".into(),

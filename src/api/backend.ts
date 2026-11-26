@@ -1,25 +1,25 @@
 /**
- * Низкоуровневый мост к Rust-бэкенду.
+ * A low-level bridge to the Rust backend.
  *
- * Единственное место, которое знает про `invoke` и форму ошибки Tauri.
- * Все ошибки нормализуются в {@link ApiError} со стабильным `code`,
- * чтобы UI локализовывал их без парсинга строк.
+ * The only place that knows about `invoke` and the shape of a Tauri error.
+ * All errors are normalized into {@link ApiError} with a stable `code`,
+ * so the UI localizes them without parsing strings.
  */
 import { invoke } from '@tauri-apps/api/core';
 
-/** Признак запуска внутри webview Tauri (в браузере — демо-режим на моках). */
+/** The flag of running inside a Tauri webview (in the browser — demo mode on mocks). */
 export function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
 
-/** Payload ошибки IPC от бэкенда: код для i18n и сообщение. */
+/** IPC error payload from the backend: a code for i18n and a message. */
 export interface BackendErrorPayload {
   code?: string;
   message?: string;
   details?: string | null;
 }
 
-/** Типизированная ошибка бэкенда/окружения. */
+/** A typed backend/environment error. */
 export class ApiError extends Error {
   readonly code: string;
   readonly details: string | null;
@@ -31,7 +31,7 @@ export class ApiError extends Error {
     this.details = payload.details ?? null;
   }
 
-  /** Нормализация произвольного отброса `invoke` (объект или JSON-строка). */
+  /** Normalization of an arbitrary `invoke` rejection (an object or a JSON string). */
   static from(unknownError: unknown): ApiError {
     if (unknownError instanceof ApiError) {
       return unknownError;
@@ -43,7 +43,7 @@ export class ApiError extends Error {
           return new ApiError(parsed);
         }
       } catch {
-        // Не JSON — обычный текст ошибки.
+        // Not JSON — a plain error text.
       }
       return new ApiError({ code: 'INTERNAL', message: unknownError });
     }
@@ -54,7 +54,7 @@ export class ApiError extends Error {
   }
 }
 
-/** Типизированный вызов команды Rust с нормализацией ошибок. */
+/** A typed Rust command call with error normalization. */
 export async function invokeCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   if (!isTauri()) {
     throw new ApiError({

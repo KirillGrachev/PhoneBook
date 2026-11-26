@@ -23,7 +23,7 @@ interface SettingsAdOrgCardProps {
   onTest: () => void;
 }
 
-/** Карточка одной организации AD. */
+/** A card of a single AD organization. */
 export function SettingsAdOrgCard({
   config,
   index,

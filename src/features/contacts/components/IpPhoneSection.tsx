@@ -8,7 +8,7 @@ interface IpPhoneSectionProps {
   fullIpPhone?: string;
 }
 
-/** Акцентный блок с номерами IP-телефонии. */
+/** An accent block with IP telephony numbers. */
 export function IpPhoneSection({ ipPhone, fullIpPhone }: IpPhoneSectionProps) {
   const { t } = useTranslation();
 

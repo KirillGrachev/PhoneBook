@@ -11,39 +11,46 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import type { TabType, Contact } from '@/types';
 
 const SEARCH_DEBOUNCE_MS = 250;
-/** Размер порции выдачи: список догружается по мере скролла, а не целиком. */
+/** The result batch size: the list loads while scrolling, not all at once. */
 export const CONTACTS_PAGE_SIZE = 300;
 
-/** Возврат хука списка: контакты, итоги и флаги состояний. */
+/** Return value of the list hook: contacts, totals and state flags. */
 export interface ContactsListResult {
   contacts: Contact[];
-  /** Точное общее число совпадений (без ограничения страницы). */
+  /** The exact total number of matches (not limited by the page). */
   total: number;
   isLoading: boolean;
   isFetching: boolean;
+  /**
+   * A search term is entered but its result is not known yet: the debounce
+   * has not fired, the query is in flight, or stale placeholder data is shown.
+   * The UI keeps the "Start searching" hint instead of flashing "No matches"
+   * before the backend has actually answered.
+   */
+  isSearchPending: boolean;
   isFetchingNextPage: boolean;
   hasNextPage: boolean;
   fetchNextPage: () => void;
   isError: boolean;
   error: unknown;
   refetch: () => void;
-  /** Достигнут потолок выдачи — стоит предложить пользователю уточнить запрос. */
+  /** The result ceiling is reached — suggest the user refine the query. */
   limitReached: boolean;
 }
 
 /**
- * Список контактов текущей вкладки с серверным поиском.
+ * The contact list of the current tab with server-side search.
  *
- * * строка поиска дебounced-ится, запрос уходит в бэкенд (SQLite FTS);
- * * выдача порционная: первая страница 300 записей, следующие догружаются
- *   списком по мере скролла (`useInfiniteQuery`), весь каталог сразу не
- *   передаётся и не парсится;
- * * запрос, похожий на номер телефона, ищет по всему каталогу вне зависимости
- *   от вкладки и фильтров организаций: номер не «принадлежит» вкладке, и
- *   переключение вкладок только усложняло бы поиск;
- * * «Мои контакты» запрашиваются точной выборкой по сохранённым id;
- * * ошибки пробрасываются в UI (состояние + тост), а не глотаются;
- * * `keepPreviousData` устраняет мигание списка при доборе символов.
+ * * the search string is debounced, the request goes to the backend (SQLite FTS);
+ * * the result is paginated: the first page is 300 records, the rest are
+ * loaded as a list while scrolling (`useInfiniteQuery`); the whole directory is not
+ * transferred and parsed;
+ * * a query that looks like a phone number searches the whole directory
+ * independent of the tab and organization filters: a number does not "belong" to a tab, and
+ * switching tabs would only complicate the search;
+ * * "My contacts" are fetched by an exact selection of saved ids;
+ * * errors are propagated to the UI (state + toast), not swallowed;
+ * * `keepPreviousData` removes list flicker while more characters are typed.
  */
 export function useContactsList(
   activeTab: TabType,
@@ -55,32 +62,32 @@ export function useContactsList(
   const { t } = useTranslation();
   const testMode = useAppStore((state) => state.testMode);
   const hideEmptyContacts = useAppStore((state) => state.hideEmptyContacts);
-  // Звезда в «Группах организаций» меняет выбор предприятия; ключ запроса
-  // обязан измениться, иначе React Query отдаёт старый кэш до перезапуска.
+  // The star in "Organization groups" changes the enterprise selection; the query key
+  // must change, otherwise React Query returns the old cache until restart.
   const enterpriseGroupId = useAppStore((state) => state.enterpriseGroupId);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
 
-  // Стабильный ключ для избранных контактов: перерисовка только при реальном изменении набора.
+  // Stable key for starred contacts: rerender only when the set actually changes.
   const savedKey = useMemo(
     () => (activeTab === 'local' ? [...savedContactIds].sort().join('|') : ''),
     [activeTab, savedContactIds],
   );
 
-  // Союз организаций выбранной группы стабилен между рендерами.
+  // The organization union of the selected group is stable between renders.
   const groupKey = useMemo(
     () => (selectedGroupOrgs ? [...selectedGroupOrgs].sort().join('|') : ''),
     [selectedGroupOrgs],
   );
 
-  // Номер телефона ищется по всему каталогу: вкладки и фильтры организаций
-  // отключаются, чтобы не заставлять пользователя угадывать вкладку.
+  // A phone number is searched across the whole directory: tabs and organization filters
+  // are disabled so the user does not have to guess the tab.
   const phoneSearch = isPhoneQuery(debouncedSearch);
   const effectiveTab: TabType = phoneSearch ? 'global' : activeTab;
   const effectiveOrg = phoneSearch ? null : selectedOrg;
   const effectiveGroupKey = phoneSearch ? '' : groupKey;
-  // Не показываем весь справочник при входе: запрос уходит только при
-  // непустом поиске или явно выбранной организации/группе. «Мои контакты»
-  // остаются отдельным исключением — там набор уже ограничен избранным.
+  // We do not show the whole directory on entry: a request goes out only when there is a
+  // non-empty search or an explicitly selected organization/group. "My contacts"
+  // remain a separate exception - there the set is already limited to starred contacts.
   const hasExplicitScope = activeTab === 'local' || Boolean(selectedOrg?.trim()) || Boolean(selectedGroupOrgs?.length);
   const hasQuery = debouncedSearch.trim() !== '' || hasExplicitScope;
 
@@ -129,8 +136,8 @@ export function useContactsList(
     }
   }, [query.isError, query.error, t]);
 
-  // Видимый признак идущего поиска: пока debounced-запрос выполняется,
-  // держим loading-тост снизу (тот же слот, что и прогресс синхронизации).
+  // A visible sign of an ongoing search: while the debounced request runs,
+  // keep the loading toast at the bottom (the same slot as sync progress).
   useEffect(() => {
     if (query.isFetching && debouncedSearch.trim() !== '') {
       toast.loading(t('searchInProgress'), { id: 'search-progress-toast', duration: Infinity });
@@ -145,11 +152,19 @@ export function useContactsList(
   );
   const total = hasQuery ? (query.data?.pages[0]?.total ?? 0) : 0;
 
+  // The result for the current input is not known yet while the debounce lags
+  // behind the raw search string, or the query for it is still loading/fetching
+  // (including keepPreviousData placeholders). Only once it settles may the UI
+  // claim "no matches".
+  const isSearchPending =
+    search.trim() !== debouncedSearch.trim() || (hasQuery && (query.isLoading || query.isPlaceholderData));
+
   return {
     contacts,
     total,
     isLoading: hasQuery && query.isLoading,
     isFetching: hasQuery && query.isFetching,
+    isSearchPending,
     isFetchingNextPage: query.isFetchingNextPage,
     hasNextPage: query.hasNextPage ?? false,
     fetchNextPage: () => void query.fetchNextPage(),

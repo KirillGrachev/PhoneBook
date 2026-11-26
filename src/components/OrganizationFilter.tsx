@@ -25,8 +25,8 @@ const filterButtonVariants = cva(
 const itemClass = (selected: boolean) =>
   cn(
     'w-full flex items-center justify-between px-4 py-2 text-[13px] outline-none transition-colors cursor-pointer focus:bg-surface-hover text-left',
-    // Выделение — цветом плашки/текста и галочкой, без смены начертания:
-    // bold сдвигает текст пункта, а цвет уже несёт состояние.
+    // Selection is by the badge/text color and a checkmark, without changing the font style:
+    // bold shifts the item text, while the color already carries the state.
     selected ? 'text-primary bg-primary/10 focus:bg-primary/10' : 'text-foreground',
   );
 
@@ -34,7 +34,7 @@ const sectionClass = 'px-4 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wi
 
 interface OrganizationFilterProps {
   organizations: string[];
-  /** Группы организаций: объединённые фильтры из настроек. */
+  /** Organization groups: combined filters from settings. */
   groups: OrgGroupDto[];
   selectedOrg: string | null;
   selectedGroupId: string | null;
@@ -43,11 +43,11 @@ interface OrganizationFilterProps {
 }
 
 /**
- * Фильтр по организации холдинга (виден только в глобальном режиме).
+ * Filter by a holding organization (visible only in global mode).
  *
- * Группы из настроек заменяют поглощённые ими организации: в дропдауне
- * группа идёт одним пунктом (союз её организаций), а входящие в неё
- * организации отдельно не показываются.
+ * Groups from settings replace the organizations they absorb: in the dropdown
+ * the group is a single item (the union of its organizations), and the members
+ * organizations are not shown separately.
  */
 export function OrganizationFilter({
   organizations,
@@ -129,10 +129,10 @@ export function OrganizationFilter({
                       className={itemClass(selectedGroupId === group.id)}
                       onClick={() => onSelectGroup(selectedGroupId === group.id ? null : group.id)}
                     >
-                      {/* Состав группы виден прямо в пункте: в глобальном
-                          фильтре группа заменяет поглощённые организации,
-                          и без этой строки их «исчезновение» из секции
-                          организаций выглядит как несвежий список. */}
+                      {/* The group composition is visible right in the item: in the global
+                          filter the group replaces the absorbed organizations,
+                          and without this line their "disappearance" from the
+                          organizations section looks like a stale list. */}
                       <span className="flex flex-col gap-0.5 flex-1 pr-2 min-w-0">
                         <span className="flex items-center gap-2 min-w-0">
                           <Groups className="w-[13px] h-[13px] shrink-0" aria-hidden />

@@ -1,4 +1,4 @@
-//! Читательские запросы: поиск (FTS5 + LIKE-фолбэк), счётчики, выборки.
+//! Read queries: search (FTS5 + LIKE fallback), counters, selections.
 
 use std::sync::atomic::Ordering;
 
@@ -10,11 +10,11 @@ use super::model::{AdDuplicateRecord, Employee, SearchPage, SearchParams};
 use super::schema::{EMPLOYEE_COLUMNS, LOOKUP_JOINS};
 use super::Db;
 
-/// Значение динамического SQL-параметра.
+/// Dynamic SQL parameter value.
 ///
-/// Количество параметров зависит от запроса, а `params_from_iter` требует
-/// `Item: ToSql`. Собственная обёртка делает гетерогенные наборы параметров
-/// типобезопасными и не полагается на тонкости trait-object impl'ов rusqlite.
+/// The number of parameters depends on the query, while `params_from_iter` requires
+/// `Item: ToSql`. Our own wrapper makes heterogeneous parameter sets
+/// type-safe and does not rely on subtleties of rusqlite trait-object impls.
 #[derive(Debug, Clone)]
 enum SqlValue {
     Text(String),
@@ -31,8 +31,8 @@ impl ToSql for SqlValue {
 }
 impl Db {
     pub fn search(&self, search: SearchParams) -> Result<SearchPage, AppError> {
-        // requestId — только для отмены устаревших запросов, на результат не
-        // влияет; иначе каждый новый id промахивался бы мимо кэша.
+        // requestId is only for cancelling stale requests, it does not affect the result
+        // affects it; otherwise every new id would miss the cache.
         let mut cache_params = search.clone();
         cache_params.request_id = None;
         let cache_key = (self.search_generation.load(Ordering::SeqCst), cache_params);
@@ -49,8 +49,8 @@ impl Db {
                 self.return_read(reader);
                 match result {
                     Ok(page) => page,
-                    // Shared-cache reader мог не увидеть схему (например,
-                    // после deserialize): повторяем на основном соединении.
+                    // A shared-cache reader might not see the schema (e.g.,
+                    // after deserialize): repeat on the main connection.
                     Err(AppError::Db(_)) => {
                         let conn = self.lock();
                         self.search_locked(&conn, fallback)?
@@ -79,8 +79,8 @@ impl Db {
     ) -> Result<SearchPage, AppError> {
         let mut search = search;
         Self::normalize_org_filter(conn, &mut search)?;
-        // Верхняя граница защищает IPC/память от запроса «вся база»;
-        // 0 больше не означает «без лимита» — это просто дефолтная страница.
+        // The upper bound protects IPC/memory from a "whole database" request;
+        // 0 no longer means "no limit" — it is just the default page.
         let limit = i64::from(search.limit.unwrap_or(300).clamp(1, 10_000));
         let offset = i64::from(search.offset.unwrap_or(0));
 
@@ -92,11 +92,11 @@ impl Db {
             return Ok(SearchPage { items, total });
         }
 
-        // Раскладочные варианты строятся из СЫРОГО запроса: запятая и точка
-        // на русской раскладке — это «б» и «ю», и санитизация до них лишила бы
-        // поиск этих букв. Санитизированная строка нужна только триграммному
-        // индексу и LIKE (в hay пунктуации нет); если раскладочных вариантов
-        // нет вовсе (например, «%»), запрос деградирует до просмотра.
+        // Layout variants are built from the RAW query: a comma and a period
+        // on the Russian layout these are "b" and "yu", and sanitizing before them would deprive
+        // search for these letters. The sanitized string is needed only for trigram
+        // index and LIKE (hay has no punctuation); if layout variants
+        // none at all (e.g. "%"), the query degrades to a browse.
         let raw_query = search
             .query
             .as_deref()
@@ -115,18 +115,18 @@ impl Db {
                 let fts_total = Self::fts_count(conn, expr, &search)?;
                 let mut total = fts_total;
 
-                // Дополнение — только те подстроки, которых нет в FTS.
-                // Иначе при склейке двух выдач один и тот же контакт мог
-                // попасть и в FTS-страницу, и в complement-страницу.
+                // The complement is only those substrings that are not in FTS.
+                // Otherwise, when gluing two results, the same contact could
+                // land on both the FTS page and the complement page.
                 if let Some((conditions, args)) = Self::complement_conditions(&san, &search) {
                     let (only_conditions, only_args) = Self::exclude_fts(&conditions, &args, expr);
                     let complement_total =
                         Self::complement_only_count(conn, &only_conditions, &only_args)?;
                     total += complement_total;
 
-                    // Порядок выдачи: сначала все FTS-совпадения (bm25), затем
-                    // complement-only (по имени). При таком контракте offset
-                    // раскладывается на две части без пересечений и пропусков.
+                    // Result order: first all FTS matches (bm25), then
+                    // complement-only (by name). Under this contract offset
+                    // split into two parts without overlaps or gaps.
                     if offset < fts_total as i64 {
                         let mut page = Self::fts_search(conn, expr, &search, limit, offset)?;
                         if (page.len() as i64) < limit {
@@ -169,22 +169,22 @@ impl Db {
         Ok(SearchPage { items, total })
     }
 
-    /// Привязывает фильтры `organization` / `organizations` к справочнику
+    /// Binds the `organization` / `organizations` filters to the lookup
     /// `orgs` (AD `company`).
     ///
-    /// Имя организации из настроек AD-подключения может не совпадать посимвольно
-    /// со значением атрибута `company` («КМАруда» ⇄ «АО Комбинат КМАруда»),
-    /// а вкладка предприятия обязана искать именно по предприятию, а не по
-    /// всему источнику синхронизации (один домен может держать весь холдинг).
-    /// `organizations` — союз имён группы фильтров из настроек: каждое имя
-    /// разрешается независимо, выдача учитывает объединение (см.
+    /// The organization name from the AD connection settings may not match character-by-character
+    /// with the `company` attribute value ("KMAruda" <-> "AO Kombinat KMAruda"),
+    /// and the enterprise tab must search specifically by enterprise, not by
+    /// the whole sync source (one domain may hold the entire holding).
+    /// `organizations` - union of the filter group names from settings: each name is
+    /// resolved independently; results consider the union (see
     /// [`Self::normalize_org_union`]).
-    /// Разрешение имени, по убыванию точности:
-    /// * точное совпадение нормализованного ключа — обычное path фильтра;
-    /// * единственный справочник, взаимно содержащий ключ подстрокой;
-    /// * фолбэк на источник синхронизации с тем же именем — только когда
-    ///   `source_org` продублирован тем же значением и таких организаций нет:
-    ///   вкладка предприятия деградирует до «весь источник», но не пустеет.
+    /// Name resolution, in descending accuracy:
+    /// * an exact normalized key match - the normal filter path;
+    /// * the single lookup mutually containing the key as a substring;
+    /// * fallback to the sync source with the same name - only when
+    ///   `source_org` is duplicated with the same value and there are no such organizations:
+    ///   the enterprise tab degrades to "the whole source", but does not become empty.
     fn normalize_org_filter(conn: &Connection, search: &mut SearchParams) -> Result<(), AppError> {
         if let Some(orgs) = search.organizations.clone() {
             return Self::normalize_org_union(conn, search, &orgs);
@@ -200,7 +200,7 @@ impl Db {
         };
         let key = crate::services::tokens::company_key(org);
         match Self::resolve_org_key(conn, org)? {
-            // Точное совпадение ключа — обычный path фильтра.
+            // An exact key match is a normal filter path.
             Some(resolved) if resolved == key => Ok(()),
             Some(resolved) => {
                 search.organization = Some(resolved);
@@ -221,16 +221,16 @@ impl Db {
         }
     }
 
-    /// Разрешает имена группы организаций в ключи справочника `orgs`.
+    /// Resolves organization group names into `orgs` lookup keys.
     ///
-    /// Каждое имя разрешается независимо ([`Self::resolve_org_key`]); союз
-    /// ключей уходит в `IN (...)`-фильтр выдачи. Неразрешённые имена в союз
-    /// не попадают. Если не разрешилось ни одно имя:
-    /// * пара с непустым `source_org` (маркер вкладки предприятия) —
-    ///   фолбэк на источник синхронизации, список не пустеет;
-    /// * строгая группа (без маркера) — `Some(vec![])`: выдача пуста,
-    ///   а не «весь холдинг»: исчезнувшие из AD организации группы не
-    ///   должны подменять фильтр отсутствием фильтра.
+    /// Each name is resolved independently ([`Self::resolve_org_key`]); the union
+    /// keys go into the `IN (...)` result filter. Unresolved names
+    /// are not included in the union. If no name was resolved:
+    /// * a pair with non-empty `source_org` (enterprise tab marker) -
+    ///   fallback to the sync source; the list does not become empty;
+    /// * a strict group (without the marker) - `Some(vec![])`: results are empty,
+    ///   not "the whole holding": group organizations that disappeared from AD
+    ///   must not replace the filter with the absence of a filter.
     fn normalize_org_union(
         conn: &Connection,
         search: &mut SearchParams,
@@ -277,10 +277,10 @@ impl Db {
         Ok(())
     }
 
-    /// Имя организации → ключ справочника `orgs` (AD `company`), по убыванию
-    /// точности: точное совпадение нормализованного ключа либо единственный
-    /// справочник, взаимно содержащий ключ подстрокой. Нескольких кандидатов
-    /// или нуля — имя не разрешается (`None`).
+    /// Organization name -> `orgs` lookup key (AD `company`), in descending
+    /// accuracy: an exact normalized key match or the single
+    /// lookup mutually containing the key as a substring. Several candidates
+    /// or zero - the name is not resolved (`None`).
     fn resolve_org_key(conn: &Connection, name: &str) -> Result<Option<String>, AppError> {
         let key = crate::services::tokens::company_key(name);
         let exact: i64 = conn.query_row(
@@ -305,7 +305,7 @@ impl Db {
         }
     }
 
-    /// Общее число совпадений FTS-запроса (без LIMIT).
+    /// Total number of FTS query matches (without LIMIT).
     fn fts_count(
         conn: &Connection,
         match_expr: &str,
@@ -322,13 +322,13 @@ impl Db {
         Ok(query_scalar(conn, &sql, &args)? as u64)
     }
 
-    /// Добавляет к условиям дополнения исключение FTS-совпадений.
+    /// Adds an exclusion of FTS matches to the complement conditions.
     ///
-    /// NOT IN с материализацией подзапроса: MATCH выполняется один раз
-    /// (EXPLAIN: LIST SUBQUERY), а не для каждой строки users, как в
-    /// коррелированном NOT EXISTS. `object_guid` в users_fts всегда заполнен
-    /// (вставка из users.object_guid, PK), а IS NOT NULL страхует
-    /// трёхзначную логику NOT IN.
+    /// NOT IN with subquery materialization: MATCH runs once
+    /// (EXPLAIN: LIST SUBQUERY), not for every users row, as in
+    /// correlated NOT EXISTS. `object_guid` in users_fts is always filled
+    /// (insert from users.object_guid, PK), while IS NOT NULL guards against
+    /// three-valued NOT IN logic.
     fn exclude_fts(conditions: &str, args: &[SqlValue], fts_expr: &str) -> (String, Vec<SqlValue>) {
         let mut conditions = conditions.to_string();
         conditions.push_str(
@@ -339,8 +339,8 @@ impl Db {
         (conditions, args)
     }
 
-    /// Совпадения дополнения, которые FTS не нашёл (для точного общего числа).
-    /// Условия уже должны содержать [`Self::exclude_fts`].
+    /// Complement matches that FTS did not find (for the exact total count).
+    /// The conditions must already contain [`Self::exclude_fts`].
     fn complement_only_count(
         conn: &Connection,
         conditions: &str,
@@ -350,9 +350,9 @@ impl Db {
         Ok(query_scalar(conn, &sql, args)? as u64)
     }
 
-    /// Общее число контактов по фильтрам (без запроса и LIMIT).
+    /// Total number of contacts by filters (without query and LIMIT).
     fn browse_count(conn: &Connection, search: &SearchParams) -> Result<u64, AppError> {
-        // Без фильтров JOIN'ы не нужны: на 50k это заметно дешевле.
+        // Without filters the JOINs are not needed: on 50k this is noticeably cheaper.
         let unfiltered = search.organization.is_none()
             && search.organizations.is_none()
             && search.source_org.is_none()
@@ -387,10 +387,10 @@ impl Db {
         let mut args: Vec<SqlValue> = vec![SqlValue::Text(match_expr.to_string())];
         push_filters(&mut sql, &mut args, search);
         push_empty_filter(&mut sql, search);
-        // Веса bm25 по колонкам FTS: guid(0), ФИО, отдел, компания,
-        // должность, e-mail, токены (инициалы/телефоны).
-        // GUID — детерминированный tie-break: без него одинаковые bm25
-        // могли менять порядок между страницами и ломать offset-пагинацию.
+        // bm25 weights by FTS columns: guid(0), name, department, company,
+        // job title, email, tokens (initials/phone numbers).
+        // GUID is a deterministic tie-break: without it identical bm25
+        // could change order between pages and break offset pagination.
         sql.push_str(
             " ORDER BY bm25(users_fts, 0.0, 10.0, 2.0, 1.0, 2.0, 3.0, 6.0), users.object_guid LIMIT ? OFFSET ?",
         );
@@ -400,10 +400,10 @@ impl Db {
         query(conn, &sql, &args)
     }
 
-    /// Условия дополнения к FTS: триграммный индекс для подстрок от 3
-    /// символов (hay в нижнем регистре, phones только цифры) и LIKE для
-    /// того, что триграммам недоступно (1–2 символа, двухзначные хвосты).
-    /// `None` — дополнять нечем.
+    /// FTS complement conditions: trigram index for substrings of 3
+    /// characters (hay in lowercase, phones digits only) and LIKE for
+    /// what trigrams cannot access (1-2 characters, two-digit tails).
+    /// `None` - nothing to complement with.
     fn complement_conditions(
         raw_query: &str,
         search: &SearchParams,
@@ -415,8 +415,8 @@ impl Db {
         let mut args: Vec<SqlValue> = Vec::new();
 
         if text.chars().count() >= 3 {
-            // IN с материализацией подзапроса: MATCH выполняется один раз,
-            // а не для каждой строки users (EXISTS с корреляцией).
+            // IN with subquery materialization: MATCH runs once,
+            // rather than for every users row (correlated EXISTS).
             parts.push(
                 "users.object_guid IN (SELECT object_guid FROM users_substr WHERE users_substr MATCH ?)"
                     .to_string(),
@@ -446,8 +446,8 @@ impl Db {
             }
         }
         if digits.len() == 2 {
-            // «Хвост» номера: сравниваем только цифры, игнорируя
-            // форматирование («45-67» найдёт «+7 (495) 123-45-67»).
+            // The number "tail": we compare only digits, ignoring
+            // formatting ("45-67" finds "+7 (495) 123-45-67").
             let digit_pattern = format!("%{digits}%");
             for column in ["ip_phone", "phone_external", "phone_mobile"] {
                 parts.push(format!("({}) LIKE ? ESCAPE '\\'", digits_sql(column)));
@@ -518,7 +518,7 @@ impl Db {
         Ok(result)
     }
 
-    /// Карточка сотрудника по GUID — точечная выборка для карточки контакта.
+    /// Employee card by GUID - a point selection for the contact card.
     pub fn get_by_id(&self, id: &str) -> Result<Employee, AppError> {
         let conn = self.lock();
         conn.query_row(
@@ -532,8 +532,24 @@ impl Db {
         .ok_or_else(|| AppError::NotFound("Контакт не найден в справочнике или был удалён".into()))
     }
 
-    /// Тип источника по имени (`Some("ad"` / `Some("external")`): внешний
-    /// файл не должен занимать имя источника, который синхронизируется с AD.
+    /// Raw avatar bytes for a single contact (AD `thumbnailPhoto`).
+    /// `None` when the contact has no photo or does not exist; the frontend
+    /// then renders a letter avatar. Kept separate from [`Employee`] so search
+    /// pages never carry image payloads.
+    pub fn get_photo(&self, id: &str) -> Result<Option<Vec<u8>>, AppError> {
+        let conn = self.lock();
+        conn.query_row(
+            "SELECT photo FROM users WHERE object_guid = ?1",
+            [id],
+            |row| row.get::<_, Option<Vec<u8>>>(0),
+        )
+        .optional()
+        .map(|row| row.flatten())
+        .map_err(AppError::from)
+    }
+
+    /// Source type by name (`Some("ad"` / `Some("external")`): an external
+    /// file must not occupy the name of a source that is synced with AD.
     pub fn source_kind(&self, name: &str) -> Result<Option<String>, AppError> {
         let conn = self.lock();
         conn.query_row(
@@ -547,9 +563,9 @@ impl Db {
 
     pub fn list_organizations(&self) -> Result<Vec<String>, AppError> {
         let conn = self.lock();
-        // Дедупликацию вариантов написания («КМАруда», «КМАРУДА», лишние
-        // пробелы) гарантирует UNIQUE-ключ справочника `orgs` — запрос
-        // просто отдаёт отображаемые имена.
+        // Deduplication of spelling variants ("KMAruda", "KMARUDA", extra
+        // whitespace) is guaranteed by the UNIQUE key of the `orgs` lookup - the query
+        // simply returns the display names.
         let mut stmt = conn.prepare("SELECT name FROM orgs")?;
         let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
         let mut orgs: Vec<String> = rows.filter_map(Result::ok).collect();
@@ -566,8 +582,8 @@ impl Db {
         Ok(conn.query_row("SELECT COUNT(*) FROM users", [], |row| row.get::<_, i64>(0))? as u64)
     }
 
-    /// AD-контакты для отсечения дублей внешней телефонной книги: ФИО и
-    /// контакты/атрибуты, по которым можно доказать, что запись уже есть в AD.
+    /// AD contacts for cutting off external phone book duplicates: full name and
+    /// contacts/attributes that can prove the record already exists in AD.
     pub fn ad_duplicates(&self) -> Result<Vec<AdDuplicateRecord>, AppError> {
         let conn = self.lock();
         let mut stmt = conn.prepare(
@@ -614,8 +630,8 @@ impl Db {
     }
 }
 
-/// Фильтр «не пустая учётка»: есть почта ИЛИ любой телефон.
-/// Применяется ко всем путям поиска и к count-запросам.
+/// "Non-empty account" filter: has email OR any phone.
+/// Applied to all search paths and to count queries.
 fn push_empty_filter(sql: &mut String, search: &SearchParams) {
     if search.hide_empty {
         sql.push_str(
@@ -637,8 +653,8 @@ fn push_filters(sql: &mut String, args: &mut Vec<SqlValue>, search: &SearchParam
         sql.push_str(" AND orgs.name_key = ?");
         args.push(SqlValue::Text(crate::services::tokens::company_key(org)));
     }
-    // Союз организаций группы: ключи уже разрешены normalize_org_union;
-    // company_key идемпотентен, поэтому повторная нормализация безопасна.
+    // Organization union of the group: keys are already resolved by normalize_org_union;
+    // company_key is idempotent, so repeated normalization is safe.
     if let Some(orgs) = search.organizations.as_deref() {
         if orgs.is_empty() {
             sql.push_str(" AND 0");
@@ -669,8 +685,8 @@ fn push_filters(sql: &mut String, args: &mut Vec<SqlValue>, search: &SearchParam
         sql.push_str(" AND departments.name = ?");
         args.push(SqlValue::Text(department.to_string()));
     }
-    // Должность: точное совпадение (клик по должности в карточке открывает
-    // список людей с той же должностью — аналог модалки отдела).
+    // Job title: an exact match (clicking a title in the card opens
+    // list of people with the same job title - analogous to the department modal).
     if let Some(title) = search
         .title
         .as_deref()
@@ -680,8 +696,8 @@ fn push_filters(sql: &mut String, args: &mut Vec<SqlValue>, search: &SearchParam
         sql.push_str(" AND users.title = ?");
         args.push(SqlValue::Text(title.to_string()));
     }
-    // Кабинет: точное совпадение (клик по кабинету в карточке открывает
-    // список людей в том же кабинете — та же логика, что отдел/должность).
+    // Office: an exact match (clicking an office in the card opens
+    // list of people in the same office - the same logic as department/job title).
     if let Some(office) = search
         .office
         .as_deref()
@@ -703,14 +719,14 @@ fn query(conn: &Connection, sql: &str, args: &[SqlValue]) -> Result<Vec<Employee
     Ok(out)
 }
 
-/// «Кириллица сначала»: служебные учётки и записи, начинающиеся с латиницы
-/// (adm-, svc- и т.п.), не поднимаются в начало списка. Юникод: а=1072..я=1103, ё=1105.
-// Детерминированный порядок для порционной выдачи: сортировка по имени
-// дополняется tie-break по GUID, иначе страницы могли бы перемешиваться
-// при одинаковых sort_key.
+/// "Cyrillic first": service accounts and records starting with Latin letters
+/// (adm-, svc-, etc.) are not raised to the top of the list. Unicode: a=1072..ya=1103, yo=1105.
+// A deterministic order for paginated results: sorting by name
+// supplemented by a GUID tie-break; otherwise pages could get shuffled
+// with identical sort_key.
 const ORDER_NAMES: &str = " ORDER BY CASE WHEN unicode(substr(users.sort_key, 1, 1)) BETWEEN 1072 AND 1105 THEN 0 ELSE 1 END, users.sort_key, users.object_guid";
 
-/// Группа сортировки имени: 0 — начинается с кириллицы, 1 — прочее (латиница и т.д.).
+/// Name sort group: 0 - starts with Cyrillic, 1 - other (Latin, etc.).
 fn name_group(name: &str) -> u8 {
     match name.chars().next() {
         Some('а'..='я' | 'ё' | 'А'..='Я' | 'Ё') => 0,
@@ -752,7 +768,7 @@ fn row_to_employee(row: &Row<'_>) -> rusqlite::Result<Employee> {
     })
 }
 
-/// Экранирование спецсимволов LIKE (`\`, `%`, `_`).
+/// Escaping LIKE special characters (`\`, `%`, `_`).
 pub(super) fn escape_like(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for ch in value.chars() {
@@ -767,16 +783,16 @@ pub(super) fn escape_like(value: &str) -> String {
     out
 }
 
-/// SQL-выражение «только цифры» для телефонной колонки.
+/// SQL "digits only" expression for the phone column.
 fn digits_sql(column: &str) -> String {
     format!(
         "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(users.{column}, ''), ' ', ''), '-', ''), '(', ''), ')', ''), '+', '')"
     )
 }
 
-/// FTS-фраза с фильтром по колонке: `column : "значение"` (кавычки внутри
-/// значения удваиваются). Значение обязано быть преднормализовано так же,
-/// как содержимое индекса (hay — lower, phones — цифры).
+/// FTS phrase with a column filter: `column : "value"` (quotes inside
+/// values are doubled). The value must be pre-normalized the same way,
+/// as the index content (hay - lower, phones - digits).
 fn fts_phrase(column: &str, value: &str) -> String {
     let escaped = value.replace('"', "\"\"");
     format!("{column} : \"{escaped}\"")

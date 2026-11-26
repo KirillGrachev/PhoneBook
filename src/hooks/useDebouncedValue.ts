@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Дебаунс значения: возвращает `value` спустя `delayMs` «затишья».
- * Используется для поисковой строки (запросы к бэкенду на каждое нажатие
- * клавиши — лишняя нагрузка на IPC и SQLite).
+ * Value debounce: returns `value` after `delayMs` of "quiet".
+ * Used for the search box (a backend request on every key press
+ * key — extra load on IPC and SQLite).
  */
 export function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);

@@ -65,7 +65,7 @@ describe('MockContactsService (демо-режим)', () => {
     expect(byOffice.contacts.length).toBeGreaterThan(1);
     expect(byOffice.contacts.every((c) => c.office === 'Каб. 401')).toBe(true);
 
-    // Должность и кабинет вместе (карточка коллеги из того же кабинета).
+    // Job title and office together (a colleague card from the same office).
     const both = await service.search({ activeTab: 'global', title: 'Бухгалтер', office: 'Каб. 210' });
     expect(both.contacts.map((c) => c.id)).toEqual(['mock-orlova']);
 

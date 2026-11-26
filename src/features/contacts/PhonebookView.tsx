@@ -19,14 +19,14 @@ import { isMockMode } from '@/services/ContactsService';
 import { useAppStore } from '@/store/useAppStore';
 import type { Contact } from '@/types';
 
-/** Открытый список коллег: поле карточки, значение и организация контакта. */
+/** The open colleague list: the card field, value and contact organization. */
 interface ColleaguesView {
   mode: ColleaguesMode;
   value: string;
   organization: string | null;
 }
 
-/** Главный экран: список контактов + карточка выбранного сотрудника. */
+/** The main screen: contact list + the selected employee card. */
 export function PhonebookView() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -52,9 +52,9 @@ export function PhonebookView() {
 
   const [colleaguesView, setColleaguesView] = useState<ColleaguesView | null>(null);
 
-  // В тестовом режиме справочник полностью демонстрационный: настройки
-  // реального AD (группы, предприятие, организации) не должны протекать
-  // в фильтры и подписи.
+  // In test mode the directory is fully demonstrational: the settings
+  // of real AD (groups, enterprise, organizations) must not leak
+  // into filters and labels.
   const directoryScope = useMemo(
     () => resolveDirectoryScope(testMode, ldapConfigs, orgGroups, enterpriseGroupId),
     [testMode, ldapConfigs, orgGroups, enterpriseGroupId],
@@ -65,10 +65,10 @@ export function PhonebookView() {
     enterpriseGroupId: effectiveEnterpriseGroupId,
   } = directoryScope;
 
-  // Выбранная группа фильтра: союз её организаций уходит в запрос целиком.
+  // The selected filter group: the union of its organizations goes into the request whole.
   const selectedGroup = useMemo(() => {
     const group = findOrgGroup(effectiveOrgGroups, selectedGroupId);
-    // Пустая группа не считается выбранным фильтром (черновик без организаций).
+    // An empty group is not considered a selected filter (a draft without organizations).
     return group && group.orgs.some((org) => org.trim() !== '') ? group : null;
   }, [effectiveOrgGroups, selectedGroupId]);
   const selectedGroupOrgs = useMemo(
@@ -81,6 +81,7 @@ export function PhonebookView() {
     total,
     isLoading,
     isFetching,
+    isSearchPending,
     isError,
     refetch,
     limitReached,
@@ -90,14 +91,14 @@ export function PhonebookView() {
   } = useContactsList(activeTab, search, selectedOrg, savedContactIds, selectedGroupOrgs);
   const { data: organizations = [] } = useOrganizations();
 
-  // Фильтр предприятия для вкладки «КМАруда»: имя группы из настроек,
-  // а без отмеченной группы — первая настроенная AD-организация.
+  // Enterprise filter for the "KMAruda" tab: group name from settings,
+  // without a selected group - the first configured AD organization.
   const enterpriseOrg = useMemo(
     () => resolveEnterpriseName(effectiveLdapConfigs, effectiveOrgGroups, effectiveEnterpriseGroupId),
     [effectiveLdapConfigs, effectiveOrgGroups, effectiveEnterpriseGroupId],
   );
 
-  // Организация и группа фильтра взаимно исключают друг друга.
+  // The organization and the filter group mutually exclude each other.
   const handleSelectOrg = useCallback(
     (org: string | null) => {
       setSelectedOrg(org);
@@ -113,56 +114,33 @@ export function PhonebookView() {
     [setSelectedGroupId, setSelectedOrg],
   );
 
-  const isSaved = selectedId ? savedContactIds.includes(selectedId) : false;
-
-  // Глубокая ссылка /settings?view=ad обрабатывается роутером; здесь —
-  // нормализация вкладок при переключении глобального режима.
+  // The deep link /settings?view=ad is handled by the router; here —
+  // tab normalization when switching the global mode.
   useEffect(() => {
     if (globalMode) {
       if (activeTab === 'kmaruda') {
         setActiveTab('global');
       }
     } else if (activeTab === 'global' && (selectedOrg || selectedGroupId)) {
-      // Вне глобальной версии фильтра по организации нет вовсе:
-      // сбрасываем и организацию, и выбранную группу.
+      // Outside the global version there is no organization filter at all:
+      // reset both the organization and the selected group.
       setSelectedOrg(null);
       setSelectedGroupId(null);
     }
   }, [globalMode, activeTab, selectedOrg, selectedGroupId, setActiveTab, setSelectedOrg, setSelectedGroupId]);
 
-  // Сброс выбора при смене режима данных (тестовый ⇄ боевой). Фильтры
-  // реального AD в тестовом режиме не действуют, поэтому их тоже снимаем.
+  // Reset the selection when the data mode changes (test <-> live). Filters
+  // of real AD do not apply in test mode, so we clear them too.
   useEffect(() => {
     setSelectedId(null);
     setSelectedOrg(null);
     setSelectedGroupId(null);
   }, [testMode, setSelectedId, setSelectedOrg, setSelectedGroupId]);
 
-  // Поиск сам открывает карточку: единственное совпадение или верхний
-  // результат списка — пользователю не нужно целиться в список вручную.
-  // Ручной выбор внутри выдачи не перебрасывается, пока не изменится выдача.
-  useEffect(() => {
-    // Пока идёт первичная загрузка/добор, не трогаем выбор: список может быть
-    // ещё пустым, а карточка уже открыта пользователем.
-    if (isLoading || isFetching) {
-      return;
-    }
-    const currentId = useAppStore.getState().selectedId;
-    if (filtered.length === 0) {
-      // Поиск/фильтр не дал совпадений — карточка старого результата не
-      // должна висеть справа.
-      if (currentId !== null) {
-        setSelectedId(null);
-      }
-      return;
-    }
-    if (search.trim() !== '' && currentId !== filtered[0].id) {
-      setSelectedId(filtered[0].id);
-    }
-  }, [filtered, isFetching, isLoading, search, setSelectedId]);
-
-  // Смена вкладки/фильтра начинает новую выборку; карточка из предыдущего
-  // фильтра не должна оставаться открытой.
+  // Changing the tab/filter starts a new selection; a card from the previous
+  // filter must not remain open. This effect must run BEFORE the auto-select
+  // effect below: otherwise a quick tab switch can clear the freshly selected
+  // first result and leave the detail pane out of sync with the list.
   const filterKey = `${activeTab}|${selectedOrg ?? ''}|${selectedGroupId ?? ''}|${effectiveEnterpriseGroupId ?? ''}`;
   const previousFilterKey = useRef(filterKey);
   useEffect(() => {
@@ -173,12 +151,36 @@ export function PhonebookView() {
     setSelectedId(null);
   }, [filterKey, setSelectedId]);
 
+  // The search itself opens the card: the only match or the top
+  // list result - the user does not need to aim at the list manually.
+  // A manual selection within the result set is not overridden until the set changes.
+  useEffect(() => {
+    // While the initial load/top-up is running or the result of the current input is not yet
+    // known, do not touch the selection: the list may still be empty while the card already
+    // opened by the user.
+    if (isLoading || isFetching || isSearchPending) {
+      return;
+    }
+    const currentId = useAppStore.getState().selectedId;
+    if (filtered.length === 0) {
+      // The search/filter gave no matches - the old result card
+      // must not remain on the right.
+      if (currentId !== null) {
+        setSelectedId(null);
+      }
+      return;
+    }
+    if (search.trim() !== '' && currentId !== filtered[0].id) {
+      setSelectedId(filtered[0].id);
+    }
+  }, [filtered, isFetching, isLoading, isSearchPending, search, setSelectedId]);
+
   const handleSettingsClick = useCallback(() => navigate('/settings'), [navigate]);
   const handleConfigureAdClick = useCallback(() => navigate('/settings?view=ad'), [navigate]);
   const handleConfigureGroupsClick = useCallback(() => navigate('/settings?view=groups'), [navigate]);
-  // Клик по отделу / должности / кабинету в карточке открывает список
-  // коллег по тому же полю; организация контакта ограничивает выдачу,
-  // чтобы одинаковые кабинеты и должности разных организаций не смешивались.
+  // Clicking a department / job title / office in the card opens a list of
+  // colleagues by the same field; the contact's organization limits the results,
+  // so identical offices and job titles from different organizations are not mixed.
   const handleDepartmentClick = useCallback((department: string, organization?: string) => {
     setColleaguesView({ mode: 'department', value: department, organization: organization ?? null });
   }, []);
@@ -191,9 +193,9 @@ export function PhonebookView() {
   const handleBackToSidebar = useCallback(() => setSelectedId(null), [setSelectedId]);
 
   /**
-   * Клик по руководителю: открывает его карточку. По GUID — мгновенно;
-   * если руководитель вне выборки AD (GUID не разрешён при синхронизации),
-   * ищем по имени и открываем точное совпадение.
+   * Clicking a manager opens their card. By GUID — instantly;
+   * if the manager is outside the AD sample (the GUID was not resolved during sync),
+   * we search by name and open the exact match.
    */
   const handleManagerClick = useCallback(
     async (manager: string, managerId?: string) => {
@@ -222,9 +224,9 @@ export function PhonebookView() {
 
   const browserLocked = !isTauriEnv() && !testMode;
   const directoryNotConfigured = !isMockMode() && !browserLocked && ldapConfigs.length === 0;
-  // В неглобальном режиме вкладка «КМАруда» работает только по группе,
-  // отмеченной звездой. Без выбранной группы не подставляем первое
-  // AD-подключение и не показываем весь холдинг.
+  // In non-global mode the "KMAruda" tab works only by the starred
+  // group. Without a selected group we do not substitute the first
+  // AD connection and do not show the whole holding.
   const enterpriseGroup = findOrgGroup(effectiveOrgGroups, effectiveEnterpriseGroupId);
   const enterpriseGroupReady = Boolean(enterpriseGroup && enterpriseGroup.orgs.some((org) => org.trim() !== ''));
   const enterpriseGroupScopeActive = !browserLocked && activeTab === 'kmaruda' && (testMode || ldapConfigs.length > 0);
@@ -232,15 +234,17 @@ export function PhonebookView() {
   const enterpriseGroupNotSelected = enterpriseGroupScopeActive && orgGroups.length > 0 && !enterpriseGroupReady;
   const enterpriseGroupsUnavailable = enterpriseGroupsMissing || enterpriseGroupNotSelected;
 
-  // Пустое состояние зависит от контекста: браузер / избранное /
-  // поисковый запрос / не настроен AD / нет групп предприятия /
-  // ещё не синхронизировано.
+  // The empty state depends on the context: browser / favorites /
+  // search query / AD not configured / no enterprise groups /
+  // not synchronized yet.
   const emptyState = browserLocked
     ? { title: t('browserMode.title'), description: t('browserMode.desc') }
     : activeTab === 'local'
       ? { title: t('emptyLocal.title'), description: t('emptyLocal.desc') }
       : search.trim()
-        ? { title: t('noMatches'), description: t('tryAnotherSearch') }
+        ? isSearchPending
+          ? { title: t('emptySearch.title'), description: t('emptySearch.desc') }
+          : { title: t('noMatches'), description: t('tryAnotherSearch') }
         : enterpriseGroupNotSelected
           ? { title: t('emptyEnterprise.noSelectionTitle'), description: t('emptyEnterprise.noSelectionDesc') }
           : enterpriseGroupsMissing
@@ -334,8 +338,6 @@ export function PhonebookView() {
               <ContactDetails
                 key={selectedId}
                 contactId={selectedId}
-                isSaved={isSaved}
-                onToggleSave={toggleSavedContact}
                 onBack={handleBackToSidebar}
                 onDepartmentClick={handleDepartmentClick}
                 onTitleClick={handleTitleClick}

@@ -1,24 +1,24 @@
 import type { Contact } from '@/types';
 
 /**
- * Демо-данные для браузерной разработки и «тестового режима».
+ * Demo data for browser development and "test mode".
  *
- * В продуктовом режиме (Tauri + testMode=off) источник данных — кэш
- * Active Directory; этот модуль в запросах не участвует.
+ * In production mode (Tauri + testMode=off) the data source is the cache
+ * Active Directory; this module does not take part in queries.
  */
 export const KMARUDA_ORG = 'ООО «КМАруда»';
-/** Демо-организация «Глобал Строй» (константа названия). */
+/** Demo organization "Global Stroy" (name constant). */
 export const GLOBAL_STROY_ORG = 'ЗАО «Глобал Строй»';
-/** Демо-организация «Рога и Копыта» (константа названия). */
+/** Demo organization "Roga i Kopyta" (name constant). */
 export const ROGA_ORG = 'ООО «Рога и Копыта»';
 
-/** Демо-контакты браузерного режима и тестов.
+/** Demo contacts for browser mode and tests.
  *
- * Набор подобран так, чтобы покрывать кликабельные поля карточки:
- * пары с одинаковой должностью («Бухгалтер», «Инженер технической
- * поддержки», «Менеджер по работе с клиентами»), одинаковым кабинетом
- * («Каб. 210», «Каб. 401», «Каб. 12») и цепочки руководителей —
- * с GUID (`managerId`) и без него (фолбэк поиска по имени).
+ * The set is chosen to cover the clickable card fields:
+ * pairs with the same job title ("Accountant", "Technical support
+ * engineer", "Customer manager"), the same office
+ * ("Office 210", "Office 401", "Office 12") and manager chains —
+ * with a GUID (`managerId`) and without one (name-search fallback).
  */
 export const mockContacts: Contact[] = [
   {
@@ -120,7 +120,7 @@ export const mockContacts: Contact[] = [
     email: 'smirnova@globalstroy.ru',
     trueconfId: 'smirnova',
     office: 'Этаж 2, оф. 12',
-    // Руководитель без GUID: демонстрирует фолбэк клика — поиск по имени.
+    // Supervisor without a GUID: demonstrates the click fallback - search by name.
     manager: 'Фёдоров Игорь Николаевич',
   },
   {
@@ -177,7 +177,7 @@ export const mockContacts: Contact[] = [
   },
 ];
 
-/** Список демо-организаций. */
+/** The list of demo organizations. */
 export const mockOrganizations: string[] = [
   ...new Set(mockContacts.map((contact) => contact.organization).filter((org): org is string => Boolean(org))),
 ].sort((a, b) => a.localeCompare(b, 'ru'));

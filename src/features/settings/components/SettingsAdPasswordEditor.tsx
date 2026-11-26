@@ -14,7 +14,7 @@ interface SettingsAdPasswordEditorProps {
   onSave: () => void;
 }
 
-/** Пароль bind-учётки: отдельный защищённый канал, не через стор. */
+/** The bind account password: a separate protected channel, not through the store. */
 export function SettingsAdPasswordEditor({
   config,
   password,

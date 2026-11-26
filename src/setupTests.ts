@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 
-// jsdom не реализует matchMedia — минимальная заглушка для хуков темы.
+// jsdom does not implement matchMedia — a minimal stub for the theme hooks.
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: (query: string): MediaQueryList =>
@@ -16,7 +16,7 @@ Object.defineProperty(window, 'matchMedia', {
     }) as unknown as MediaQueryList,
 });
 
-/** IntersectionObserver используется ленивой загрузкой аватаров. */
+/** IntersectionObserver is used by lazy avatar loading. */
 class IntersectionObserverStub implements IntersectionObserver {
   readonly root = null;
   readonly rootMargin = '';
@@ -34,15 +34,15 @@ Object.defineProperty(window, 'IntersectionObserver', {
   value: IntersectionObserverStub,
 });
 
-// navigator.clipboard отсутствует в jsdom.
+// navigator.clipboard is absent in jsdom.
 Object.defineProperty(navigator, 'clipboard', {
   writable: true,
-  // user-event повторно навешивает свой стаб clipboard — разрешаем переопределение.
+  // user-event re-attaches its own clipboard stub — we allow redefinition.
   configurable: true,
   value: { writeText: async () => {} },
 });
 
-/** ResizeObserver используется Radix-попперами (дропдауны, тултипы). */
+/** ResizeObserver is used by Radix poppers (dropdowns, tooltips). */
 class ResizeObserverStub implements ResizeObserver {
   observe(): void {}
   unobserve(): void {}
