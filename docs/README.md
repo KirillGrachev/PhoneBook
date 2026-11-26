@@ -48,7 +48,7 @@ A browser demo mode with mock data is available for UI work.
   keyring;
 - English and Russian interface, including English name transliteration in QR
   vCards, light/dark/system themes and animation settings;
-- Montserrat typography and a 34-icon currentColor icon set.
+- Montserrat typography and a currentColor icon set.
 
 ## Stack
 
