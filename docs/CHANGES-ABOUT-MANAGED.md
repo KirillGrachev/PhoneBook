@@ -1,5 +1,7 @@
 # About: managed banner и профиль конфигурации
 
+> Историческая заметка для workspace 0.2.24. Актуальное поведение описано в README.md, DEPLOYMENT.md и CHANGELOG.md.
+
 База: GitHub `main`, версия **0.2.24**.  
 Дата: 20.11.2026.
 

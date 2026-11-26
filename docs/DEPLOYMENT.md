@@ -9,13 +9,14 @@ the managed test/global switches come from the profile.
 
 - theme and language;
 - animations toggle;
+- **Show avatars** toggle;
 - saved contacts;
 - email overrides;
 - window size/position;
 - LDAP bind passwords (Credential Manager only; never in the profile or exe).
 
 All administrative settings are protected in Rust on `load` and `save`, not
-only by disabled controls. A direct IPC call cannot override them.
+only by hiding their controls. A direct IPC call cannot override them.
 
 ## 1. Build a reference profile
 
@@ -71,13 +72,14 @@ Do not commit a production profile to the public repository.
 
 ## 4. Verification
 
-- The Settings screen shows the managed banner with the profile name and
-  revision.
-- AD, Groups, Synchronization and External phone books are disabled; direct
-  edits through the API are still overwritten from the profile.
-- Theme, language, favorites and animations remain editable and survive a
-  profile update.
-- `About` shows the embedded profile name and revision.
+- The Settings screen shows the managed banner with the profile name.
+- AD, Groups, Synchronization, External phone books and configuration transfer
+  are **hidden**, not merely disabled; direct links to them return to the
+  settings root. Direct IPC edits are still overwritten from the profile.
+- Theme, language, avatars, favorites and animations remain editable and
+  survive a profile update.
+- `About` shows the normal version block only; profile metadata is shown in the
+  Settings banner.
 - On first launch with no cache, the profile has LDAP configured, so the normal
   sync starts and fills the directory without user action.
 

@@ -38,8 +38,12 @@ A browser demo mode with mock data is available for UI work.
 - LDAP connection/operation timeouts, retries with backoff and domain-controller
   failover;
 - employee profile with manager and colleagues by department, job title or
-  office;
-- favorites, holding-wide global mode and organization groups;
+  office, plus optional AD contact photos (`thumbnailPhoto`) and a **Show
+  avatars** interface setting with letter fallback;
+- favorites that stay in sync between My contacts and search, holding-wide
+  global mode and organization groups;
+- **Find and remove** duplicate cleanup with a preview of duplicate groups and
+  extra accounts, without modifying Active Directory;
 - AES-256-GCM encryption for the local cache; AD passwords stay in the OS
   keyring;
 - English and Russian interface, including English name transliteration in QR
@@ -59,8 +63,8 @@ A browser demo mode with mock data is available for UI work.
 
 ## Getting started
 
-Requirements: Windows 10/11 x64, Node.js 20+, Rust stable (MSRV 1.89), MSVC
-Build Tools and the Windows SDK, and the
+Requirements: Windows 10/11 x64, Node.js 22+ (the CI version), Rust stable
+(MSRV 1.89), MSVC Build Tools and the Windows SDK, and the
 [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ```powershell
@@ -81,12 +85,23 @@ npm run format:check
 npm run typecheck
 npm run lint
 npm test
+npm run test:e2e
 npm run check:locales
 npm run check:version
+npm run check:tauri
+npm run check:contracts
+npm run check:contracts:generated
+npm run check:bundle
 cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml --locked
+$env:KMPB_EMBED_CONFIG = "$PWD/src-tauri/tests/fixtures/embedded-config.json"
+cargo test --manifest-path src-tauri/Cargo.toml --features embedded-config --locked
 ```
+
+The Playwright suite needs its Chromium binary: `npx playwright install chromium`.
+`npm run vendor:verify` checks the generated offline store after
+`npm run vendor:fetch`; the binary store itself is not committed.
 
 Search load benchmark (not part of the regular `cargo test`):
 
@@ -99,15 +114,18 @@ cargo test --release --manifest-path src-tauri/Cargo.toml search_load_benchmark 
 | Path | Purpose |
 | --- | --- |
 | `src/features/contacts` | Directory screen, search and employee profile |
-| `src/features/settings` | AD, interface, groups and import/export settings |
+| `src/features/settings` | AD, interface, avatars, groups and import/export settings |
+| `src/components/ui/FocusLock.tsx` | Scroll-safe focus trap used by dialogs |
 | `src/services` | Contact-source contract, Tauri and demo implementations |
+| `e2e` | Playwright browser tests (search, duplicates, favorites, avatars) |
+| `vendor` | Patched picomatch, manifest and offline-fetch/verify tooling |
 | `src-tauri/src/commands` | Typed IPC boundary |
 | `src-tauri/src/services/ldap` | LDAP/AD client and record parsing |
 | `src-tauri/src/services/db` | SQLite cache, FTS/trigrams and encryption |
 | `src-tauri/xml` | Standalone Yealink XML parser shared with the fuzzer |
 | `src-tauri/fuzz` | cargo-fuzz target and seed corpus |
 | `docs/screenshots` | Current light/dark screenshots used by this README |
-| `docs` | Contributing, security policy, code of conduct and signing notes |
+| `docs` | Contributing, deployment, release template, security, conduct and signing notes |
 
 ## Documentation
 
