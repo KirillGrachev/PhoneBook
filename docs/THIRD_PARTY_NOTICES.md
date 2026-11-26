@@ -9,7 +9,7 @@ included or required at runtime.
   `single-instance`, `dialog`) are distributed under the Apache-2.0 / MIT
   licenses.
 - **React**, **React DOM**, **TanStack Query/Virtual**, **Zustand**,
-  **i18next**, **Radix UI**, **lucide-react**, **motion**, **sonner** and
+  **i18next**, **Radix UI**, **focus-trap**, **motion**, **sonner** and
   **react-qr-code** are distributed under the MIT license.
 - **Vite**, **TypeScript**, **Vitest**, **ESLint** and **Prettier** are
   development dependencies with their own licenses.
@@ -22,8 +22,8 @@ included or required at runtime.
   (Apache-2.0 / MIT).
 - **keyring** — OS secret storage (Windows Credential Manager, macOS
   Keychain, Linux keyutils) (Apache-2.0 / MIT).
-- **quick-xml** — streaming parser for the external Yealink XML phonebook
-  (MIT).
+- **quick-xml** via the `phonebook-xml` crate — streaming parser for the
+  external Yealink XML phonebook (MIT).
 - Full dependency lists with versions and licenses: `src-tauri/Cargo.lock`.
 
 ## Microsoft runtime

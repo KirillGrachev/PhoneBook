@@ -1,4 +1,4 @@
-﻿# Release notes template
+# Release notes template
 
 Replace every `X.Y.Z`, file name, commit hash and comparison range. Keep the
 same section order as the GitHub releases.
@@ -13,12 +13,12 @@ installation. The WebView2 bootstrapper is embedded in the installer.
 
 ## What changed
 
-### Features
+### Added
 
-- **Feature name:** what changed and why it matters
+- **New behaviour:** what changed and why it matters
   ([abc1234](https://github.com/KirillGrachev/PhoneBook/commit/<full-sha>))
 
-### Fixes
+### Fixed
 
 - **Fixed behaviour:** what was broken and what is different now
   ([abc1234](https://github.com/KirillGrachev/PhoneBook/commit/<full-sha>))

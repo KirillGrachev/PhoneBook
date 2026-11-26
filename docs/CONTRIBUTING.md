@@ -15,7 +15,7 @@ setup, the architecture boundary and the conventions used in the repository.
 Requirements:
 
 - Windows 10/11 x64 (Active Directory features are Windows-first);
-- Node.js 20+ and npm;
+- Node.js 22+ and npm (the CI version);
 - Rust stable with the MSVC toolchain;
 - Microsoft C++ Build Tools and the Windows SDK;
 - Tauri prerequisites: https://v2.tauri.app/start/prerequisites/
@@ -45,6 +45,7 @@ are hidden in this mode.
 | `src/features/contacts`         | PhoneBook screen: search, results, contact details |
 | `src/features/settings`         | Settings hub and its sections (AD, groups, etc.)   |
 | `src/components`                | Shared UI: sidebar, modals, header, QR code, splash |
+| `src/components/ui`             | Design primitives and the scroll-safe focus trap  |
 | `src/services`                  | Contact service contract, Tauri and mock backends  |
 | `src/store`                     | Zustand store and the persisted-config bridge      |
 | `src/api`                       | Typed IPC contracts and error normalization        |
@@ -54,7 +55,9 @@ are hidden in this mode.
 | `src-tauri/src/services/ldap`   | Native LDAP client (ldap3), parsing, sync          |
 | `src-tauri/src/services/db`     | Encrypted SQLite cache (AES-256-GCM at rest)       |
 | `src-tauri/src/services/config` | `config.json` store, validation, keyring secrets   |
-| `scripts/`                      | Release and consistency checks                     |
+| `e2e/`                          | Playwright browser tests                           |
+| `vendor/`                       | Patched picomatch and offline npm tooling          |
+| `scripts/`                      | Release, vendor and consistency checks             |
 
 Keep the boundary intact: React talks to Rust only through the typed commands
 in `src-tauri/src/commands`, and the Rust side must not know about React.
@@ -70,15 +73,24 @@ npm run format:check
 npm run typecheck
 npm run lint
 npm test
+npm run test:e2e
 npm run check:locales
 npm run check:version
+npm run check:tauri
+npm run check:contracts
+npm run check:contracts:generated
+npm run check:bundle
 cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml
+$env:KMPB_EMBED_CONFIG = "$PWD/src-tauri/tests/fixtures/embedded-config.json"
+cargo test --manifest-path src-tauri/Cargo.toml --features embedded-config
 ```
 
-CI runs the same set on Ubuntu and Windows plus `cargo audit`, CodeQL and the
-OSV scanner; see [.github/workflows](../.github/workflows).
+Install the Playwright browser once with `npx playwright install chromium`.
+CI runs the same set on Ubuntu and Windows plus the embedded-profile Rust tests,
+`cargo audit`, CodeQL, dependency review and the OSV scanner; see
+[.github/workflows](../.github/workflows).
 
 ## Conventions
 
@@ -97,14 +109,18 @@ OSV scanner; see [.github/workflows](../.github/workflows).
 
 ## Releases
 
+`main` is the only long-lived branch; release and Dependabot branches are
+deleted after merge.
+
 1. Bump the version in the three files above and move the `CHANGELOG.md` entries
    into a `## [x.y.z] - YYYY-MM-DD` section.
-2. Merge to `main`, then push a tag: `git tag v0.2.0 && git push origin v0.2.0`.
+2. Merge the release PR into `main`, then push an annotated tag:
+   `git tag -a v0.2.0 -m "v0.2.0" && git push origin v0.2.0`.
 3. The Release workflow builds MSI/NSIS, creates the portable ZIP, symbols,
    `SHA256SUMS-windows-x64.txt` and the SBOM, and publishes the GitHub Release.
-4. Write the release notes in the same `Features` / `Fixes` / `Internal` format
-   as the previous releases. **Every change bullet must end with the short hash
-   and a full-link to the commit that made that change** — even when several
-   bullets come from one squash commit. Use
+4. Write the release notes in the same `Install` / `What changed` /
+   `Internal` format as the previous releases. **Every change bullet must end
+   with the short hash and a full-link to the commit that made that change** —
+   even when several bullets come from one squash commit. Use
    [RELEASE_NOTES_TEMPLATE.md](RELEASE_NOTES_TEMPLATE.md). Releases are unsigned
    until an Authenticode certificate is configured.
