@@ -38,18 +38,18 @@ describe('ContactSearchEngine', () => {
   });
 
   it('находит при ошибочной английской раскладке', () => {
-    // «bdfy» — «иван» в английской раскладке.
+    // "bdfy" — "ivan" on the English layout.
     expect(engine.match(contact, 'bdfy')).toBe(true);
   });
 
   it('находит при ошибочной русской раскладке', () => {
-    // «ivanov» → «шмфтщм» в русской раскладке.
+    // "ivanov" -> "shmftshchm" on the Russian layout.
     expect(engine.match(contact, 'шмфтщм')).toBe(true);
   });
 
   it('находит по инициалам', () => {
     expect(engine.match(contact, 'иии')).toBe(true);
-    // «bbb» — те же инициалы, набранные в английской раскладке.
+    // "bbb" — the same initials typed on the English layout.
     expect(engine.match(contact, 'bbb')).toBe(true);
     expect(engine.match(contact, 'zzz')).toBe(false);
   });

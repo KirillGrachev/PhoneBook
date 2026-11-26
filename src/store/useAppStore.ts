@@ -7,13 +7,13 @@ import type { TabType } from '@/types';
 
 import { configStorage } from './configStorage';
 
-/** Тема оформления: светлая / тёмная / системная. */
+/** The appearance theme: light / dark / system. */
 import type { LanguageCode, ThemeName } from '@/api/contracts';
 
 export type { LanguageCode, ThemeName };
-/** Язык интерфейса. */
+/** The interface language. */
 
-/** Персистируемые настройки (в десктопе живут в config.json + keyring). */
+/** Persisted settings (in the desktop they live in config.json + keyring). */
 interface SettingsSlice {
   theme: ThemeName;
   setTheme: (theme: ThemeName) => void;
@@ -29,6 +29,9 @@ interface SettingsSlice {
   setTestMode: (value: boolean) => void;
   animationsEnabled: boolean;
   setAnimationsEnabled: (value: boolean) => void;
+  /** Show contact photos as avatars; when false, letter initials are used. */
+  showAvatars: boolean;
+  setShowAvatars: (value: boolean) => void;
   syncIntervalHours: number;
   setSyncIntervalHours: (hours: number) => void;
   ldapConnectTimeoutSecs: number;
@@ -41,14 +44,14 @@ interface SettingsSlice {
   setEmailOverride: (contactId: string, email: string) => void;
   ldapConfigs: LdapOrgConfigDto[];
   setLdapConfigs: (configs: LdapOrgConfigDto[]) => void;
-  /** Именованные группы организаций (объединённые фильтры). */
+  /** Named organization groups (combined filters). */
   orgGroups: OrgGroupDto[];
-  /** Создаёт или обновляет группу (по идентификатору). */
+  /** Creates or updates a group (by identifier). */
   saveOrgGroup: (group: OrgGroupDto) => void;
   removeOrgGroup: (id: string) => void;
-  /** Полная замена набора групп (импорт файла обмена); персист — обычный. */
+  /** A full replacement of the group set (exchange file import); persistence is normal. */
   setOrgGroups: (groups: OrgGroupDto[]) => void;
-  /** Группа для вкладки «КМАруда» (не глобальная версия). */
+  /** The group for the "KMAruda" tab (non-global version). */
   enterpriseGroupId: string | null;
   /** External phone book files (Yealink IPPhoneBook XML), one source per file. */
   externalPhonebookPaths: string[];
@@ -67,7 +70,7 @@ interface SettingsSlice {
   toggleSavedContact: (id: string) => void;
 }
 
-/** Эфемерное состояние UI — не персистируется. */
+/** Ephemeral UI state — not persisted. */
 interface UiSlice {
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
@@ -77,12 +80,12 @@ interface UiSlice {
   setSearch: (search: string) => void;
   selectedOrg: string | null;
   setSelectedOrg: (org: string | null) => void;
-  /** Выбранная группа фильтра по организации (глобальная версия). */
+  /** The selected organization filter group (global version). */
   selectedGroupId: string | null;
   setSelectedGroupId: (id: string | null) => void;
 }
 
-/** Тип корневого стора: срез настроек + срез UI. */
+/** The root store type: a settings slice + a UI slice. */
 export type AppStore = SettingsSlice & UiSlice;
 
 const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]], [], SettingsSlice> = (set) => ({
@@ -93,7 +96,7 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
     try {
       localStorage.setItem('phonebook-language-user', '1');
     } catch {
-      // localStorage может быть недоступен в ограниченном WebView.
+      // localStorage may be unavailable in a restricted WebView.
     }
     set({ language });
   },
@@ -106,6 +109,8 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
   setTestMode: (testMode) => set({ testMode }),
   animationsEnabled: true,
   setAnimationsEnabled: (animationsEnabled) => set({ animationsEnabled }),
+  showAvatars: true,
+  setShowAvatars: (showAvatars) => set({ showAvatars }),
   syncIntervalHours: 24,
   setSyncIntervalHours: (syncIntervalHours) => set({ syncIntervalHours }),
   ldapConnectTimeoutSecs: 15,
@@ -133,7 +138,7 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
   removeOrgGroup: (id) =>
     set((state) => ({
       orgGroups: state.orgGroups.filter((group) => group.id !== id),
-      // Ссылка вкладки предприятия не должна указывать на удалённую группу.
+      // The enterprise tab reference must not point to a deleted group.
       enterpriseGroupId: state.enterpriseGroupId === id ? null : state.enterpriseGroupId,
     })),
   enterpriseGroupId: null,
@@ -167,10 +172,12 @@ const createSettingsSlice: StateCreator<AppStore, [['zustand/persist', unknown]]
       }
       return {
         savedContactIds: [...ids],
-        // Removing the open card must clear the selection immediately;
-        // otherwise the detail pane requests a deleted contact and flashes
-        // "Could not load contact" until another tab refreshes the list.
-        selectedId: wasSaved && state.selectedId === id ? null : state.selectedId,
+        // In "My contacts" the removed record disappears from the list, so the
+        // open card must close immediately. On search/holding tabs the contact
+        // still exists in the directory: keep the card open and only update the
+        // favorite flag, otherwise the auto-select effect can reopen it and feel
+        // out of sync.
+        selectedId: wasSaved && state.activeTab === 'local' && state.selectedId === id ? null : state.selectedId,
       };
     }),
 });
@@ -188,7 +195,7 @@ const createUiSlice: StateCreator<AppStore, [['zustand/persist', unknown]], [], 
   setSelectedGroupId: (selectedGroupId) => set({ selectedGroupId }),
 });
 
-/** Глобальный стор приложения (zustand + persist через конфиг бэкенда). */
+/** The global app store (zustand + persist through the backend config). */
 export const useAppStore = create<AppStore>()(
   persist((...args) => ({ ...createSettingsSlice(...args), ...createUiSlice(...args) }), {
     name: 'phonebook-storage',
@@ -202,6 +209,7 @@ export const useAppStore = create<AppStore>()(
       managedRevision: state.managedRevision,
       testMode: state.testMode,
       animationsEnabled: state.animationsEnabled,
+      showAvatars: state.showAvatars,
       syncIntervalHours: state.syncIntervalHours,
       ldapConnectTimeoutSecs: state.ldapConnectTimeoutSecs,
       ldapOperationTimeoutSecs: state.ldapOperationTimeoutSecs,
@@ -216,12 +224,12 @@ export const useAppStore = create<AppStore>()(
       externalPhonebookIntervals: state.externalPhonebookIntervals,
       externalHideAdDuplicates: state.externalHideAdDuplicates,
     }),
-    /** Гидрация асинхронная (чтение config.json через IPC) — запускается из App. */
+    /** Hydration is asynchronous (reading config.json over IPC) — started from App. */
     skipHydration: true,
   }),
 );
 
-/** Селектор «контакт в избранном» (стабильная ссылка через zustand selector). */
+/** The "contact is favorite" selector (a stable reference via a zustand selector). */
 export const selectIsContactSaved =
   (id: string) =>
   (state: AppStore): boolean =>

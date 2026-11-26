@@ -3,16 +3,16 @@ import type { TFunction } from 'i18next';
 import { ApiError } from '@/api/backend';
 
 /**
- * Перевод ошибки бэкенда в строку для пользователя.
+ * Translating a backend error into a user-facing string.
  *
- * Код ошибки (`LDAP_AUTH`, `DB_ERROR`, ...) используется как i18n-ключ
- * `errors.<CODE>`; если ключа нет — показывается сообщение бэкенда как есть.
+ * The error code (`LDAP_AUTH`, `DB_ERROR`, ...) is used as an i18n key
+ * `errors.<CODE>`; if there is no key, the backend message is shown as is.
  */
 export function translateBackendError(error: unknown, t: TFunction): string {
   const apiError = ApiError.from(error);
   const params = { details: apiError.details ?? apiError.message, defaultValue: '' };
-  // Английские тексты не подставляют русский `details` бэкенда: техническая
-  // часть остаётся в ApiError/логах, пользователь видит нейтральную фразу.
+  // English texts do not substitute the Russian `details` of the backend: technical
+  // part remains in ApiError/logs; the user sees a neutral phrase.
   const language = typeof document !== 'undefined' ? document.documentElement.lang : 'en';
   if (language.startsWith('en')) {
     const english = t(`errors.${apiError.code}_en`, params);

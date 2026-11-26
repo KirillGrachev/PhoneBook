@@ -15,21 +15,21 @@ interface MainHeaderProps {
   setSearch: (search: string) => void;
   selectedOrg: string | null;
   setSelectedOrg: (org: string | null) => void;
-  /** Выбранная группа фильтра по организации (глобальная версия). */
+  /** The selected organization filter group (global version). */
   selectedGroupId: string | null;
   setSelectedGroupId: (id: string | null) => void;
-  /** Группы организаций из настроек (объединённые фильтры). */
+  /** Organization groups from settings (combined filters). */
   orgGroups: OrgGroupDto[];
   globalMode: boolean;
   onSettingsClick: () => void;
   organizations: string[];
-  /** Имя фильтра предприятия: группа вкладки «КМАруда» или первая AD-организация. */
+  /** The enterprise filter name: the "KMAruda" tab group or the first AD organization. */
   enterpriseOrg: string | null;
-  /** Имя выбранной группы фильтра (плейсхолдер поиска глобальной версии). */
+  /** The name of the selected filter group (the global-version search placeholder). */
   selectedGroupName: string | null;
 }
 
-/** Шапка справочника: заголовок, поиск, фильтр по организации, вкладки. */
+/** The directory header: title, search, organization filter, tabs. */
 export const MainHeader = memo(function MainHeader({
   activeTab,
   setActiveTab,
@@ -48,8 +48,8 @@ export const MainHeader = memo(function MainHeader({
 }: MainHeaderProps) {
   const { t } = useTranslation();
 
-  // Плейсхолдер повторяет область поиска: холдинг / предприятие / избранное.
-  // Вкладка предприятия ищет по организации настроек, а не «в своих контактах».
+  // The placeholder repeats the search scope: holding / enterprise / favorites.
+  // The enterprise tab searches by the settings organization, not "in my contacts".
   const searchPlaceholder =
     activeTab === 'global'
       ? (selectedGroupName ?? selectedOrg)

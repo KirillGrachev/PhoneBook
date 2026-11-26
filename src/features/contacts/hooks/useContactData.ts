@@ -10,7 +10,7 @@ import { getContactsService, isMockMode } from '@/services/ContactsService';
 import { useAppStore } from '@/store/useAppStore';
 import type { Contact } from '@/types';
 
-/** Карточка контакта: точечная выборка по id (быстрее и точнее поиска по списку). */
+/** Contact card: a point selection by id (faster and more precise than searching the list). */
 export function useContact(id: string | null) {
   const testMode = useAppStore((state) => state.testMode);
   return useQuery({
@@ -22,17 +22,35 @@ export function useContact(id: string | null) {
 }
 
 /**
- * vCard для QR-кода: в десктопе генерирует Rust (единый канонический
- * формат), в демо-режиме — локальный генератор; при сбое команды
- * используется локальный fallback.
+ * Avatar photo for the open card, fetched lazily as a `data:` URL.
+ * Returns `null` when the contact has no AD photo (letter avatar fallback).
+ * Kept out of the search payload so only the visible card loads an image.
+ */
+export function useContactPhoto(id: string | null) {
+  const testMode = useAppStore((state) => state.testMode);
+  const showAvatars = useAppStore((state) => state.showAvatars);
+  return useQuery({
+    queryKey: ['contact-photo', id, testMode],
+    queryFn: () => getContactsService().getPhoto(id as string),
+    // Do not request AD photos while avatars are disabled.
+    enabled: Boolean(id) && showAvatars,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
+/**
+ * vCard for the QR code: in the desktop Rust generates it (a single canonical
+ * format); in demo mode — a local generator; if the command fails
+ * a local fallback is used.
  */
 export function useVcard(contact: Contact | null | undefined): string {
   const { i18n } = useTranslation();
   const [vcard, setVcard] = useState('');
   const displayName = contact ? personNameForLanguage(contact.fullName, i18n.language) : '';
-  // Вкладка предприятия не глобальной версии: в QR подставляется внешний
-  // номер IP-телефонии (внутренний снаружи ненабираем). В глобальной
-  // версии и на остальных вкладках — обычное поведение.
+  // The enterprise tab of the non-global version: the QR substitutes the external
+  // IP telephony number (the internal one is not dialable from outside). In the global
+  // version and on the other tabs - normal behavior.
   const activeTab = useAppStore((state) => state.activeTab);
   const preferExternalPhone = activeTab === 'kmaruda';
 
@@ -76,7 +94,7 @@ export function useVcard(contact: Contact | null | undefined): string {
         }
       })
       .catch((error) => {
-        console.warn('[vcard] бэкенд недоступен, использую локальный генератор', error);
+        console.warn('[vcard] backend unavailable, using local generator', error);
         if (!cancelled) {
           setVcard(fallback);
         }

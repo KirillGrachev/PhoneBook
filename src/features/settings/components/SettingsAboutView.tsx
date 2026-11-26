@@ -2,18 +2,19 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import FocusLock from '@/components/ui/FocusLock';
 
 import { isTauri } from '@/api/backend';
 import { systemApi } from '@/api/directory';
 
 const DEVELOPER_URL = 'https://github.com/KirillGrachev';
 
-/** Экран «О программе». Версия берётся из бандла (Tauri API), а не хардкодом. */
+/** The "About" screen. The version is taken from the bundle (Tauri API), not hardcoded. */
 export function SettingsAboutView() {
   const { t } = useTranslation();
   const [showConfirm, setShowConfirm] = useState(false);
-  // Vite подставляет версию из package.json на этапе сборки. Это убирает
-  // промежуточный хардкод и мигание «0.2.0 → актуальная» при открытии экрана.
+  // Vite substitutes the version from package.json at build time. This removes
+  // intermediate hardcode and the "0.2.0 -> current" flicker when opening the screen.
   const buildVersion = typeof __APP_VERSION__ === 'string' && __APP_VERSION__ ? __APP_VERSION__ : null;
   const [version, setVersion] = useState<string | null>(buildVersion);
 
@@ -29,7 +30,7 @@ export function SettingsAboutView() {
           setVersion(value);
         }
       })
-      .catch((error) => console.warn('[about] не удалось прочитать версию', error));
+      .catch((error) => console.warn('[about] failed to read version', error));
     return () => {
       cancelled = true;
     };
@@ -40,7 +41,7 @@ export function SettingsAboutView() {
     try {
       await systemApi.openExternal(DEVELOPER_URL);
     } catch (error) {
-      console.error('[about] не удалось открыть ссылку', error);
+      console.error('[about] failed to open link', error);
       window.open(DEVELOPER_URL, '_blank', 'noopener,noreferrer');
     }
   };
@@ -79,43 +80,45 @@ export function SettingsAboutView() {
         createPortal(
           <AnimatePresence>
             {showConfirm && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 top-[32px] z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-                role="alertdialog"
-                aria-modal="true"
-              >
-                <div className="absolute inset-0" onClick={() => setShowConfirm(false)} />
+              <FocusLock returnFocus={{ preventScroll: true }} focusOptions={{ preventScroll: true }}>
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.97 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.97 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  style={{ backfaceVisibility: 'hidden', transform: 'translate3d(0, 0, 0)' }}
-                  className="bg-surface w-full max-w-[340px] rounded-[24px] p-6 shadow-2xl border border-border flex flex-col gap-5 text-center relative z-10"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 top-[32px] z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                  role="alertdialog"
+                  aria-modal="true"
                 >
-                  <h3 className="text-[22px] font-bold text-foreground">{t('about.confirmTitle')}</h3>
-                  <p className="text-[16px] text-muted-foreground leading-relaxed">{t('about.confirmMsg')}</p>
-                  <div className="flex justify-center gap-3 mt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm(false)}
-                      className="px-5 py-3 rounded-[12px] text-[15px] font-bold text-foreground/70 hover:bg-input transition-all duration-300 border border-border bg-surface cursor-pointer"
-                    >
-                      {t('about.cancelBtn')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void confirmNavigation()}
-                      className="px-5 py-3 rounded-[12px] text-[15px] font-bold text-white bg-primary hover:bg-primary-hover transition-all duration-300 cursor-pointer"
-                    >
-                      {t('about.goBtn')}
-                    </button>
-                  </div>
+                  <div className="absolute inset-0" onClick={() => setShowConfirm(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.97 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    style={{ backfaceVisibility: 'hidden', transform: 'translate3d(0, 0, 0)' }}
+                    className="bg-surface w-full max-w-[340px] rounded-[24px] p-6 shadow-2xl border border-border flex flex-col gap-5 text-center relative z-10"
+                  >
+                    <h3 className="text-[22px] font-bold text-foreground">{t('about.confirmTitle')}</h3>
+                    <p className="text-[16px] text-muted-foreground leading-relaxed">{t('about.confirmMsg')}</p>
+                    <div className="flex justify-center gap-3 mt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirm(false)}
+                        className="px-5 py-3 rounded-[12px] text-[15px] font-bold text-foreground/70 hover:bg-input transition-all duration-300 border border-border bg-surface cursor-pointer"
+                      >
+                        {t('about.cancelBtn')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void confirmNavigation()}
+                        className="px-5 py-3 rounded-[12px] text-[15px] font-bold text-white bg-primary hover:bg-primary-hover transition-all duration-300 cursor-pointer"
+                      >
+                        {t('about.goBtn')}
+                      </button>
+                    </div>
+                  </motion.div>
                 </motion.div>
-              </motion.div>
+              </FocusLock>
             )}
           </AnimatePresence>,
           document.body,

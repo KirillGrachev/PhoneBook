@@ -1,7 +1,7 @@
 import type { LdapOrgConfigDto, LdapOrgInput } from '@/api/contracts';
 import { cn } from '@/lib/utils';
 
-/** Схема LDAP-URL: 'ldap' | 'ldaps' | null. */
+/** The LDAP URL scheme: 'ldap' | 'ldaps' | null. */
 export function urlScheme(url: string): 'ldap' | 'ldaps' | null {
   const normalized = url.trim().toLowerCase();
   if (normalized.startsWith('ldaps://')) return 'ldaps';
@@ -21,7 +21,7 @@ export function toInput(config: LdapOrgConfigDto): LdapOrgInput {
   };
 }
 
-/** Основная кнопка; в disabled — нейтральный стиль, а не «полупрозрачный primary». */
+/** The primary button; when disabled — a neutral style, not a "semi-transparent primary". */
 export function primaryButton(disabled: boolean, extra?: string): string {
   return cn(
     'flex items-center justify-center gap-2 rounded-[10px] text-[13px] font-bold transition-colors',

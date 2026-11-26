@@ -1,10 +1,10 @@
-//! Единая модель ошибок приложения.
+//! Unified application error model.
 //!
-//! Ошибки пересекают IPC-границу в виде структуры `{ code, message, details? }`:
-//! * `code` — стабильный машиночитаемый идентификатор. Фронтенд использует его
-//!   как ключ локализации (`errors.<CODE>`) и не парсит человекочитаемый текст.
-//! * `message` — текст для пользователя (по-русски, продукт RU-first).
-//! * `details` — технические подробности для логов и диагностических тостов.
+//! Errors cross the IPC boundary as a `{ code, message, details? }` structure:
+//! * `code` - stable machine-readable identifier. The frontend uses it
+//!   as a localization key (`errors.<CODE>`) and does not parse human-readable text.
+//! * `message` - user-facing text (in Russian; the product is RU-first).
+//! * `details` - technical details for logs and diagnostic toasts.
 
 use serde::Serialize;
 use thiserror::Error;
@@ -46,7 +46,7 @@ pub enum AppError {
 }
 
 impl AppError {
-    /// Стабильный код ошибки для фронтенда (i18n-ключ `errors.<CODE>`).
+    /// Stable error code for the frontend (i18n key `errors.<CODE>`).
     pub fn code(&self) -> &'static str {
         match self {
             Self::Config(_) => "CONFIG_ERROR",
@@ -63,8 +63,8 @@ impl AppError {
         }
     }
 
-    /// Техническая часть для логов/диагностики. Для `LdapTimeout` её нет:
-    /// сообщение самодостаточно.
+    /// Technical part for logs/diagnostics. Absent for `LdapTimeout`:
+    /// the message is self-contained.
     pub fn details(&self) -> Option<&str> {
         match self {
             Self::LdapTimeout => None,
@@ -109,8 +109,8 @@ impl From<rusqlite::Error> for AppError {
     }
 }
 
-/// SQLite отдаёт диагностику по-английски. Пользователю показываем
-/// локализованную формулировку, сырой текст остаётся в tracing-логе.
+/// SQLite returns diagnostics in English. We show the user
+/// localized wording; the raw text remains in the tracing log.
 fn localize_db_error(raw: &str) -> String {
     let lower = raw.to_lowercase();
     if lower.contains("no such table") {

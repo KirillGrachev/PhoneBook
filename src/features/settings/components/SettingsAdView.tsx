@@ -32,13 +32,13 @@ const EMPTY_ORG: LdapOrgConfigDto = {
 };
 
 /**
- * ÃÂÃÂ°Ã‘ÂÃ‘â€šÃ‘â‚¬ÃÂ¾ÃÂ¹ÃÂºÃÂ¸ Active Directory.
+ * Active Directory settings.
  *
- * * ÃÂ½ÃÂµÃ‘ÂÃÂºÃÂ¾ÃÂ»Ã‘Å’ÃÂºÃÂ¾ ÃÂ¾Ã‘â‚¬ÃÂ³ÃÂ°ÃÂ½ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸ÃÂ¹, ÃÂºÃÂ°ÃÂ¶ÃÂ´ÃÂ°Ã‘Â Ã‘ÂÃÂ¾ Ã‘ÂÃÂ²ÃÂ¾ÃÂ¸ÃÂ¼ ÃÂºÃÂ¾ÃÂ½Ã‘â€šÃ‘â‚¬ÃÂ¾ÃÂ»ÃÂ»ÃÂµÃ‘â‚¬ÃÂ¾ÃÂ¼, Base DN ÃÂ¸ Ã‘Æ’Ã‘â€¡Ã‘â€˜Ã‘â€šÃÂºÃÂ¾ÃÂ¹;
- * * ÃÂ¿ÃÂ°Ã‘â‚¬ÃÂ¾ÃÂ»Ã‘Å’ Ã‘Æ’Ã‘â€¦ÃÂ¾ÃÂ´ÃÂ¸Ã‘â€š ÃÂ¾Ã‘â€šÃÂ´ÃÂµÃÂ»Ã‘Å’ÃÂ½ÃÂ¾ÃÂ¹ ÃÂºÃÂ¾ÃÂ¼ÃÂ°ÃÂ½ÃÂ´ÃÂ¾ÃÂ¹ straight ÃÂ² keyring, ÃÂ¼ÃÂ¸ÃÂ½Ã‘Æ’Ã‘Â Ã‘ÂÃ‘â€šÃÂ¾Ã‘â‚¬ ÃÂ¸ config.json;
- * * Ã‚Â«ÃÅ¸Ã‘â‚¬ÃÂ¾ÃÂ²ÃÂµÃ‘â‚¬ÃÂ¸Ã‘â€šÃ‘Å’ ÃÂ¿ÃÂ¾ÃÂ´ÃÂºÃÂ»Ã‘Å½Ã‘â€¡ÃÂµÃÂ½ÃÂ¸ÃÂµÃ‚Â» Ã¢â‚¬â€ ÃÂ´ÃÂ¸ÃÂ°ÃÂ³ÃÂ½ÃÂ¾Ã‘ÂÃ‘â€šÃÂ¸ÃÂºÃÂ° Ã‘â€¡ÃÂµÃ‘â‚¬ÃÂµÃÂ· ÃÂ±Ã‘ÂÃÂºÃÂµÃÂ½ÃÂ´ (bind + rootDSE + ÃÂ²Ã‘â€¹ÃÂ±ÃÂ¾Ã‘â‚¬ÃÂºÃÂ°);
- * * Ã‘â‚¬Ã‘Æ’Ã‘â€¡ÃÂ½ÃÂ¾ÃÂ¹ ÃÂ·ÃÂ°ÃÂ¿Ã‘Æ’Ã‘ÂÃÂº Ã‘ÂÃÂ¸ÃÂ½Ã‘â€¦Ã‘â‚¬ÃÂ¾ÃÂ½ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸ÃÂ¸ ÃÂ¸ Ã‘ÂÃ‘â€šÃÂ°Ã‘â€šÃ‘Æ’Ã‘Â ÃÂ¿ÃÂ¾Ã‘ÂÃÂ»ÃÂµÃÂ´ÃÂ½ÃÂµÃÂ¹ ÃÂ¿ÃÂ¾ ÃÂºÃÂ°ÃÂ¶ÃÂ´ÃÂ¾ÃÂ¹ ÃÂ¾Ã‘â‚¬ÃÂ³ÃÂ°ÃÂ½ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸ÃÂ¸;
- * * ÃÂ² ÃÂ±Ã‘â‚¬ÃÂ°Ã‘Æ’ÃÂ·ÃÂµÃ‘â‚¬ÃÂµ (ÃÂ±ÃÂµÃÂ· Tauri) Ã‘â€žÃÂ¾Ã‘â‚¬ÃÂ¼ÃÂ° Ã‘ÂÃÂºÃ‘â‚¬Ã‘â€¹Ã‘â€šÃÂ°: AD ÃÂ½ÃÂµÃÂ´ÃÂ¾Ã‘ÂÃ‘â€šÃ‘Æ’ÃÂ¿ÃÂµÃÂ½ ÃÂ²ÃÂ½ÃÂµ ÃÂ´ÃÂµÃ‘ÂÃÂºÃ‘â€šÃÂ¾ÃÂ¿-ÃÂ¿Ã‘â‚¬ÃÂ¸ÃÂ»ÃÂ¾ÃÂ¶ÃÂµÃÂ½ÃÂ¸Ã‘Â.
+ * * several organizations, each with its own controller, Base DN and account;
+ * * the password goes through a separate command straight into the keyring, bypassing the store and config.json;
+ * * "Test connection" — diagnostics through the backend (bind + rootDSE + sample);
+ * * manual sync launch and the last-sync status per organization;
+ * * in the browser (without Tauri) the form is hidden: AD is unavailable outside the desktop app.
  */
 export function SettingsAdView() {
   const { t, i18n } = useTranslation();
@@ -57,7 +57,7 @@ export function SettingsAdView() {
 
   const { running: syncRunning, organizations: syncStates } = useSyncStatus();
 
-  /** Ãâ€™ÃÂ²ÃÂµÃÂ´Ã‘â€˜ÃÂ½ÃÂ½Ã‘â€¹ÃÂµ (ÃÂµÃ‘â€°Ã‘â€˜ ÃÂ½ÃÂµ Ã‘ÂÃÂ¾Ã‘â€¦Ã‘â‚¬ÃÂ°ÃÂ½Ã‘â€˜ÃÂ½ÃÂ½Ã‘â€¹ÃÂµ) ÃÂ¿ÃÂ°Ã‘â‚¬ÃÂ¾ÃÂ»ÃÂ¸: ÃÂ¾Ã‘â‚¬ÃÂ³ÃÂ°ÃÂ½ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸Ã‘Â Ã¢â€ â€™ ÃÂ¿ÃÂ°Ã‘â‚¬ÃÂ¾ÃÂ»Ã‘Å’. */
+  /** Entered (not yet saved) passwords: organization → password. */
   const [passwordDrafts, setPasswordDrafts] = useState<Record<string, string>>({});
   const [testingOrg, setTestingOrg] = useState<number | null>(null);
   const [removingOrg, setRemovingOrg] = useState<number | null>(null);
@@ -88,10 +88,7 @@ export function SettingsAdView() {
       try {
         await configApi.setPassword(removed.organization, null);
       } catch (error) {
-        console.warn(
-          '[ad-settings] ÃÂ½ÃÂµ Ã‘Æ’ÃÂ´ÃÂ°ÃÂ»ÃÂ¾Ã‘ÂÃ‘Å’ Ã‘Æ’ÃÂ´ÃÂ°ÃÂ»ÃÂ¸Ã‘â€šÃ‘Å’ Ã‘ÂÃÂµÃÂºÃ‘â‚¬ÃÂµÃ‘â€š',
-          error,
-        );
+        console.warn('[ad-settings] не удалось удалить секрет', error);
       }
     }
   };
@@ -144,7 +141,7 @@ export function SettingsAdView() {
         duration: 10_000,
       });
 
-      // ÃÅ¸ÃÂ¾ÃÂ´Ã‘ÂÃÂºÃÂ°ÃÂ·ÃÂºÃÂ° rootDSE: ÃÂµÃ‘ÂÃÂ»ÃÂ¸ Base DN ÃÂ¿Ã‘Æ’Ã‘ÂÃ‘â€š Ã¢â‚¬â€ ÃÂ¿Ã‘â‚¬ÃÂµÃÂ´ÃÂ»ÃÂ°ÃÂ³ÃÂ°ÃÂµÃÂ¼ ÃÂ´ÃÂ¾ÃÂ¼ÃÂµÃÂ½ÃÂ½Ã‘â€¹ÃÂ¹ ÃÂºÃÂ¾Ã‘â‚¬ÃÂµÃÂ½Ã‘Å’.
+      // rootDSE hint: if Base DN is empty — we suggest the domain root.
       if (!config.baseDn.trim() && result.defaultNamingContext) {
         updateOrg(index, { baseDn: result.defaultNamingContext });
         toast.info(t('settings.ad.baseDnAutofilled'), { id: 'ad-base-autofill' });
@@ -194,8 +191,11 @@ export function SettingsAdView() {
     }
   };
 
-  /** ÃÅ¸Ã‘â‚¬ÃÂµÃÂ²Ã‘Å’Ã‘Å½ ÃÂ´Ã‘Æ’ÃÂ±ÃÂ»ÃÂ¸ÃÂºÃÂ°Ã‘â€šÃÂ¾ÃÂ²: ÃÂ¿Ã‘Æ’Ã‘ÂÃ‘â€šÃÂ¾ Ã¢â‚¬â€ Ã‘â€šÃÂ¾Ã‘ÂÃ‘â€š, ÃÂ¸ÃÂ½ÃÂ°Ã‘â€¡ÃÂµ ÃÂ¿ÃÂ¾ÃÂ´Ã‘â€šÃÂ²ÃÂµÃ‘â‚¬ÃÂ¶ÃÂ´ÃÂ°Ã‘Å½Ã‘â€°ÃÂ¸ÃÂ¹ ÃÂ´ÃÂ¸ÃÂ°ÃÂ»ÃÂ¾ÃÂ³. */
+  /** Duplicate preview: empty — a toast, otherwise a confirmation dialog. */
   const handleDuplicatesCheck = async () => {
+    if (dupBusy !== null) {
+      return;
+    }
     setDupBusy('preview');
     try {
       const preview = await contactsApi.previewDuplicates();
@@ -212,8 +212,11 @@ export function SettingsAdView() {
     }
   };
 
-  /** ÃÂ£ÃÂ±ÃÂ¾Ã‘â‚¬ÃÂºÃÂ° ÃÂ´Ã‘Æ’ÃÂ±ÃÂ»ÃÂ¸ÃÂºÃÂ°Ã‘â€šÃÂ¾ÃÂ² Ã‘Â ÃÂ¸ÃÂ½ÃÂ²ÃÂ°ÃÂ»ÃÂ¸ÃÂ´ÃÂ°Ã‘â€ ÃÂ¸ÃÂµÃÂ¹ ÃÂ²Ã‘â€¹ÃÂ´ÃÂ°Ã‘â€¡ Ã‘ÂÃÂ¿Ã‘â‚¬ÃÂ°ÃÂ²ÃÂ¾Ã‘â€¡ÃÂ½ÃÂ¸ÃÂºÃÂ°. */
+  /** Duplicate cleanup with invalidation of directory results. */
   const handleDuplicatesApply = async () => {
+    if (dupBusy !== null) {
+      return;
+    }
     setDupBusy('apply');
     try {
       const removed = await contactsApi.deduplicate();
@@ -236,7 +239,7 @@ export function SettingsAdView() {
   return (
     <div className="flex flex-col gap-5 w-full h-full relative">
       <div className="flex flex-col gap-6 pb-6">
-        {/* ÃÂ¢ÃÂµÃ‘ÂÃ‘â€šÃÂ¾ÃÂ²Ã‘â€¹ÃÂ¹ Ã‘â‚¬ÃÂµÃÂ¶ÃÂ¸ÃÂ¼ Ã¢â‚¬â€ ÃÂ´ÃÂ¾Ã‘ÂÃ‘â€šÃ‘Æ’ÃÂ¿ÃÂµÃÂ½ ÃÂ²ÃÂµÃÂ·ÃÂ´ÃÂµ (ÃÂ² ÃÂ±Ã‘â‚¬ÃÂ°Ã‘Æ’ÃÂ·ÃÂµÃ‘â‚¬ÃÂµ ÃÂ²ÃÂºÃÂ»Ã‘Å½Ã‘â€¡ÃÂ°ÃÂµÃ‘â€š ÃÂ´ÃÂµÃÂ¼ÃÂ¾-ÃÂ´ÃÂ°ÃÂ½ÃÂ½Ã‘â€¹ÃÂµ) */}
+        {/* Test mode - available everywhere (in the browser it enables demo data) */}
         <div className="flex items-center justify-between border border-border bg-surface p-4 rounded-[16px] shadow-sm shrink-0">
           <div className="flex flex-col gap-0.5 pr-4">
             <span className="text-[16px] font-bold text-foreground">{t('testMode')}</span>
@@ -262,7 +265,7 @@ export function SettingsAdView() {
 
         {desktop && (
           <>
-            {/* ÃÅ¾Ã‘â‚¬ÃÂ³ÃÂ°ÃÂ½ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸ÃÂ¸ */}
+            {/* Organizations */}
             <section className="flex flex-col gap-4" aria-label={t('settings.adSettings')}>
               {configs.map((config, index) => (
                 <SettingsAdOrgCard

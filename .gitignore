@@ -28,3 +28,10 @@ cargo_check.log
 # Playwright
 playwright-report/
 test-results/
+
+# Vendored npm cache: keep the content store (_cacache) and vendor/manifest.json,
+# ignore the transient files npm creates inside the cache directory.
+vendor/npm-cache/_logs/
+vendor/npm-cache/tmp/
+vendor/npm-cache/_update-notifier-last-checked
+vendor/npm-cache/erl_crash.dump

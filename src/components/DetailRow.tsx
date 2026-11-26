@@ -16,7 +16,7 @@ interface DetailRowProps {
   copyable?: boolean;
 }
 
-/** Строка карточки контакта: иконка, подпись, значение, копирование, стрелка. */
+/** A contact card row: icon, label, value, copy, arrow. */
 export function DetailRow({
   icon: Icon,
   label,
@@ -62,8 +62,8 @@ export function DetailRow({
         <div
           title={value}
           className={cn(
-            // Без truncate: на узких окнах длинные почты и должности
-            // переносятся на следующую строку, а не прячутся под «…».
+            // Without truncate: in narrow windows long emails and job titles
+            // carried to the next line, rather than hidden under "...".
             'text-[15px] break-words border-b border-transparent min-h-[21px] transition-colors select-text',
             !value ? 'text-muted-foreground italic' : isLink ? 'text-primary' : 'text-foreground font-medium',
           )}

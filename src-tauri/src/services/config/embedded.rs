@@ -1,8 +1,8 @@
-//! Встроенный профиль конфигурации (только сборка с `--features embedded-config`).
+//! Embedded configuration profile (only builds with `--features embedded-config`).
 //!
-//! Payload — обычный файл экспорта `kmaruda-phonebook/config`, полученный
-//! кнопкой «Экспорт конфигурации» на эталонной машине. Секреты в него не
-//! попадают: `ConfigShareFile::parse` сбрасывает `hasPassword`.
+//! Payload is a regular `kmaruda-phonebook/config` export file obtained via the
+//! "Export configuration" button on the reference machine. Secrets are not
+//! included: `ConfigShareFile::parse` resets `hasPassword`.
 
 #[cfg(feature = "embedded-config")]
 use serde::Deserialize;
@@ -14,7 +14,7 @@ use super::ConfigShareFile;
 #[cfg(feature = "embedded-config")]
 const EMBEDDED_JSON: &str = include_str!(concat!(env!("OUT_DIR"), "/embedded-config.json"));
 
-/// Метаданные профиля, не входящие в `AppConfig`.
+/// Profile metadata not included in `AppConfig`.
 #[cfg(feature = "embedded-config")]
 #[derive(Debug, Default, Deserialize)]
 struct ProfileMeta {
@@ -24,7 +24,7 @@ struct ProfileMeta {
     revision: Option<u32>,
 }
 
-/// Разобранный встроенный профиль.
+/// Parsed embedded profile.
 #[derive(Debug, Clone)]
 pub struct EmbeddedProfile {
     pub config: AppConfig,
@@ -32,7 +32,7 @@ pub struct EmbeddedProfile {
     pub revision: Option<u32>,
 }
 
-/// `None` — обычная сборка; `Some` — управляемая раскатка.
+/// `None` - a normal build; `Some` - a managed rollout.
 pub fn profile() -> Option<EmbeddedProfile> {
     #[cfg(feature = "embedded-config")]
     {

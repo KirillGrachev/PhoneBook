@@ -140,10 +140,10 @@ describe('файл обмена группами организаций', () => 
       null,
     );
     expect(merged.groups).toHaveLength(1);
-    // локальный id сохранён для локальных отметок
+    // the local id is saved for local marks
     expect(merged.groups[0].id).toBe('local1');
     expect(merged.groups[0].orgs).toEqual(['Новая', 'Новая2']);
-    // отметка из файла переехала на локальный id
+    // the mark from the file moved to the local id
     expect(merged.enterpriseGroupId).toBe('local1');
   });
 
@@ -159,7 +159,7 @@ describe('файл обмена группами организаций', () => 
       file([group('imp1', 'Привозная', ['Б'])], 'missing-id'),
       'local1',
     );
-    // текущая отметка сохранена
+    // the current mark is saved
     expect(merged.enterpriseGroupId).toBe('local1');
   });
 

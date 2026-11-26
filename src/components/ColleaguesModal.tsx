@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import { Briefcase, Building2, ChevronLeft, ChevronRight, ClearInput, Network, Search } from '@/components/icons';
-import FocusLock, { AutoFocusInside } from 'react-focus-lock';
+import FocusLock, { AutoFocusInside } from '@/components/ui/FocusLock';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/components/ui/Avatar';
@@ -14,17 +14,17 @@ import { cn } from '@/lib/utils';
 import { getContactsService } from '@/services/ContactsService';
 import { useAppStore } from '@/store/useAppStore';
 
-/** Поле карточки, по которому открыт список коллег. */
+/** The card field by which the colleague list is opened. */
 export type ColleaguesMode = 'department' | 'title' | 'office';
 
 interface ColleaguesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** Режим списка: коллеги по отделу, по должности или по кабинету. */
+  /** List mode: colleagues by department, by job title or by office. */
   mode: ColleaguesMode;
-  /** Значение поля из карточки (точный фильтр запроса). */
+  /** A card field value (an exact query filter). */
   value: string | null;
-  /** Организация контакта: список коллег не смешивает организации. */
+  /** The contact organization: the colleague list does not mix organizations. */
   organization: string | null;
   onSelectContact: (id: string) => void;
 }
@@ -32,7 +32,7 @@ interface ColleaguesModalProps {
 const PAGE_SIZE = 10;
 const DEPARTMENT_LIMIT = 500;
 
-/** Ключ заголовка модалки для режима списка. */
+/** The modal title key for the list mode. */
 const MODE_LABEL_KEY: Record<ColleaguesMode, string> = {
   department: 'department',
   title: 'jobTitle',
@@ -40,11 +40,11 @@ const MODE_LABEL_KEY: Record<ColleaguesMode, string> = {
 };
 
 /**
- * Модальное окно коллег по отделу / должности / кабинету.
+ * Modal of colleagues by department / job title / office.
  *
- * Данные запрашиваются у бэкенда по точному фильтру поля и организации
- * (в исходной версии модалка фильтровала «все загруженные контакты»,
- * что ломалось при серверном поиске с ограничением выдачи).
+ * Data is requested from the backend by an exact field-and-organization filter
+ * (in the original version the modal filtered "all loaded contacts",
+ * which broke with server-side search and a limited result).
  */
 export function ColleaguesModal({ isOpen, onClose, mode, value, organization, onSelectContact }: ColleaguesModalProps) {
   const { t, i18n } = useTranslation();
@@ -116,7 +116,7 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <FocusLock returnFocus>
+        <FocusLock returnFocus={{ preventScroll: true }} focusOptions={{ preventScroll: true }}>
           <div
             className="fixed inset-0 top-[32px] z-50 flex items-center justify-center p-4"
             role="dialog"
@@ -179,9 +179,9 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
               </div>
 
               <div className="flex-1 overflow-y-auto bg-background">
-                {/* Прогрутка без рывка: индикатор, список и пустое состояние
-                    сменяют друг друга кроссфейдом (mode="wait"), строки списка
-                    раскрываются каскадом — общие пресеты motionPresets. */}
+                {/* Smooth loading: the indicator, list, and empty state
+                    replace each other with a crossfade (mode="wait"); list rows
+                    expand in a cascade - shared motionPresets. */}
                 <AnimatePresence mode="wait" initial={false}>
                   {isLoading ? (
                     <motion.div
@@ -224,8 +224,8 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
                               {personNameForLanguage(contact.fullName, i18n.language)}
                             </span>
                             <span className="text-[14px] text-muted-foreground truncate flex items-center gap-1.5">
-                              {/* В списке должностей должность одинакова у всех строк —
-                                  второй строкой показываем отдел вместо неё. */}
+                              {/* In the job title list the title is the same for all rows -
+                                  show the department on the second line instead. */}
                               {mode === 'title' ? (
                                 <Network className="w-4 h-4 shrink-0" aria-hidden />
                               ) : (
@@ -320,7 +320,7 @@ export function ColleaguesModal({ isOpen, onClose, mode, value, organization, on
   );
 }
 
-/** Номера страниц с «…»: 1 … 4 5 6 … 20. */
+/** Page numbers with "…": 1 … 4 5 6 … 20. */
 function pageNumbers(current: number, total: number): (number | 'ellipsis')[] {
   const pages = new Set<number>([1, total]);
   for (let page = current - 1; page <= current + 1; page += 1) {

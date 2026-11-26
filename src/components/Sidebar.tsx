@@ -18,27 +18,29 @@ interface SidebarProps {
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
-  /** Показано не всё: total больше размера страницы. */
+  /** Not everything is shown: total is larger than the page size. */
   limitReached: boolean;
-  /** Точное общее число совпадений. */
+  /** The exact total number of matches. */
   total: number;
-  /** Кастомное действие для пустого состояния (настройка AD / демо-режим). */
+  /** A custom action for the empty state (AD setup / demo mode). */
   emptyAction?: ReactNode;
-  /** Переопределение текстов пустого состояния. */
+  /** Override of the empty-state texts. */
   emptyTitle?: string;
   emptyDescription?: string;
-  /** Показывать кнопку быстрого удаления из избранного (вкладка «Мои контакты»). */
+  /** Show a quick-remove-from-favorites button (the "My contacts" tab). */
   showUnsave?: boolean;
   onUnsave?: (id: string) => void;
-  /** Догрузка следующей порции выдачи при скролле к концу списка. */
+  /** Loading the next batch of results when scrolling to the end of the list. */
   onLoadMore?: () => void;
   hasMore?: boolean;
   isFetchingMore?: boolean;
 }
 
 const ITEM_HEIGHT = 64;
+/** Minimum interval between selection moves while an arrow key is held down. */
+const ARROW_REPEAT_DELAY_MS = 120;
 
-/** Виртуализированный список результатов (тысячи записей без тормозов). */
+/** A virtualized result list (thousands of records without slowdowns). */
 export function Sidebar({
   contacts,
   selectedId,
@@ -62,6 +64,7 @@ export function Sidebar({
   const { t, i18n } = useTranslation();
   const presets = useMotionPresets();
   const parentRef = useRef<HTMLDivElement>(null);
+  const lastArrowMoveRef = useRef(0);
 
   const virtualizer = useVirtualizer({
     count: contacts.length,
@@ -73,8 +76,8 @@ export function Sidebar({
     paddingEnd: 12,
   });
 
-  // Порционная догрузка: когда виртуализатор дорисовался до хвоста
-  // загруженного списка, запрашиваем следующую страницу.
+  // Paginated top-up: when the virtualizer has drawn to the tail
+  // of the loaded list, request the next page.
   const virtualItems = virtualizer.getVirtualItems();
   useEffect(() => {
     const last = virtualItems[virtualItems.length - 1];
@@ -104,8 +107,8 @@ export function Sidebar({
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
       switch (event.key) {
-        // Стрелки ↑/↓ обрабатываются глобальным слушателем (см. ниже),
-        // чтобы листать список, даже когда фокус не на самом списке.
+        // Up/down arrows are handled by the global listener (see below),
+        // to page through the list even when focus is not on the list itself.
         case 'Home':
           event.preventDefault();
           onSelect(contacts[0]?.id ?? null);
@@ -123,8 +126,8 @@ export function Sidebar({
     [contacts, onSelect, virtualizer],
   );
 
-  // Стрелки ↑/↓ листают список глобально: работают, когда фокус где угодно
-  // в окне, кроме полей ввода и открытых диалогов.
+  // Up/down arrows page through the list globally: they work whenever focus is anywhere
+  // in the window, except input fields and open dialogs.
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
@@ -144,6 +147,13 @@ export function Sidebar({
         return;
       }
       event.preventDefault();
+      // The OS auto-repeat fires much faster than a comfortable list pace.
+      // The first press moves immediately; held repeats are throttled.
+      const now = performance.now();
+      if (event.repeat && now - lastArrowMoveRef.current < ARROW_REPEAT_DELAY_MS) {
+        return;
+      }
+      lastArrowMoveRef.current = now;
       moveSelection(event.key === 'ArrowDown' ? 1 : -1);
     };
     window.addEventListener('keydown', onKeyDown);
@@ -174,11 +184,11 @@ export function Sidebar({
         aria-busy={isLoading}
         aria-activedescendant={selectedId ? `contact-${selectedId}` : undefined}
       >
-        {/* Смена состояний списка (ошибка / загрузка / пусто / выдача) —
-            кроссфейд из общих пресетов: первая прогрузка и переходы не
-            мигают мгновенной подменой содержимого. Пока выдача просто
-            уточняется поиском, состояние остаётся «list» и строки
-            обновляются на месте без перестройки. */}
+        {/* List state changes (error / loading / empty / results) -
+            a crossfade from the shared presets: the first load and transitions do not
+            flicker with an instant content swap. While the results are merely
+            refined by search, the state stays "list" and rows
+            update in place without rebuilding. */}
         <AnimatePresence mode="wait" initial={false}>
           {isError ? (
             <motion.div

@@ -6,58 +6,60 @@ import { MockContactsService } from './MockContactsService';
 import { TauriContactsService } from './TauriContactsService';
 import { ApiError } from '@/api/backend';
 
-/** Параметры выборки контактов в терминах предметной области. */
+/** Contact selection parameters in domain terms. */
 export interface ContactsQuery {
   activeTab: TabType;
-  /** Уже debounce-нутая строка поиска. */
+  /** An already debounced search string. */
   search?: string;
   organization?: string | null;
-  /** Союз организаций (группа фильтров): заменяет одиночный фильтр. */
+  /** The union of organizations (a filter group): replaces a single filter. */
   organizations?: string[] | null;
   department?: string | null;
-  /** Фильтр по должности (клик по должности в карточке). */
+  /** A job title filter (clicking a title in the card). */
   title?: string | null;
-  /** Фильтр по кабинету (клик по кабинету в карточке). */
+  /** An office filter (clicking an office in the card). */
   office?: string | null;
-  /** Идентификаторы избранных контактов (вкладка «Мои контакты»). */
+  /** Identifiers of favorite contacts (the "My contacts" tab). */
   savedIds?: string[];
   limit?: number;
-  /** Смещение порции выдачи (порционная загрузка списком). */
+  /** The result batch offset (paginated list loading). */
   offset?: number;
-  /** Скрывать учётки без почты и телефонов. */
+  /** Hide accounts without email and phones. */
   hideEmpty?: boolean;
 }
 
 /**
- * Контракт источника контактов.
+ * The contact source contract.
  *
- * Три реализации:
- * * {@link TauriContactsService} — локальный кэш Active Directory (SQLite);
- * * {@link MockContactsService} — демо-данные (тестовый режим / браузер);
- * * {@link BrowserLockedService} — браузер БЕЗ тестового режима: данных нет,
- *   UI объясняет причину и предлагает включить тестовый режим.
+ * Three implementations:
+ * * {@link TauriContactsService} — local Active Directory cache (SQLite);
+ * * {@link MockContactsService} — demo data (test mode / browser);
+ * * {@link BrowserLockedService} — browser WITHOUT test mode: no data,
+ *   the UI explains the reason and offers to enable test mode.
  *
- * Ошибки ОБЯЗАТЕЛЬНО пробрасываются наверх (никаких «тихих» пустых списков):
- * react-query показывает их пользователю и позволяет повторить запрос.
+ * Errors MUST be propagated upward (no "silent" empty lists):
+ * react-query shows them to the user and allows retrying the request.
  */
-/** Результат выборки: контакты страницы + точное общее число. */
+/** Selection result: page contacts + the exact total. */
 export interface ContactsPage {
   contacts: Contact[];
   total: number;
 }
 
-/** Контракт сервиса контактов: mock- и боевая имплементации. */
+/** The contact service contract: mock and production implementations. */
 export interface ContactsService {
   search(query: ContactsQuery): Promise<ContactsPage>;
   getById(id: string): Promise<Contact>;
+  /** Avatar as a `data:` URL, or `null` when the contact has no photo. */
+  getPhoto(id: string): Promise<string | null>;
   listOrganizations(): Promise<string[]>;
   count(): Promise<number>;
 }
 
 /**
- * Запуск в браузере с выключенным тестовым режимом: Active Directory
- * недоступен вне десктоп-приложения, демо-данные пользователь не включал —
- * значит, справочник пуст ОСОЗНАННО, с понятным объяснением в UI.
+ * Running in the browser with test mode off: Active Directory
+ * is unavailable outside the desktop app, the user did not enable demo data —
+ * so the directory is empty ON PURPOSE, with a clear explanation in the UI.
  */
 class BrowserLockedService implements ContactsService {
   async search(): Promise<ContactsPage> {
@@ -69,6 +71,10 @@ class BrowserLockedService implements ContactsService {
       code: 'NOT_RUNNING_IN_DESKTOP',
       message: 'Данные справочника доступны только в десктоп-приложении',
     });
+  }
+
+  async getPhoto(): Promise<string | null> {
+    return null;
   }
 
   async listOrganizations(): Promise<string[]> {
@@ -85,9 +91,9 @@ const mockService = new MockContactsService();
 const browserLockedService = new BrowserLockedService();
 
 /**
- * Провайдер выбирается на каждый вызов (не кэшируется синглтоном):
- * тестовый режим можно переключить в рантайме, а браузерный запуск
- * отличается от десктопного отсутствием Tauri-окружения.
+ * The provider is chosen on every call (not cached as a singleton):
+ * test mode can be toggled at runtime, and a browser launch
+ * differs from the desktop one by the absence of a Tauri environment.
  */
 export function getContactsService(): ContactsService {
   const testMode = useAppStore.getState().testMode;
@@ -97,12 +103,12 @@ export function getContactsService(): ContactsService {
   return isTauri() ? tauriService : browserLockedService;
 }
 
-/** Демо-режим: мок-данные вместо AD. */
+/** Demo mode: mock data instead of AD. */
 export function isMockMode(): boolean {
   return useAppStore.getState().testMode;
 }
 
-/** Запуск в браузере без тестового режима (справочник осознанно пуст). */
+/** Running in the browser without test mode (the directory is intentionally empty). */
 export function isBrowserLocked(): boolean {
   return !isTauri() && !useAppStore.getState().testMode;
 }

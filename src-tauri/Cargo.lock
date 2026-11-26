@@ -2328,7 +2328,7 @@ dependencies = [
 
 [[package]]
 name = "kmaruda-phonebook"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "aes-gcm",
  "getrandom 0.2.17",

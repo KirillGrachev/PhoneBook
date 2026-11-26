@@ -14,7 +14,7 @@ interface SettingsAdBindFieldsProps {
   onSave: () => void;
 }
 
-/** Bind DN и пароль сервисной учётки. */
+/** Bind DN and password of the service account. */
 export function SettingsAdBindFields({
   config,
   password,

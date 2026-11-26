@@ -15,12 +15,12 @@ const BUTTON_CLASS =
   'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset outline-none';
 
 /**
- * Кастомная строка заголовка (окно без системной рамки).
+ * A custom title bar row (a window without a system frame).
  *
- * Управление окном идёт через штатный JS API `@tauri-apps/api/window`
- * (minimize/toggleMaximize/close) — самописные Rust-команды для этого
- * больше не нужны. Иконка «развернуть/восстановить» синхронизируется
- * с реальным состоянием окна через подписку на resize.
+ * Window management goes through the standard JS API `@tauri-apps/api/window`
+ * (minimize/toggleMaximize/close) — hand-written Rust commands for this
+ * are no longer needed. The "maximize/restore" icon is synchronized
+ * with the real window state through a resize subscription.
  */
 export function TitleBar({ title }: TitleBarProps) {
   const { t } = useTranslation();
@@ -64,7 +64,7 @@ export function TitleBar({ title }: TitleBarProps) {
   }, [desktop]);
 
   if (!desktop) {
-    // Браузерный демо-режим: строка заголовка без оконных кнопок.
+    // Browser demo mode: a title bar without window buttons.
     return (
       <div className="relative h-[32px] bg-surface shrink-0 z-[60] flex items-center justify-between select-none border-b border-border">
         <div className="pl-3 flex items-center flex-1 h-full min-w-0">

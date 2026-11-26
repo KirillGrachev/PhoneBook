@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import FocusLock from 'react-focus-lock';
+import FocusLock from '@/components/ui/FocusLock';
 import { useTranslation } from 'react-i18next';
 
 import { isTauri } from '@/api/backend';
@@ -16,12 +16,12 @@ import { SettingsMainView } from './components/SettingsMainView';
 import { SettingsTransferView } from './components/SettingsTransferView';
 
 /**
- * Экраны настроек: главный (навигация), интерфейс и поиск, внешний телефонный
- * файл, перенос конфигурации, о программе, AD, группы организаций.
+ * Settings screens: main (navigation), interface and search, external phone
+ * file, config transfer, about, AD, organization groups.
  */
 export type SettingsView = 'main' | 'interface' | 'external' | 'transfer' | 'about' | 'ad' | 'groups';
 
-/** Ключи перевода заголовков шапки для каждого экрана. */
+/** Translation keys of the header titles for each screen. */
 const VIEW_TITLE_KEYS: Record<SettingsView, string> = {
   main: 'settings',
   interface: 'settings.interfaceTitle',
@@ -47,13 +47,13 @@ function parseView(raw: string | null): SettingsView {
 }
 
 /**
- * Страница настроек.
+ * The settings page.
  *
- * Текущий раздел живёт в query-параметре (`/settings?view=ad`) — это даёт
- * глубокие ссылки из других экранов (пустой справочник, чип синхронизации)
- * и корректное поведение кнопки «назад». Главный раздел — список переходов:
- * группы настроек разнесены по отдельным экранам, чтобы не собирать все
- * органы управления на одной прокручиваемой странице.
+ * The current section lives in a query parameter (`/settings?view=ad`) — this gives
+ * deep links from other screens (empty directory, sync chip)
+ * and correct "back" button behavior. The main section is a list of links:
+ * settings groups are spread across separate screens so as not to gather all
+ * controls on a single scrollable page.
  */
 export function SettingsPage({ onClose }: SettingsPageProps) {
   const { t } = useTranslation();
@@ -84,9 +84,9 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     setSearchParams(params, { replace: true });
   };
 
-  // В embedded/managed-профиле административные разделы не показываем вовсе:
-  // остаются только «Интерфейс и поиск» и «О программе». Прямые ссылки
-  // (?view=ad и т.п.) возвращают на главный экран настроек.
+  // In an embedded/managed profile administrative sections are not shown at all:
+  // only "Interface and search" and "About" remain. Direct links
+  // (?view=ad etc.) return to the main settings screen.
   useEffect(() => {
     if (!managed) {
       return;
@@ -97,19 +97,19 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   }, [managed, view, setView]);
 
   return (
-    // Экран настроек открывается мгновенно: без собственной анимации
-    // появления/закрытия. Общий тумблер «Анимации» продолжает управлять
-    // остальными поверхностями приложения.
-    <FocusLock returnFocus>
+    // The settings screen opens instantly: without its own animation
+    // appearance/closing. The general "Animations" toggle still controls
+    // the other surfaces of the application.
+    <FocusLock returnFocus={{ preventScroll: true }} focusOptions={{ preventScroll: true }}>
       <div
         className="absolute top-[32px] bottom-0 left-0 right-0 z-50 bg-background flex flex-col w-full text-foreground"
         role="dialog"
         aria-modal="true"
       >
-        {/* Скролл-контейнер сам является flex-колонкой: внутренние авто-поля
-          (my-auto) центрируют блок настроек по вертикали, пока он короче
-          экрана, а при переполнении схлопываются до нуля — скролл начинается
-          от верха без обрезки шапки (в отличие от justify-center). */}
+        {/* The scroll container itself is a flex column: inner auto fields
+          (my-auto) center the settings block vertically while it is shorter
+          than the screen, and collapse to zero on overflow - scrolling starts
+          from the top without clipping the header (unlike justify-center). */}
         <div className="flex-1 overflow-y-auto w-full relative flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="shrink-0 my-auto py-8 px-6 xl:px-12 mx-auto max-w-[600px] w-full flex flex-col">
             <SettingsHeader
@@ -125,13 +125,13 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
                 {t('managed.bannerDesc', { profile: managedProfile ?? t('managed.defaultProfile') })}
               </div>
             )}
-            {/* Раздел переключается мгновенно, без анимации: экран настроек
-              не должен «подниматься» или мигать при навигации. */}
+            {/* The section switches instantly, without animation: the settings screen
+              must not "rise" or flicker during navigation. */}
             <div className="flex flex-col">
               {view === 'main' && <SettingsMainView onNavigate={setView} />}
               {view === 'interface' && <SettingsInterfaceView />}
-              {/* Внешний телефонный файл — функция десктоп-сборки: в браузере
-                раздела нет ни в навигации, ни по прямой ссылке. */}
+              {/* The external phone file is a desktop build feature: in the browser
+                the section is absent from both navigation and direct links. */}
               {view === 'external' && isTauri() && (
                 <fieldset
                   disabled={managed}

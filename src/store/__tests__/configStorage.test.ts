@@ -29,8 +29,8 @@ describe('configStorage: гидрация', () => {
     const raw = await configStorage.getItem('phonebook-storage');
     expect(raw).not.toBeNull();
     const parsed = JSON.parse(raw as string) as { state: Record<string, unknown> };
-    // Регрессия: без этих ключей гидрация затирала группы дефолтом при
-    // каждом перезапуске, несмотря на то что в config.json они лежали.
+    // Regression: without these keys hydration overwrote groups with the default on
+    // every restart, despite being stored in config.json.
     expect(parsed.state.orgGroups).toEqual(GROUPS);
     expect(parsed.state.enterpriseGroupId).toBe('g1');
   });

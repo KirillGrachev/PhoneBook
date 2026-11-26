@@ -1,4 +1,4 @@
-//! Команды конфигурации, обмена настройками и диагностики подключений.
+//! Configuration, settings exchange, and connection diagnostics commands.
 
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
@@ -15,18 +15,18 @@ use crate::state::AppState;
 
 use super::run_blocking;
 
-/// Загрузка конфигурации. Пароли не возвращаются — только флаг `hasPassword`.
+/// Configuration loading. Passwords are not returned - only the `hasPassword` flag.
 ///
-/// Дисковый I/O вынесен в пул блокирующих задач: синхронные команды Tauri v2
-/// исполняются на главном потоке окна и подвесили бы UI на время чтения.
+/// Disk I/O is moved to the blocking task pool: Tauri v2 synchronous commands
+/// run on the window's main thread and would suspend the UI for the duration of the read.
 #[tauri::command]
 pub async fn load_config(state: State<'_, AppState>) -> Result<AppConfig, AppError> {
     let config_dir = state.config_dir.clone();
     run_blocking(move || ConfigStore::load(&config_dir)).await
 }
 
-/// Сохранение конфигурации (без секретов). Возвращает итоговую конфигурацию,
-/// чтобы фронтенд синхронизировал нормализованные значения (trim, флаги).
+/// Saving configuration (without secrets). Returns the resulting configuration,
+/// so the frontend synchronizes the normalized values (trim, flags).
 #[tauri::command]
 pub async fn save_config(
     state: State<'_, AppState>,
@@ -36,12 +36,12 @@ pub async fn save_config(
     run_blocking(move || ConfigStore::save(&config_dir, config)).await
 }
 
-/// Управление секретом bind-учётки: `Some(password)` — сохранить,
-/// `None` — удалить. Отдельная команда, чтобы пароли никогда не путешествовали
-/// вместе с конфигурацией и не оседали в сторе фронтенда.
+/// Bind account secret management: `Some(password)` - save,
+/// `None` - delete. A separate command so passwords never travel
+/// together with the configuration and did not settle in the frontend store.
 ///
-/// Обращение к системному keyring может занимать секунды (особенно первое) —
-/// поэтому тоже вне главного потока.
+/// Accessing the system keyring can take seconds (especially the first time) -
+/// therefore also off the main thread.
 #[tauri::command]
 pub async fn set_ldap_password(
     organization: String,
@@ -50,11 +50,11 @@ pub async fn set_ldap_password(
     run_blocking(move || ConfigStore::set_password(&organization, password)).await
 }
 
-/// Экспорт групп организаций в файл обмена: «Документы/KMARUDA Phonebook/
-/// kmaruda-org-groups.json». Возвращает полный путь записанного файла —
-/// UI показывает его с кнопкой копирования, чтобы файлом можно было
-/// поделиться. Группы и отметка вкладки предприятия берутся из сохранённой
-/// конфигурации (единый источник правды, не из черновиков стора).
+/// Export organization groups to an exchange file: "Documents/KMARUDA Phonebook/
+/// kmaruda-org-groups.json". Returns the full path of the written file;
+/// the UI shows it with a copy button so the file can be
+/// shared. Groups and the enterprise tab mark are taken from the saved
+/// configuration (single source of truth, not from store drafts).
 #[tauri::command]
 pub async fn export_org_groups_file(
     app: AppHandle,
@@ -75,19 +75,19 @@ pub async fn export_org_groups_file(
     .await
 }
 
-/// Разбор содержимого файла обмена группами (выбор файла — нативный
-/// `<input type="file">` webview, чтение — на фронтенде). Валидация формата
-/// живёт в Rust ([`OrgGroupsShareFile::parse`]): фронтенд не применяет
-/// непроверенные данные. Слияние с локальными группами выполняет фронтенд
-/// (чистая функция с unit-тестами), персист — через обычный save_config.
+/// Parsing the contents of the group exchange file (file selection is native
+/// webview `<input type="file">`; reading happens on the frontend). Format validation
+/// lives in Rust ([`OrgGroupsShareFile::parse`]): the frontend does not apply
+/// unvalidated data. The frontend merges it with local groups
+/// (a pure function with unit tests); persistence - through the normal save_config.
 #[tauri::command]
 pub async fn parse_org_groups_file(content: String) -> Result<OrgGroupsShareFile, AppError> {
     run_blocking(move || OrgGroupsShareFile::parse(&content)).await
 }
 
-/// Загрузка внешнего телефонного файла (Yealink IPPhoneBook) в кэш по
-/// текущей сохранённой конфигурации: путь и признак берутся с диска, поэтому
-/// фронтенд перед вызовом сбрасывает дебаунс сохранения.
+/// Loading an external phone file (Yealink IPPhoneBook) into the cache by
+/// the current saved configuration: the path and flag are taken from disk, therefore
+/// the frontend resets the save debounce before the call.
 #[tauri::command]
 pub async fn refresh_external_phonebook(
     state: State<'_, AppState>,
@@ -106,8 +106,8 @@ pub async fn refresh_external_phonebook(
     .await
 }
 
-/// Нативный диалог выбора XML-файлов телефонной книги. Возвращает пустой
-/// список, если пользователь закрыл диалог: отмена — не ошибка.
+/// Native dialog for selecting phone book XML files. Returns an empty
+/// list if the user closed the dialog: cancellation is not an error.
 #[tauri::command]
 pub async fn pick_external_phonebook_files(app: AppHandle) -> Result<Vec<String>, AppError> {
     let (sender, receiver) = tokio::sync::oneshot::channel();
@@ -116,9 +116,9 @@ pub async fn pick_external_phonebook_files(app: AppHandle) -> Result<Vec<String>
         .set_title("Select phone book files")
         .add_filter("XML (*.xml)", &["xml"])
         .pick_files(move |picked| {
-            // `into_path` возвращает Result: выбор из диалога теоретически может
-            // быть URL, а не локальным путём. Для файлового диалога это недостижимо,
-            // но молча терять путь нельзя — логируем и пропускаем запись.
+            // `into_path` returns a Result: a dialog selection could theoretically
+            // be a URL, not a local path. This is impossible for the file dialog,
+            // but the path must not be silently lost - log it and skip the record.
             let paths = picked
                 .unwrap_or_default()
                 .into_iter()
@@ -135,9 +135,9 @@ pub async fn pick_external_phonebook_files(app: AppHandle) -> Result<Vec<String>
     Ok(receiver.await.unwrap_or_default())
 }
 
-/// Экспорт всей конфигурации в файл обмена: «Документы/KMARUDA Phonebook/
-/// kmaruda-config.json». Секреты LDAP не покидают машину: флаг `hasPassword`
-/// сбрасывается, пароли остаются в системном хранилище.
+/// Export the whole configuration to an exchange file: "Documents/KMARUDA Phonebook/
+/// kmaruda-config.json". LDAP secrets never leave the machine: the `hasPassword` flag
+/// reset; passwords remain in the system store.
 #[tauri::command]
 pub async fn export_config_file(
     app: AppHandle,
@@ -158,17 +158,17 @@ pub async fn export_config_file(
     .await
 }
 
-/// Разбор содержимого файла обмена конфигурацией (выбор файла — нативный
-/// `<input type="file">` webview, чтение — на фронтенде). Валидация формата
-/// живёт в Rust ([`ConfigShareFile::parse`]): фронтенд не применяет
-/// непроверенные данные. Применение к стору выполняет фронтенд, персист —
-/// через обычный save_config.
+/// Parsing the contents of the configuration exchange file (file selection is native
+/// webview `<input type="file">`; reading happens on the frontend). Format validation
+/// lives in Rust ([`ConfigShareFile::parse`]): the frontend does not apply
+/// unvalidated data. The frontend applies it to the store; persistence -
+/// through the normal save_config.
 #[tauri::command]
 pub async fn parse_config_file(content: String) -> Result<AppConfig, AppError> {
     run_blocking(move || ConfigShareFile::parse(&content)).await
 }
 
-/// Папка файлов обмена: «Документы/KMARUDA Phonebook».
+/// Exchange files folder: "Documents/KMARUDA Phonebook".
 fn share_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
     let dir = app
         .path()
@@ -178,10 +178,10 @@ fn share_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
 }
-/// Диагностика подключения: bind, rootDSE, пробная выборка сотрудников.
+/// Connection diagnostics: bind, rootDSE, sample employee selection.
 ///
-/// `passwordOverride` позволяет проверить ещё не сохранённый пароль;
-/// если он не задан, берётся сохранённый секрет организации.
+/// `passwordOverride` allows checking a password that is not saved yet;
+/// if it is not set, the organization's saved secret is used.
 #[tauri::command]
 pub async fn test_ldap_connection(
     org: LdapOrgInput,
@@ -189,8 +189,8 @@ pub async fn test_ldap_connection(
     connect_timeout_secs: Option<u32>,
     operation_timeout_secs: Option<u32>,
 ) -> Result<ConnectionTest, AppError> {
-    // keyring на первом обращении может думать секунды — не блокируем
-    // async-runtime и главный поток окна.
+    // keyring on first access may think for seconds — we do not block
+    // the async-runtime and the main window thread.
     let organization = org.organization.clone();
     let stored_password =
         run_blocking(move || Ok(ConfigStore::get_password(&organization))).await?;

@@ -13,14 +13,14 @@ interface SearchInputProps {
 }
 
 /**
- * Поле поиска с локальным буфером и внешней деbounce-логикой.
+ * A search field with a local buffer and external debounce logic.
  *
- * Компонент остаётся управляемым: внешнее значение (например, сброс
- * при смене вкладки) синхронизируется обратно в локальный буфер.
- * Дебаунс выполняется потребителем (`useDebouncedValue`), поэтому
- * здесь — мгновенный отклик ввода без «резиновой» печати.
+ * The component stays controlled: an external value (e.g. a reset
+ * on tab change) is synchronized back into the local buffer.
+ * Debouncing is done by the consumer (`useDebouncedValue`), so
+ * here — instant input response without "rubbery" typing.
  *
- * Горячие клавиши: Ctrl/Cmd+K — фокус, Escape — очистка.
+ * Hotkeys: Ctrl/Cmd+K — focus, Escape — clear.
  */
 export function SearchInput({ value, onChange, placeholder, className }: SearchInputProps) {
   const { t } = useTranslation();
@@ -29,7 +29,7 @@ export function SearchInput({ value, onChange, placeholder, className }: SearchI
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  // Внешнее значение изменилось (сброс/программная установка) — синхронизируем буфер.
+  // The external value changed (reset/programmatic set) — synchronize the buffer.
   useEffect(() => {
     setLocalValue((current) => (current === value ? current : value));
   }, [value]);

@@ -3,8 +3,8 @@ import { motion } from 'motion/react';
 import { useAppStore } from '@/store/useAppStore';
 
 /**
- * Splash-экран: показывается, пока zustand-persist не гидратирован
- * (в десктопе — до ответа команды `load_config`).
+ * Splash screen: shown until zustand-persist is hydrated
+ * (in the desktop — until the `load_config` command answers).
  */
 export function SplashScreen() {
   const animationsEnabled = useAppStore((state) => state.animationsEnabled);
