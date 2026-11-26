@@ -34,4 +34,3 @@
   nsExec::ExecToLog 'taskkill /F /IM "KMAruda Phonebook.exe"'
   Pop $0
 !macroend
-
